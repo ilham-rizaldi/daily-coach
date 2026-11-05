@@ -18,8 +18,6 @@ function Locked({ onUnlock, error, loading }) {
         <button className="primary" disabled={loading}>{loading ? "Opening report…" : "Open my report"}</button>
       </form>
       {error && <p className="error" role="alert">{error}</p>}
-      <p className="quiet">The private link contains your encrypted report. Reports you open are kept encrypted in this browser. Anyone you share the full link with can read that report.</p>
-      <a href="?preview=1">View the design preview</a>
     </main>
   );
 }
@@ -99,6 +97,8 @@ export function App() {
   const recentRide = report?.activities.filter(activity => activity.sport === "Ride" && activity.classification !== "non-training").sort((a, b) => b.date.localeCompare(a.date))[0];
   const sleep = report?.wellness.sleepMinutes;
   const readiness = report?.wellness.readiness;
+
+  if (!report) return <Locked onUnlock={unlock} loading={loading} error={error} />;
 
   return (
     <>
