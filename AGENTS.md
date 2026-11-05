@@ -4,6 +4,8 @@ The selected visual target is Performance Desk: charcoal background, lime accent
 
 The locked login page shows only the Performance Desk eyebrow, the two-line "Your training. Your private report." heading, the private-link instruction, the access-key input and the Open my report button. Do not show the global header, extra privacy paragraph or design-preview link on this screen. Show errors and loading state only when needed.
 
+The same minimal form accepts a complete private email link or a key for reports already saved on the device. Preserve the exact report selected by an incoming email, even when newer reports are cached. Place the session plan before charts. Keep historical capture dates clear, Lock available while unlocked, full activity-history filters, and completed-calendar-day comparisons with explicit source coverage. Chart code is loaded separately from the initial login bundle.
+
 Run the local server yourself and open the preview in the browser available to this environment. Do not give the user server-start instructions when you can run it.
 
 Before making substantial visual changes, use the Product Design plugin's `get-context` skill when the visual source is unclear or no longer matches the current goal. When the user gives durable prototype-specific design feedback, preferences, or decisions, record them in `AGENTS.md`.

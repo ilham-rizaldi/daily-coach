@@ -65,14 +65,48 @@ export function summarize(activities, start, end) {
   };
 }
 
-export function dailySeries(report, days = 28) {
-  const training = report.activities.filter(a => a.classification !== "non-training");
+export function jakartaDate(now = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
+export function coversWindow(report, start, end) {
+  return report.coverage.complete === true && start >= report.coverage.start && end <= report.coverage.end;
+}
+
+export function filterActivities(report, { days = "all", sport = "All", query = "", includeExcluded = false } = {}) {
+  const start = days === "all" ? report.coverage.start : shiftDate(report.date, 1 - Number(days));
+  const search = query.trim().toLocaleLowerCase();
+  return report.activities.filter(activity => activity.date >= start && activity.date <= report.date
+    && (includeExcluded || activity.classification !== "non-training")
+    && (sport === "All" || activity.sport === sport)
+    && (!search || `${activity.name} ${activity.sport} ${activity.date}`.toLocaleLowerCase().includes(search)))
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function compareWeeks(report, sport = "All") {
+  const end = shiftDate(report.date, -1);
+  const previousEnd = shiftDate(end, -7);
+  const activities = report.activities.filter(activity => sport === "All" || activity.sport === sport);
+  const current = summarize(activities, shiftDate(end, -6), end);
+  const previous = summarize(activities, shiftDate(previousEnd, -6), previousEnd);
+  const comparable = coversWindow(report, current.start, current.end) && coversWindow(report, previous.start, previous.end);
+  return {
+    current, previous, comparable,
+    timeChangePercent: comparable && previous.seconds > 0 ? (current.seconds - previous.seconds) / previous.seconds * 100 : null,
+    sessionChange: comparable ? current.sessions - previous.sessions : null,
+    activeDayChange: comparable ? current.activeDays - previous.activeDays : null,
+  };
+}
+
+export function dailySeries(report, days = 28, sport = "All") {
+  const training = report.activities.filter(a => a.classification !== "non-training" && (sport === "All" || a.sport === sport));
   return Array.from({ length: days }, (_, index) => {
     const date = shiftDate(report.date, index - days + 1);
-    const known = date >= report.coverage.start && date <= report.coverage.end;
-    const minutes = known ? training.filter(a => a.date === date).reduce((sum, a) => sum + a.movingSeconds / 60, 0) : null;
+    const rows = training.filter(a => a.date === date);
+    const known = date >= report.coverage.start && date <= report.coverage.end && (report.coverage.complete === true || rows.length > 0);
+    const minutes = known ? rows.reduce((sum, a) => sum + a.movingSeconds / 60, 0) : null;
     const windowStart = shiftDate(date, -6);
-    const meanKnown = windowStart >= report.coverage.start && date <= report.coverage.end;
+    const meanKnown = coversWindow(report, windowStart, date);
     const mean = meanKnown ? training.filter(a => a.date >= windowStart && a.date <= date).reduce((sum, a) => sum + a.movingSeconds / 60, 0) / 7 : null;
     return { date, label: formatDate(date), minutes, mean };
   });

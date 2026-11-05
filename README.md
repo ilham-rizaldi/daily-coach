@@ -13,6 +13,12 @@ npm run dev
 
 Open `?preview=1` for clearly labelled illustrative content. The default view opens reports from the private links in coaching emails, or reports previously opened on the same device.
 
+The minimal login form also accepts the complete private email link, which loads its report on a new device. An access key alone unlocks reports already stored in that browser. Opening an older email selects that report rather than the newest saved date. New revisions replace the same date in browser history.
+
+Daily reports show the planned session before the charts. The header keeps Lock available and adds older/newer report controls when multiple reports are saved. Activity history supports date windows, sport, search, pagination and a separate toggle for excluded recordings. Trends compare the previous seven completed calendar days with the preceding seven, require complete coverage for percentage changes, and support sport-specific charts. Missing coverage is unavailable rather than a zero-training day.
+
+Chart code loads separately after opening a report, so the locked login does not download the chart library on its initial load.
+
 ## Build and verify
 
 ```sh
