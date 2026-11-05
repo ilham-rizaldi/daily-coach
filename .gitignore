@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.local/
+.env*
+*.email.html
+*.private.json
+*.key
+design-qa.md
+qa/
+.DS_Store
+
+# Personal report payloads never belong in public assets.
+public/data/
+docs/data/

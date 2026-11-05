@@ -1,0 +1,24 @@
+{
+  "name": "daily-coach",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "preview": "vite preview",
+    "test:sites": "node --test tests/sites-worker.test.mjs",
+    "build:github": "vite build --base=./ && node scripts/build-github.mjs",
+    "test": "node --test tests/report.test.mjs",
+    "report": "node scripts/publish-report.mjs"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "6.0.2",
+    "vite": "8.0.13",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "recharts": "3.10.1"
+  },
+  "devDependencies": {},
+  "description": "Private sports coaching reports with encrypted archives"
+}
