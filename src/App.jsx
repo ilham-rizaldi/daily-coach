@@ -96,7 +96,7 @@ export function App() {
   }
 
   const report = reports[reportIndex];
-  const recentRide = report?.activities.find(activity => activity.sport === "Ride" && activity.classification !== "non-training");
+  const recentRide = report?.activities.filter(activity => activity.sport === "Ride" && activity.classification !== "non-training").sort((a, b) => b.date.localeCompare(a.date))[0];
   const sleep = report?.wellness.sleepMinutes;
   const readiness = report?.wellness.readiness;
 
