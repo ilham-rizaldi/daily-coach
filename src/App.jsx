@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { decimal, duration, formatDate, jakartaDate } from "./report.js";
+import { formatDate, jakartaDate } from "./report.js";
 import { parseAccessInput, unlockReports } from "./archive.js";
 import { demoReport } from "./demo.js";
 import { ActivityTable, Session, Sources, TrainingChart, Trends } from "./components.jsx";
 import { LoadForecast } from "./LoadForecast.jsx";
+import { ConditionOverview } from "./ConditionOverview.jsx";
 
 const sections = ["Daily", "Trends", "Archive", "Sources"];
 
@@ -106,9 +107,6 @@ export function App() {
   }
 
   const report = reports[reportIndex];
-  const recentRide = report?.activities.filter(activity => activity.sport === "Ride" && activity.classification !== "non-training").sort((a, b) => b.date.localeCompare(a.date))[0];
-  const sleep = report?.wellness.sleepMinutes;
-  const readiness = report?.wellness.readiness;
   const today = jakartaDate();
 
   if (!report) return <Locked onUnlock={unlock} loading={loading} error={error} />;
@@ -134,29 +132,15 @@ export function App() {
           </div>
           {section === "Daily" && (
             <>
+              <ConditionOverview report={report} />
               <section className="decision"><h1>{report.coaching.headline}</h1><p>{report.coaching.rationale}</p></section>
               <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
               <LoadForecast key={`${report.date}:${report.capturedAt}`} report={report} />
-              <div className="metric-row">
-                <div><span>Sleep</span><strong>{Number.isFinite(sleep) ? `${Math.floor(sleep / 60)}h ${sleep % 60}m` : "Unavailable"}</strong><small>{preview ? "Sample data" : `Garmin${report.wellness.sleepScore != null ? ` · score ${report.wellness.sleepScore}` : ""}`}</small></div>
-                <div><span>Readiness</span><strong className={Number.isFinite(readiness) && readiness < 50 ? "amber" : undefined}>{readiness ?? "Unavailable"}</strong><small>{preview ? "Sample data" : "Garmin · latest synced value"}</small></div>
-                <div><span>Recent ride</span><strong>{recentRide ? duration(recentRide.movingSeconds) : "Unavailable"}</strong><small>{preview ? "Sample data" : recentRide ? `${formatDate(recentRide.date)}${Number.isFinite(recentRide.distanceKm) ? ` · ${decimal(recentRide.distanceKm, 2)} km` : ""}` : "Ride data unavailable"}</small></div>
-              </div>
               <section className="evidence-grid">
                 <TrainingChart report={report} />
                 <aside className="coach-note"><h2>Coach note</h2><span className="confidence">{report.coaching.confidence}</span><p>{report.coaching.note}</p></aside>
               </section>
-              {!preview && (
-                <>
-                  <div className="recovery-strip">
-                    <div><span>Resting HR</span><strong>{report.wellness.restingHr ?? "Unavailable"} <small>bpm</small></strong><p>7-day average {report.wellness.restingHr7d ?? "unavailable"}</p></div>
-                    <div><span>HRV status</span><strong>{report.wellness.hrvStatus || "Unavailable"}</strong><p>Garmin · latest synced</p></div>
-                    <div><span>Intervals form</span><strong>{report.intervals.form == null ? "Unavailable" : `${report.intervals.form > 0 ? "+" : ""}${report.intervals.form}`}</strong><p>Fitness {report.intervals.fitness ?? "unavailable"} · fatigue {report.intervals.fatigue ?? "unavailable"}</p></div>
-                    <div><span>Garmin load ratio</span><strong>{report.wellness.garminLoadRatio ?? "Unavailable"}</strong><p>Acute {report.wellness.garminAcuteLoad ?? "unavailable"} · chronic {report.wellness.garminChronicLoad ?? "unavailable"}</p></div>
-                  </div>
-                  <ActivityTable key={report.date} report={report} />
-                </>
-              )}
+              {!preview && <ActivityTable key={report.date} report={report} />}
             </>
           )}
           {section === "Trends" && <Trends key={report.date} report={report} />}
