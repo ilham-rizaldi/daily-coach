@@ -1,19 +1,20 @@
 import { decimal, duration } from "./report.js";
 import { conditionOverview } from "./condition.js";
 import { BaselineMeter, LoadHistory, palette, ScoreMeter, SleepStages, statusColor } from "./MetricGraphics.jsx";
+import { DurationValue } from "./Readout.jsx";
 
 const num = value => Number.isFinite(value) ? decimal(value) : "—";
-const time = value => Number.isFinite(value) ? duration(value * 60).replace(" 0m", "") : "—";
+const time = value => <DurationValue seconds={Number.isFinite(value) ? value * 60 : NaN} />;
 
 function Tile({ id, label, value, unit, color, status, children, detail, stamp }) {
   return <div className="body-tile" data-metric={id} title={stamp}>
-    <dt>{label}</dt><dd><strong style={{color}}>{value}</strong>{unit && <span>{unit}</span>}
+    <dt>{label}</dt><dd><strong className="metric-value" style={{color}}><span className="metric-number">{value}</span>{unit && <small className={unit === "%" || unit === "/100" ? "metric-unit metric-unit-tight" : "metric-unit"}>{unit}</small>}</strong>
     {children}<div className="body-tile-meta"><span style={{color}}>{status}</span>{detail && <span>{detail}</span>}</div></dd>
   </div>;
 }
 
 function Stat({ label, value, unit, detail, color }) {
-  return <div><dt>{label}</dt><dd style={{color}}>{value}{unit && <small>{unit}</small>}{detail && <span>{detail}</span>}</dd></div>;
+  return <div><dt>{label}</dt><dd style={{color}}><strong className="metric-value"><span className="metric-number">{value}</span>{unit && <small className={unit === "%" || unit === "/100" ? "metric-unit metric-unit-tight" : "metric-unit"}>{unit}</small>}</strong>{detail && <span>{detail}</span>}</dd></div>;
 }
 
 export function ConditionOverview({ report }) {
@@ -27,7 +28,7 @@ export function ConditionOverview({ report }) {
       <Tile id="readiness" label="Readiness" value={num(w.readiness)} unit="/100" color={statusColor(w.readinessStatus,"readiness")} status={w.readinessStatus} detail={w.readinessUpdatedAtLocal} stamp={stamp("readiness")}><ScoreMeter label="Readiness" value={w.readiness} readiness /></Tile>
       <Tile id="battery" label="Body Battery" value={num(w.bodyBattery)} unit="/100" color={palette.blue} detail={Number.isFinite(w.bodyBatteryCharged) && Number.isFinite(w.bodyBatteryDrained) ? `↑${w.bodyBatteryCharged} ↓${w.bodyBatteryDrained}` : null} stamp={stamp("battery")}><ScoreMeter label="Body Battery" value={w.bodyBattery} /></Tile>
       <Tile id="hrv" label="HRV · overnight" value={num(w.rawHrvMs)} unit="ms" color={statusColor(w.hrvStatus)} status={w.hrvStatus} stamp={stamp("hrv")}><BaselineMeter low={hrvLow} high={hrvHigh} value={w.hrv7dMs} status={w.hrvStatus} /></Tile>
-      <Tile id="resting-hr" label="RHR" value={num(w.restingHr)} unit="bpm" color={palette.red} detail={Number.isFinite(w.restingHr7d) ? `7d ${w.restingHr7d}` : null} stamp={stamp("resting-hr")}><div className="rhr-context"><span>Overnight HR</span><b>{num(w.averageOvernightHr)} <small>bpm</small></b></div></Tile>
+      <Tile id="resting-hr" label="RHR" value={num(w.restingHr)} unit="bpm" color={palette.red} detail={Number.isFinite(w.restingHr7d) ? `7d ${w.restingHr7d}` : null} stamp={stamp("resting-hr")}><div className="rhr-context"><span>Overnight HR</span><b className="metric-value"><span className="metric-number">{num(w.averageOvernightHr)}</span><small className="metric-unit">bpm</small></b></div></Tile>
       <Tile id="sleep" label="Sleep" value={time(w.sleepMinutes)} color={palette.light} status={Number.isFinite(w.sleepScore) ? `Score ${w.sleepScore}` : null} detail={w.bedTimeLocal && w.wakeTimeLocal ? `${w.bedTimeLocal}–${w.wakeTimeLocal}` : null} stamp={stamp("sleep")}><SleepStages wellness={w} /></Tile>
       <Tile id="recovery" label="Recovery" value={time(w.recoveryTimeMinutes)} color={statusColor(w.recoveryTimeStatus)} status={w.recoveryTimeStatus} detail={w.readinessUpdatedAtLocal ? `@ ${w.readinessUpdatedAtLocal}` : null} stamp={stamp("recovery")}><div className="recovery-tags">{w.recentStressStatus && <span>Stress <b>{w.recentStressStatus}</b></span>}{w.recentSleepScoresStatus && <span>Sleep <b>{w.recentSleepScoresStatus}</b></span>}</div></Tile>
     </dl>

@@ -4,11 +4,12 @@ import { decimal, duration, formatDate } from "./report.js";
 import { palette } from "./MetricGraphics.jsx";
 import { cyclingProgression, recoverySeries, trainingPlacement } from "./performance.js";
 import "./performance.css";
+import { DurationValue, MetricValue } from "./Readout.jsx";
 
 const number = (value, places = 1) => Number.isFinite(value) ? decimal(value, places) : "—";
 const signed = value => Number.isFinite(value) ? `${value > 0 ? "+" : ""}${decimal(value, 0)}` : "—";
 const tooltipStyle = { background: "#242930", border: "1px solid #52606c", borderRadius: 5, color: "#f0f4f8", fontSize: 11 };
-const ticks = { fill: "#aeb9c4", fontSize: 10 };
+const ticks = { fill: "#aeb9c4", fontSize: 12 };
 
 function Plot({ data, label, children, domain = ["auto", "auto"], formatter }) {
   return <div className="performance-plot" role="group" aria-label={label}>
@@ -32,26 +33,26 @@ function Recovery({ report }) {
     <div className="performance-heading"><h2 id="recovery-trend-title" title={`Garmin wellness · captured ${report.wellnessHistory?.observedAt || "unrecorded"}`}>Recovery trends</h2><div className="performance-period" aria-label="Recovery period">{[7, 28, 56].map(value => <button key={value} aria-pressed={value === days} onClick={() => setDays(value)}>{value}d</button>)}</div></div>
     {available ? <>
       <div className="performance-chart-grid">
-        <article><div className="performance-chart-title"><h3>HRV <small>ms</small></h3><strong style={{ color: palette.blue }}>{number(last.hrvMs, 0)} <small>7d {number(last.hrv7dMs, 0)}</small></strong></div>
+        <article><div className="performance-chart-title"><h3>HRV <small>ms</small></h3><div className="recovery-readout"><MetricValue as="strong" value={number(last.hrvMs, 0)} unit="ms" style={{ color: palette.blue }} /><small className="metric-context">7d {number(last.hrv7dMs, 0)}ms</small></div></div>
           <Plot data={data} label="Overnight and seven-day HRV against captured personal baseline" formatter={(value, name) => [Array.isArray(value) ? value.map(v => number(v, 0)).join("–") : number(value, 0), name]}>
             <Area dataKey="hrvBand" name="Baseline · ms" fill={palette.green} fillOpacity={0.16} stroke="none" connectNulls={false} isAnimationActive={false} />
             <Line dataKey="hrvMs" name="Overnight · ms" stroke="#8499a9" strokeWidth={1.3} dot={false} connectNulls={false} isAnimationActive={false} />
             <Line dataKey="hrv7dMs" name="7d · ms" stroke={palette.blue} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </Plot><div className="performance-key"><span style={{ color: palette.blue }}>7d</span><span>Overnight</span><span style={{ color: palette.green }}>Baseline</span></div>
         </article>
-        <article><div className="performance-chart-title"><h3>RHR Δ <small>bpm</small></h3><strong style={{ color: palette.red }}>{signed(last.rhrDelta)}</strong></div>
+        <article><div className="performance-chart-title"><h3>RHR Δ <small>bpm</small></h3><MetricValue as="strong" value={signed(last.rhrDelta)} unit="bpm" style={{ color: palette.red }} /></div>
           <Plot data={data} label="Resting HR deviation from preceding 28-day median, requiring seven prior readings" formatter={(value) => [`${number(value)} bpm`, "RHR Δ"]}>
             <ReferenceLine y={0} stroke="#7d8892" strokeDasharray="3 3" />
             <Line dataKey="rhrDelta" name="RHR Δ" stroke={palette.red} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </Plot><div className="performance-key">28d personal median</div>
         </article>
-        <article><div className="performance-chart-title"><h3>Sleep − need <small>min</small></h3><strong style={{ color: Number.isFinite(last.sleepGap) && last.sleepGap >= 0 ? palette.green : palette.orange }}>{signed(last.sleepGap)}</strong></div>
+        <article><div className="performance-chart-title"><h3>Sleep − need <small>min</small></h3><MetricValue as="strong" value={signed(last.sleepGap)} unit="min" style={{ color: Number.isFinite(last.sleepGap) && last.sleepGap >= 0 ? palette.green : palette.orange }} /></div>
           <Plot data={data} label="Sleep duration minus captured sleep need in minutes" formatter={(value) => [`${signed(value)} min`, "Sleep − need"]}>
             <ReferenceLine y={0} stroke="#7d8892" />
             <Bar dataKey="sleepGap" name="Sleep − need" maxBarSize={12} isAnimationActive={false}>{data.map(row => <Cell key={row.date} fill={row.sleepGap >= 0 ? palette.green : palette.orange} />)}</Bar>
           </Plot>
         </article>
-        <article><div className="performance-chart-title"><h3>Body Battery <small>low–high</small></h3><strong style={{ color: palette.blue }}>{number(last.bodyBatteryLow, 0)}–{number(last.bodyBatteryHigh, 0)}</strong></div>
+        <article><div className="performance-chart-title"><h3>Body Battery <small>low–high</small></h3><MetricValue as="strong" value={`${number(last.bodyBatteryLow, 0)}–${number(last.bodyBatteryHigh, 0)}`} style={{ color: palette.blue }} /></div>
           <Plot data={data} label="Recorded Body Battery daily low and high" domain={[0, 100]} formatter={(value, name) => [Array.isArray(value) ? value.map(v => number(v, 0)).join("–") : number(value, 0), name]}>
             <Area dataKey="bodyBatteryRange" name="Daily low–high" stroke={palette.blue} strokeWidth={1} fill={palette.blue} fillOpacity={0.2} connectNulls={false} isAnimationActive={false} />
           </Plot>
@@ -66,7 +67,7 @@ function Cycling({ report }) {
   const data = cyclingProgression(report), placement = trainingPlacement(report), latest = data.at(-1) || {};
   return <section className="performance-cycling" aria-labelledby="cycling-progression-title">
     <div className="performance-heading"><h2 id="cycling-progression-title" title="Garmin canonical timers · Intervals activity load · completed calendar days">Cycling progression</h2><span className="quiet">6 × 7d{data.some(row => row.partial) ? " · Partial" : " · completed"}</span></div>
-    <div className="performance-cycling-stats"><div><span>Ride time</span><strong>{Number.isFinite(latest.hours) ? duration(latest.hours * 3600) : "—"}</strong></div><div><span>Frequency</span><strong>{number(latest.sessions, 0)}<small> / 7d</small></strong></div><div><span>Longest ride</span><strong>{Number.isFinite(latest.longestMinutes) ? duration(latest.longestMinutes * 60) : "—"}</strong></div><div><span>TL · Intervals</span><strong>{number(latest.load, 0)}{latest.missingLoad > 0 && <small> Partial</small>}</strong></div></div>
+    <div className="performance-cycling-stats"><div><span>Ride time</span><DurationValue as="strong" seconds={Number.isFinite(latest.hours) ? latest.hours * 3600 : NaN} /></div><div><span>Frequency</span><MetricValue as="strong" value={number(latest.sessions, 0)} unit="/7d" /></div><div><span>Longest ride</span><DurationValue as="strong" seconds={Number.isFinite(latest.longestMinutes) ? latest.longestMinutes * 60 : NaN} /></div><div><span>TL · Intervals</span><strong>{number(latest.load, 0)}{latest.missingLoad > 0 && <small> Partial</small>}</strong></div></div>
     <div className="performance-chart-grid cycling-charts">
       <article><h3>Ride time <small>h</small></h3><Plot data={data} label="Cycling hours per completed seven-day block" domain={[0, "auto"]} formatter={(value) => [`${number(value, 2)} h`, "Ride time"]}><Bar dataKey="hours" fill={palette.blue} maxBarSize={25} isAnimationActive={false}>{data.map(row => <Cell key={row.end} fill={palette.blue} fillOpacity={row.partial ? 0.45 : 1} />)}</Bar></Plot></article>
       <article><h3>TL <small>Intervals</small></h3><Plot data={data} label="Cycling Intervals load per seven-day block; missing session load produces gaps" domain={[0, "auto"]} formatter={(value) => [number(value, 0), "TL · Intervals"]}><Bar dataKey="load" fill={palette.purple} maxBarSize={25} isAnimationActive={false}>{data.map(row => <Cell key={row.end} fill={palette.purple} fillOpacity={row.partial ? 0.45 : 1} />)}</Bar></Plot></article>

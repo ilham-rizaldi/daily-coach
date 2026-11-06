@@ -5,6 +5,7 @@ import { estimateSessionLoad } from "./forecast.js";
 import { palette } from "./MetricGraphics.jsx";
 import { projectWeek, restWeek } from "./planner.js";
 import "./planner.css";
+import { DurationValue } from "./Readout.jsx";
 
 const sports = [["Rest", "Rest"], ["Ride", "Cycling"], ["Run", "Running"], ["Weight Training", "Strength"]];
 const metrics = { fitness: { label: "CTL", color: palette.blue }, fatigue: { label: "ATL", color: palette.purple }, form: { label: "TSB", color: palette.orange } };
@@ -70,13 +71,13 @@ export default function WeekPlanner({ report }) {
     </div>}
     {!result.available && <p className="week-plan-status" role="status">{result.error}</p>}
     {result.available && <>
-      <dl className="week-plan-summary"><div><dt>Volume</dt><dd>{duration(result.totals.minutes * 60)}</dd><small>{result.totals.sessions} sessions</small></div><div><dt>TL · Est.</dt><dd>{display(result.totals.load)}</dd><small>{display(result.totals.low)}–{display(result.totals.high)}</small></div>{Object.entries(metrics).map(([key, { label, color }]) => <div key={key}><dt>{label} · {formatDate(end.date)}</dt><dd style={{ color }}>{display(end.mid[key])}</dd><small>{display(end.range[key].low)}–{display(end.range[key].high)}</small></div>)}</dl>
+      <dl className="week-plan-summary"><div><dt>Volume</dt><dd><DurationValue seconds={result.totals.minutes * 60} /></dd><small>{result.totals.sessions} sessions</small></div><div><dt>TL · Est.</dt><dd>{display(result.totals.load)}</dd><small>{display(result.totals.low)}–{display(result.totals.high)}</small></div>{Object.entries(metrics).map(([key, { label, color }]) => <div key={key}><dt>{label} · {formatDate(end.date)}</dt><dd style={{ color }}>{display(end.mid[key])}</dd><small>{display(end.range[key].low)}–{display(end.range[key].high)}</small></div>)}</dl>
       <div className="week-chart-heading"><div className="week-metric-switch" role="group" aria-label="Projection metric">{Object.entries(metrics).map(([key, { label }]) => <button key={key} aria-pressed={metric === key} onClick={() => setMetric(key)}>{label}</button>)}</div><div className="week-chart-key"><span style={{ color: selected.color }}>● Plan</span><span>┄ Rest</span><span>Scenario range</span></div></div>
       <div className="week-plan-chart" role="group" aria-label={`Estimated seven-day ${selected.label} with historical scenario range and rest comparison`}>
         <ResponsiveContainer width="100%" height="100%"><ComposedChart data={chart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }} accessibilityLayer>
           <CartesianGrid vertical={false} stroke="#3d454e" />
-          <XAxis dataKey="label" tick={{ fill: "#b9c4ce", fontSize: 11 }} axisLine={false} tickLine={false} minTickGap={16} />
-          <YAxis tick={{ fill: "#b9c4ce", fontSize: 11 }} axisLine={false} tickLine={false} width={40} domain={["auto", "auto"]} />
+          <XAxis dataKey="label" tick={{ fill: "#b9c4ce", fontSize: 12 }} axisLine={false} tickLine={false} minTickGap={16} />
+          <YAxis tick={{ fill: "#b9c4ce", fontSize: 12 }} axisLine={false} tickLine={false} width={40} domain={["auto", "auto"]} />
           <Tooltip content={<ChartTooltip metric={metric} />} />
           {metric === "form" && <ReferenceLine y={0} stroke="#68727d" />}
           <Area type="linear" dataKey="range" fill={selected.color} fillOpacity={0.14} stroke="none" isAnimationActive={false} />

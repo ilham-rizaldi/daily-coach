@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, useState } from "react";
 import { compareWeeks, coversWindow, decimal, duration, filterActivities, formatDate, jakartaDate, shiftDate, summarize } from "./report.js";
 import { palette } from "./MetricGraphics.jsx";
+import { DurationValue } from "./Readout.jsx";
 
 const LazyChart = lazy(() => import("./TrainingChart.jsx"));
 
@@ -24,7 +25,7 @@ export function Session({ report, expanded, onExpand }) {
       <h2 id="session-title">{historical ? "Planned session" : "Session"} <span className="quiet">{report.preview ? "" : formatDate(session.date)}</span></h2>
       <div className="session-summary">
         <span className="session-type">{session.name}</span>
-        <strong className="session-duration">{session.minutes} min</strong>
+        <DurationValue as="strong" className="session-duration" seconds={session.minutes * 60} />
         <p>{session.target.split(". ")[0]}</p>
       </div>
       <div className="workout-timeline" role="img" aria-label={session.steps.map(step=>`${step.name}, ${step.minutes} minutes`).join("; ")}>{session.steps.map((step,index)=><div key={`${step.name}-${index}`} style={{flex:step.minutes,borderColor:[palette.light,palette.blue,palette.purple][Math.min(index,2)]}}><strong>{step.name.replace(/Warm-up/i,"WU").replace(/Cool-down/i,"CD")}</strong><span>{step.minutes}′</span></div>)}</div>
@@ -129,7 +130,7 @@ export function Trends({ report }) {
       <section className="week-comparison" aria-labelledby="comparison-title">
         <h2 id="comparison-title">7d comparison {!comparison.comparable && <small className="quiet">Partial</small>}</h2>
         <p className="quiet period-dates">{formatDate(current.start)}–{formatDate(current.end)} / {formatDate(previous.start)}–{formatDate(previous.end)}</p>
-        <div className="comparison-grid"><div><span>Duration</span><strong>{currentAvailable ? duration(current.seconds) : "—"}</strong><small>{timeLabel}</small><PeriodBars label="Duration in seconds" format={duration} current={currentAvailable?current.seconds:null} previous={previousAvailable?previous.seconds:null} /></div><div><span>Sessions</span><strong>{currentAvailable ? current.sessions : "—"}</strong><small>{changeLabel(comparison.sessionChange, "sessions")}</small><PeriodBars label="Sessions" current={currentAvailable?current.sessions:null} previous={previousAvailable?previous.sessions:null} /></div><div><span>Active days</span><strong>{currentAvailable ? current.activeDays : "—"}{currentAvailable && <small> / 7</small>}</strong><small>{changeLabel(comparison.activeDayChange, "days")}</small><PeriodBars label="Active days" current={currentAvailable?current.activeDays:null} previous={previousAvailable?previous.activeDays:null} /></div></div>
+        <div className="comparison-grid"><div><span>Duration</span><DurationValue as="strong" seconds={currentAvailable ? current.seconds : NaN} /><small>{timeLabel}</small><PeriodBars label="Duration in seconds" format={duration} current={currentAvailable?current.seconds:null} previous={previousAvailable?previous.seconds:null} /></div><div><span>Sessions</span><strong>{currentAvailable ? current.sessions : "—"}</strong><small>{changeLabel(comparison.sessionChange, "sessions")}</small><PeriodBars label="Sessions" current={currentAvailable?current.sessions:null} previous={previousAvailable?previous.sessions:null} /></div><div><span>Active days</span><strong className="metric-value"><span className="metric-number">{currentAvailable ? current.activeDays : "—"}</span>{currentAvailable && <small className="metric-unit metric-unit-tight">/7</small>}</strong><small>{changeLabel(comparison.activeDayChange, "days")}</small><PeriodBars label="Active days" current={currentAvailable?current.activeDays:null} previous={previousAvailable?previous.activeDays:null} /></div></div>
       </section>
       <TrainingChart report={report} days={days} sport={sport} />
       <details className="trend-blocks"><summary>Weekly totals</summary><div className="table-scroll"><table>
@@ -139,7 +140,7 @@ export function Trends({ report }) {
       </table></div></details>
       <h2 className="mix-title">Sport mix · 28d</h2>
       {mixSeconds>0 && <div className="sport-mix-bar" role="img" aria-label={mix.map(row=>`${row.sport} ${decimal(row.seconds/mixSeconds*100,0)}%`).join(", ")}>{mix.map(row=><span key={row.sport} style={{width:`${row.seconds/mixSeconds*100}%`,background:sportColors[row.sport] ?? palette.green}} />)}</div>}
-      <div className="sport-mix">{mix.map(row => <div key={row.sport}><h3><i style={{background:sportColors[row.sport] ?? palette.green}} />{row.sport}</h3><strong>{duration(row.seconds)}</strong><p>{row.sessions} sessions · {mixSeconds>0?`${decimal(row.seconds/mixSeconds*100,0)}%`:"—"}{["Ride", "Run"].includes(row.sport) ? ` · ${row.distanceAvailable ? decimal(row.distanceKm, 2) : "—"} km` : ""}</p></div>)}</div>
+      <div className="sport-mix">{mix.map(row => <div key={row.sport}><h3><i style={{background:sportColors[row.sport] ?? palette.green}} />{row.sport}</h3><DurationValue as="strong" seconds={row.seconds} /><p>{row.sessions} sessions · {mixSeconds>0?`${decimal(row.seconds/mixSeconds*100,0)}%`:"—"}{["Ride", "Run"].includes(row.sport) ? ` · ${row.distanceAvailable ? decimal(row.distanceKm, 2) : "—"} km` : ""}</p></div>)}</div>
     </>
   );
 }
