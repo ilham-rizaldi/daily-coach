@@ -53,6 +53,14 @@ Use the available history for depth. A longer report cannot substitute for missi
    For the separate Garmin rest-day estimate, capture dated daily acute/chronic chart values in `garminLoadHistory.rows`, with observation time, source URL and extraction method. Verify the current chart anchor against the report and native tooltips. Use complete activity coverage to identify completed days without any recording, including excluded non-training recordings. Preserve both components' paired changes, sample dates, scenario spread and extrapolation limits. A fresh data-enriched private link is required for old reports that lack the history; refreshing the public viewer cannot add private source data to an immutable emailed payload.
 3. Run:
 
+   When validated Garmin daily exports are present, attach the recovery history first, preserving source and report capture times:
+
+   ```sh
+   node scripts/attach-wellness.mjs .local/report.private.json .local/capture-YYYY-MM-DD/garmin-wellness-exports.json
+   ```
+
+   This maps dated source fields to `wellnessHistory.rows`, preserving nulls, units and per-field export pointers. It does not capture new data or refresh today's wellness. Future reports without daily exports leave history unavailable. Browser check-ins are separate encrypted subjective records; import them only when their actual entries are read during an authorized report run, without fabricating ratings or replacing provider TL.
+
    ```sh
    npm run report -- .local/report.private.json
    ```

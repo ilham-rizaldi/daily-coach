@@ -1,13 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { formatDate, jakartaDate } from "./report.js";
 import { parseAccessInput, unlockReports } from "./archive.js";
 import { demoReport } from "./demo.js";
-import { ActivityTable, Session, TrainingChart, Trends } from "./components.jsx";
+import { ActivityTable, ChartBoundary, Session, TrainingChart, Trends } from "./components.jsx";
 import { LoadForecast } from "./LoadForecast.jsx";
 import { ConditionOverview } from "./ConditionOverview.jsx";
 import { Reference } from "./Reference.jsx";
+import { SessionCheckIn } from "./SessionCheckIn.jsx";
 
-const sections = ["Daily", "Trends", "Archive", "Reference"];
+const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
+const WeekPlanner = lazy(() => import("./WeekPlanner.jsx"));
+const sections = ["Daily", "Trends", "Plan", "Archive", "Reference"];
 
 function Locked({ onUnlock, error, loading }) {
   const [key, setKey] = useState("");
@@ -133,12 +136,14 @@ export function App() {
               <ConditionOverview report={report} />
               <section className="decision"><h1>{report.coaching.headline.split(";")[0]}</h1></section>
               <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
+              <details className="check-in-panel"><summary>Session check-in</summary><SessionCheckIn key={`${report.date}:${accessKey}`} report={report} accessKey={accessKey} preview={preview} /></details>
               <LoadForecast key={`${report.date}:${report.capturedAt}`} report={report} />
               <section className="evidence-grid compact-evidence"><TrainingChart report={report} /></section>
               {!preview && <ActivityTable key={report.date} report={report} />}
             </>
           )}
-          {section === "Trends" && <Trends key={report.date} report={report} />}
+          {section === "Trends" && <><h1 className="sr-only">Trends</h1><ChartBoundary key={`insights:${report.date}:${report.capturedAt}`}><Suspense fallback={<p className="quiet" role="status">Loading…</p>}><PerformanceTrends report={report} /></Suspense></ChartBoundary><details className="volume-detail"><summary>Volume & activity history</summary><Trends key={report.date} report={report} /></details></>}
+          {section === "Plan" && <ChartBoundary key={`plan:${report.date}:${report.capturedAt}`}><Suspense fallback={<p className="quiet" role="status">Loading…</p>}><WeekPlanner report={report} /></Suspense></ChartBoundary>}
           {section === "Reference" && <Reference report={report} />}
           {section === "Archive" && (
             <>

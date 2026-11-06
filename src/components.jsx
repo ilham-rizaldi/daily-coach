@@ -4,7 +4,7 @@ import { palette } from "./MetricGraphics.jsx";
 
 const LazyChart = lazy(() => import("./TrainingChart.jsx"));
 
-class ChartBoundary extends Component {
+export class ChartBoundary extends Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() {

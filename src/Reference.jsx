@@ -4,6 +4,12 @@ import { contributionWeights, historicalLoadRate } from "./forecast.js";
 import { projectGarminRest } from "./garminForecast.js";
 
 const glossary = [
+  ["RHR Δ", "Recovery trend", "bpm", "Daily RHR minus the median of the preceding 28 calendar days. At least seven prior readings are required; the current day is excluded from its baseline."],
+  ["Sleep gap", "Recovery trend", "min", "Captured sleep duration minus captured Garmin sleep need on the same date. A negative value is a shortfall."],
+  ["Body Battery range", "Recovery trend", "0–100", "Recorded daily minimum and maximum. The capture date is partial; the range is distinct from current level or overnight charge."],
+  ["Cycling progression", "Training exposure", "h / TL / min", "Six completed trailing seven-day blocks. Cycling duration, Intervals TL and longest ride use separate scales. Any missing cycling TL makes the block total unavailable; recorded subtotals remain in Data."],
+  ["sRPE load", "Session check-in", "AU", "Actual session timer in minutes multiplied by recorded session RPE. This subjective load is separate from Intervals HRSS and Garmin exercise load."],
+  ["Leg soreness / fatigue", "Session check-in", "0–10", "Self-reported check-in at its saved timestamp. Blank means unrated; zero is a valid recorded rating."],
   ["Training readiness", "Garmin", "0–100", "Recovery-based readiness score; retain the source status and update time."],
   ["Body Battery", "Garmin", "0–100", "Recorded energy reserve. Current level, daily range and charged/drained changes are separate readings."],
   ["Overnight HRV", "Recovery", "ms", "Average heart-rate variability during sleep."],
@@ -121,6 +127,18 @@ export function Reference({ report }) {
     {!terms.length && <p className="quiet" role="status">No matching terms.</p>}
 
     <div className="reference-methods">
+      <details><summary>Recovery & progression</summary>
+        <p>Recovery charts use dated native Garmin exports, preserving missing days and values. HRV baseline limits and the seven-day HRV average are captured source values. RHR Δ uses only prior readings; sleep gap uses same-date sleep need. Load, recovery scores and performance are distinct measurements.</p>
+        <p>Cycling blocks end before the report date. Duration uses session timers, with canonical duration as a legacy fallback. Strength placement includes recorded sessions without converting strength time into cycling volume. Open Data for dates, counts, coverage and missing values.</p>
+        <dl className="reference-metadata"><div><dt>Recovery history</dt><dd>{report.wellnessHistory?.rows?.length || 0} dates</dd></div><div><dt>Captured</dt><dd>{timestamp(report.wellnessHistory?.observedAt)}</dd></div></dl>
+      </details>
+      <details><summary>7-day scenarios</summary>
+        <p>The Plan page is a user-edited scenario, starting with rest. Each day's TL is estimated from sport, duration and relative historical effort. The dated Intervals snapshot includes today's decay and recorded load; additional unrecorded work adds a weighted delta before advancing seven calendar days. CTL, ATL and raw TSB use the same model as the tomorrow simulator.</p>
+        <p>The displayed range propagates each session's load endpoints across the week. Raw TSB bounds retain each load's paired fitness/fatigue contributions. Future recovery is not forecast. The all-rest curve uses the same baseline and remaining-today assumptions.</p>
+      </details>
+      <details><summary>Session check-in</summary>
+        <p>RPE, leg soreness and fatigue are self-reported. sRPE load is duration × RPE in arbitrary units; it does not change Intervals or Garmin load. Check-ins are encrypted using the report access key before browser storage. Saved entries remain on this browser; preview entries are temporary.</p>
+      </details>
       <details><summary>Coaching analysis</summary>
         <p>{report.coaching.rationale}</p>
         <div className="findings">{report.coaching.findings.map(finding => <article key={finding.title}><h3>{finding.title}</h3><p>{finding.evidence}</p><p className="quiet">{finding.implication}</p></article>)}</div>
@@ -130,6 +148,8 @@ export function Reference({ report }) {
           <tr><th scope="row">Readiness</th><td><ColorKey items={[["Poor", "#f35858"], ["Low", "#ff9c36"], ["Moderate", "#6cc45b"], ["High", "#36a8ff"], ["Prime", "#b083ef"]]} /></td></tr>
           <tr><th scope="row">Sleep</th><td><ColorKey items={[["Deep", "#4771e8"], ["Light", "#72bdff"], ["REM", "#ba86ed"]]} /></td></tr>
           <tr><th scope="row">Garmin load</th><td><ColorKey items={[["Acute", "#36a8ff"], ["Chronic", "#ff9c36"]]} /></td></tr>
+          <tr><th scope="row">Recovery trends</th><td><ColorKey items={[["7d HRV", "#36a8ff"], ["Overnight HRV", "#8c969e"], ["HRV baseline", "#6cc45b"], ["RHR Δ", "#f35858"]]} /></td></tr>
+          <tr><th scope="row">Cycling / plan</th><td><ColorKey items={[["Hours / CTL", "#36a8ff"], ["TL / ATL", "#b083ef"], ["Longest ride / TSB", "#ff9c36"], ["Rest scenario", "#8c969e"]]} /></td></tr>
           <tr><th scope="row">Source status</th><td><ColorKey items={[["Green", "#6cc45b"], ["Orange", "#ff9c36"], ["Red", "#f35858"]]} /><small>Recorded metric category. Garmin ratio categories use the source label.</small></td></tr>
         </tbody></table></div>
       </details>
