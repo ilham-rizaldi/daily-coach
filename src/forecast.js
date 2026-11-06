@@ -48,6 +48,10 @@ export function historicalLoadRate(report, sport) {
     minimum: rates[0] ?? null, maximum: rates.at(-1) ?? null,
     unit: "Intervals load/hour", window, excludedMissing, excludedShort,
     examples: samples.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3),
+    durationRange: samples.length ? {
+      minimumMinutes: Math.min(...samples.map(sample => sample.minutes)),
+      maximumMinutes: Math.max(...samples.map(sample => sample.minutes)),
+    } : null,
     durationBasis: "Recorded session timer, including pauses and strength rest; legacy reports use their canonical session duration.",
     rangeDefinition: "25th–75th percentiles of observed same-sport load rates, not an intensity classification or confidence interval.",
     sparse: rates.length < 3,
@@ -72,13 +76,52 @@ export function contributionWeights(report, sport) {
   return { fitness: 1, fatigue: 1, source: "Equal fitness/fatigue contribution assumed; sport weights were not captured", assumed: true };
 }
 
-export function estimateSessionLoad(report, { sport, minutes } = {}) {
+export function estimateSessionLoad(report, { sport, minutes, effort } = {}) {
   const weights = contributionWeights(report, sport);
-  if (sport === "Rest") return { available: true, low: 0, mid: 0, high: 0, weights, history: null };
+  if (sport === "Rest") return {
+    available: true, low: 0, mid: 0, high: 0, weights, history: null,
+    effort: "rest", selectedRate: 0, rateRange: { low: 0, high: 0 },
+    method: "No planned activity", proxy: false, confidence: "Scenario",
+  };
   if (!finiteNonnegative(minutes) || !sport) return { available: false, low: null, mid: null, high: null, weights, history: null, error: "Enter non-negative planned minutes and a sport." };
+  if (effort !== undefined && !["easy", "moderate", "hard"].includes(effort)) {
+    return { available: false, low: null, mid: null, high: null, weights, history: null, error: "Choose easy, moderate or hard effort." };
+  }
   const history = historicalLoadRate(report, sport);
-  if (!history.available) return { available: false, low: null, mid: null, high: null, weights, history, error: "No usable same-sport load history. Enter a load estimate manually." };
-  return { available: true, low: history.low * minutes / 60, mid: history.median * minutes / 60, high: history.high * minutes / 60, weights, history };
+  if (!history.available) return { available: false, low: null, mid: null, high: null, weights, history, error: "No usable same-sport load history. Capture completed sessions with duration and load before estimating this activity." };
+
+  // Effort is a relative planning proxy from the athlete's observed load-rate
+  // distribution. It is not a conversion from RPE or a validated HR zone.
+  // Legacy callers without effort retain the median/IQR estimate.
+  const bands = {
+    easy: { low: history.minimum, mid: history.low, high: history.median },
+    moderate: { low: history.low, mid: history.median, high: history.high },
+    hard: { low: history.median, mid: history.high, high: history.maximum },
+  };
+  const rates = effort === undefined ? bands.moderate : bands[effort];
+  const hasVariation = history.minimum < history.maximum;
+  const durationExtrapolated = minutes < history.durationRange.minimumMinutes || minutes > history.durationRange.maximumMinutes;
+  return {
+    available: true,
+    low: rates.low * minutes / 60, mid: rates.mid * minutes / 60, high: rates.high * minutes / 60,
+    weights, history, effort: effort ?? "typical", selectedRate: rates.mid,
+    rateRange: { low: rates.low, high: rates.high },
+    method: effort === undefined ? "historical-median" : "historical-effort-proxy",
+    proxy: effort !== undefined, confidence: "Low", hasVariation, durationExtrapolated,
+    effortDefinition: "Easy uses the lower quartile, moderate the median and hard the upper quartile of observed same-sport load per hour. These are relative historical scenarios, not measured subjective effort or physiological zones.",
+    rangeDefinition: effort === "easy" ? "Observed minimum to median load rate."
+      : effort === "hard" ? "Observed median to maximum load rate."
+        : "Observed lower to upper quartile load rate.",
+    limitations: [
+      "Expected load is an automatic estimate for a future session, not a measured result.",
+      "Historical source load rates provide the effort proxy because matched session RPE or validated effort-zone data was not captured.",
+      "Duration scales linearly within this planning model; unfamiliar durations, interval structure, conditions and threshold errors can change actual load.",
+      "The displayed spread is a historical scenario range, not a confidence interval or a guaranteed bound.",
+      ...(!hasVariation ? ["Observed load rates have no variation, so the history cannot distinguish the selected effort levels."] : []),
+      ...(history.sparse ? ["Fewer than three usable same-sport sessions provide especially weak effort calibration."] : []),
+      ...(durationExtrapolated ? ["The planned duration is outside the observed same-sport session-duration range; this is a duration extrapolation."] : []),
+    ],
+  };
 }
 
 function state(fitness, fatigue) {

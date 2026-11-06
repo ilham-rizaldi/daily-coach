@@ -672,6 +672,13 @@ footer button {
   font-weight: 400;
 }
 .forecast-controls :disabled { opacity: .5; cursor: default; }
+.forecast-auto-load { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.forecast-auto-load > span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.forecast-auto-load output { display: block; min-height: 46px; padding: 8px 12px; border: 1px solid #596c43; border-radius: 5px; background: #20291b; color: var(--lime); font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.forecast-auto-load small { font-size: 12px; line-height: 1.5; }
+.forecast-today-toggle { display: flex; align-items: center; gap: 10px; margin: 20px 0; font-size: 14px; }
+.forecast-today-toggle input { width: 18px; height: 18px; accent-color: var(--lime); }
+.forecast-today-controls { margin: 20px 0; }
 .forecast-help { font-size: 13px; color: var(--muted); margin: 13px 0; max-width: 1100px; }
 .text-button { color: var(--lime); text-decoration: underline; text-underline-offset: 4px; padding: 5px 0; margin-left: 8px; }
 .forecast-output { margin-top: 24px; }
@@ -706,6 +713,8 @@ footer button {
   .forecast-heading h2 { font-size: 24px; }
   .forecast-controls { gap: 17px 12px; }
   .forecast-controls label { font-size: 12px; }
+  .forecast-auto-load > span { font-size: 12px; }
+  .forecast-auto-load output { font-size: 18px; padding-inline: 8px; overflow-wrap: anywhere; }
   .forecast-controls input, .forecast-controls select { padding-inline: 8px; font-size: 14px; }
   .forecast-results { grid-template-columns: 1fr; }
   .forecast-stat + .forecast-stat { border-left: 0; border-top: 1px solid #4c5543; }

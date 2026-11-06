@@ -101,3 +101,62 @@ test("range envelopes preserve lower and upper ratio order for fatigue-only cont
   assert.ok(result.range.form.low < result.range.form.high);
   assert.equal(result.range.form.low, result.high.form);
 });
+
+const effortReport = {
+  ...report,
+  activities: [10, 20, 30, 40, 50].map((load, index) => ({
+    date: `2026-04-0${index + 1}`, sport: "Ride", name: "Illustrative session",
+    timerSeconds: 3600, intervalsListLoad: load,
+  })),
+};
+
+test("activity, duration and effort automatically produce distinct load estimates", () => {
+  const easy = estimateSessionLoad(effortReport, { sport: "Ride", minutes: 60, effort: "easy" });
+  const moderate = estimateSessionLoad(effortReport, { sport: "Ride", minutes: 60, effort: "moderate" });
+  const hard = estimateSessionLoad(effortReport, { sport: "Ride", minutes: 60, effort: "hard" });
+  assert.equal(easy.mid, 20);
+  assert.equal(moderate.mid, 30);
+  assert.equal(hard.mid, 40);
+  assert.ok(easy.mid < moderate.mid && moderate.mid < hard.mid);
+  assert.deepEqual([easy.low, easy.high], [10, 30]);
+  assert.deepEqual([moderate.low, moderate.high], [20, 40]);
+  assert.deepEqual([hard.low, hard.high], [30, 50]);
+  assert.equal(hard.proxy, true);
+  assert.equal(hard.method, "historical-effort-proxy");
+  assert.equal(hard.confidence, "Low");
+  const longer = estimateSessionLoad(effortReport, { sport: "Ride", minutes: 120, effort: "hard" });
+  assert.equal(longer.mid, hard.mid * 2);
+  assert.equal(longer.durationExtrapolated, true);
+  assert.equal(hard.durationExtrapolated, false);
+});
+
+test("automatic effort estimates retain activity specificity and need no entered load", () => {
+  const mixed = { ...effortReport, activities: [
+    ...effortReport.activities,
+    { date: "2026-04-01", sport: "Run", timerSeconds: 3600, intervalsListLoad: 65 },
+  ] };
+  assert.equal(estimateSessionLoad(mixed, { sport: "Ride", minutes: 30, effort: "hard" }).mid, 20);
+  assert.equal(estimateSessionLoad(mixed, { sport: "Run", minutes: 30, effort: "hard" }).mid, 32.5);
+  assert.equal(estimateSessionLoad(mixed, { sport: "Rest", minutes: 0, effort: "hard" }).mid, 0);
+  const forecast = estimateSessionLoad(mixed, { sport: "Ride", minutes: 30, effort: "hard" });
+  assert.equal(projectTomorrow(mixed, { load: forecast.mid, loadLow: forecast.low, loadHigh: forecast.high }).available, true);
+});
+
+test("unsupported effort or missing data remains unavailable without asking for load points", () => {
+  for (const effort of [null, "", "maximum", 7]) {
+    assert.equal(estimateSessionLoad(effortReport, { sport: "Ride", minutes: 30, effort }).available, false);
+  }
+  const unavailable = estimateSessionLoad(report, { sport: "Ride", minutes: 30, effort: "hard" });
+  assert.equal(unavailable.available, false);
+  assert.ok(!unavailable.error.includes("manually"));
+});
+
+test("sparse or constant historical rates do not fabricate an effort difference", () => {
+  const constant = { ...report, activities: [{ date: "2026-04-01", sport: "Ride", timerSeconds: 3600, intervalsListLoad: 25 }] };
+  const easy = estimateSessionLoad(constant, { sport: "Ride", minutes: 60, effort: "easy" });
+  const hard = estimateSessionLoad(constant, { sport: "Ride", minutes: 60, effort: "hard" });
+  assert.equal(easy.mid, hard.mid);
+  assert.equal(hard.hasVariation, false);
+  assert.equal(hard.history.sparse, true);
+  assert.ok(hard.limitations.some(value => value.includes("cannot distinguish")));
+});
