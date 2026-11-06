@@ -2,6 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { contributionWeights, estimateSessionLoad, historicalLoadRate, projectTomorrow } from "../src/forecast.js";
 
+test("whole-minute plans tolerate the source timer's sub-minute precision", () => {
+  const r = { date: "2026-04-10", activities: [{ date: "2026-04-09", sport: "Ride", timerSeconds: 1810, intervalsListLoad: 20 }] };
+  assert.equal(estimateSessionLoad(r, { sport: "Ride", minutes: 30, effort: "easy" }).durationExtrapolated, false);
+  assert.equal(estimateSessionLoad(r, { sport: "Ride", minutes: 20, effort: "easy" }).durationExtrapolated, true);
+});
+
 const report = {
   date: "2026-04-10", intervals: { date: "2026-04-10", fitness: 35, fatigue: 42 },
   // Deliberately incompatible scales ensure Garmin never becomes a fallback.

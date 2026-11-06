@@ -100,7 +100,10 @@ export function estimateSessionLoad(report, { sport, minutes, effort } = {}) {
   };
   const rates = effort === undefined ? bands.moderate : bands[effort];
   const hasVariation = history.minimum < history.maximum;
-  const durationExtrapolated = minutes < history.durationRange.minimumMinutes || minutes > history.durationRange.maximumMinutes;
+  // Plans use whole minutes; native timers include seconds. Do not flag a
+  // 30-minute plan as extrapolated from a recorded 30:10 session.
+  const durationExtrapolated = minutes < Math.floor(history.durationRange.minimumMinutes)
+    || minutes > Math.ceil(history.durationRange.maximumMinutes);
   return {
     available: true,
     low: rates.low * minutes / 60, mid: rates.mid * minutes / 60, high: rates.high * minutes / 60,
