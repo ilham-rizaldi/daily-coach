@@ -7,8 +7,11 @@
   font-synthesis: none;
   --muted: #c7c9cd;
   --rule: #676b70;
-  --lime: #c0f77b;
-  --amber: #ffc16b;
+  --lime: #59b8ff;
+  --amber: #ff9c36;
+  --blue: #36a8ff;
+  --green: #6cc45b;
+  --purple: #b083ef;
   color-scheme: dark;
 }
 .condition-overview { margin: 8px 0 28px; padding: 22px; border: 1px solid #454a4b; border-radius: 8px; background: #1e2122; }
@@ -1323,4 +1326,234 @@ button:disabled {
     white-space: normal;
     overflow-wrap: anywhere;
   }
+}
+
+/* Compact training workspace */
+.report-meta { padding: 16px 0 12px; gap: 16px; font-size: 13px; }
+.report-meta > span { padding-left: 16px; }
+.report-switcher button { min-height: 34px; padding: 7px 10px; }
+.body-overview { padding: 16px; margin: 0 0 18px; background: #1d2024; border-color: #3b4249; }
+.body-overview .condition-heading { margin-bottom: 12px; flex-direction: row; align-items: center; }
+.body-overview .condition-heading h2 { font-size: 18px; letter-spacing: -.2px; }
+.metric-provider { color: #99a4ae; font-size: 11px; }
+.body-primary { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 9px; margin: 0; }
+.body-tile { border: 1px solid #39414a; border-radius: 5px; padding: 12px; min-width: 0; background: #242930; }
+.body-tile dt { color: #b7c0c8; font-size: 11px; }
+.body-tile dd { margin: 7px 0 0; }
+.body-tile dd > strong { font-size: 31px; font-weight: 600; line-height: 1.1; letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
+.body-tile dd > span { font-size: 11px; color: #aab5bf; margin-left: 4px; }
+.body-tile-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 7px; min-height: 13px; margin-top: 8px; color: #aab5bf; font-size: 10px; }
+.score-meter { height: 6px; position: relative; background: #3b434b; border-radius: 3px; margin: 13px 0 0; }
+.score-fill { display: block; height: 100%; border-radius: inherit; }
+.score-segments { display: flex; height: 100%; gap: 2px; overflow: hidden; border-radius: inherit; }
+.score-marker { position: absolute; width: 2px; height: 12px; top: -3px; background: #f7fbff; box-shadow: 0 0 0 1px #14191e; transform: translateX(-1px); }
+.baseline-meter { margin-top: 13px; }
+.baseline-meter > div { position: relative; height: 6px; border-radius: 3px; background: #3c444c; }
+.baseline-meter > div > span { height: 100%; position: absolute; background: #367246; border-radius: 2px; }
+.baseline-meter i { height: 12px; width: 4px; border: 1px solid #e9edf2; top: -3px; position: absolute; border-radius: 2px; }
+.baseline-meter small { display: flex; justify-content: space-between; color: #aab4bd; margin-top: 5px; font-size: 9px; }
+.baseline-meter b { font-weight: 500; color: #dce3e9; }
+.sleep-stage-bar, .sport-mix-bar { display: flex; width: 100%; border-radius: 3px; overflow: hidden; gap: 2px; height: 8px; margin-top: 13px; }
+.sleep-stage-key { display: flex; flex-wrap: wrap; gap: 3px 7px; margin-top: 5px; color: #bcc5ce; font-size: 9px; }
+.sleep-stage-key > span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.sleep-stage-key i, .sport-mix h3 i { display: inline-block; width: 5px; height: 5px; border-radius: 50%; }
+.sleep-stage-key b { font-weight: 500; color: #e4e9ee; }
+.rhr-context { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; color: #aab4bd; font-size: 10px; }
+.rhr-context b { color: #e4e9ed; font-weight: 500; }
+.rhr-context small { font-size: 9px; }
+.recovery-tags { margin-top: 12px; font-size: 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; color: #aab4bd; }
+.recovery-tags b { font-weight: 500; color: #dce2e8; }
+.body-secondary { display: grid; grid-template-columns: 1.15fr 1fr 1.1fr .8fr; gap: 16px; padding-top: 16px; }
+.body-secondary > section { min-width: 0; }
+.body-secondary > section + section { border-left: 1px solid #3b4249; padding-left: 16px; }
+.body-secondary h3 { font-size: 12px; margin: 0 0 10px; display: flex; justify-content: space-between; gap: 7px; }
+.status-dot { font-size: 10px; font-weight: 500; }
+.status-dot:not(:empty)::before { content: ''; display: inline-block; width: 5px; height: 5px; background: currentColor; border-radius: 50%; margin-right: 5px; }
+.body-stat-row { display: flex; gap: 12px; justify-content: space-between; margin: 0; }
+.body-stat-row > div { min-width: 0; flex: 1; }
+.body-stat-row dt { font-size: 10px; color: #aab5bf; }
+.body-stat-row dd { margin: 5px 0 0; font-size: 25px; line-height: 1.15; font-weight: 600; font-variant-numeric: tabular-nums; }
+.body-stat-row small { display: block; font-size: 9px; font-weight: 400; color: #aab5bf; margin-top: 3px; }
+.body-stat-row dd > span { display: block; font-size: 10px; font-weight: 400; color: #b5bec7; margin-top: 4px; }
+.load-history { margin-top: 8px; }
+.load-history svg { display: block; width: 100%; height: 40px; }
+.load-history > div { display: flex; justify-content: space-between; font-size: 9px; color: #9aa6b0; }
+.adaptation-status { display: flex; flex-direction: column; gap: 5px; color: #b7c0c9; font-size: 10px; margin-top: 12px; }
+.decision { padding: 6px 0 0; }
+.decision h1, .page-title h1 { font-size: 28px; line-height: 1.2; letter-spacing: -.7px; }
+.page-title { padding: 22px 0; }
+h2 { font-size: 20px; }
+.session-section { padding: 14px 0 18px; }
+.session-section h2 { font-size: 14px; color: #aeb8c2; }
+.session-section h2 > .quiet { font-size: 12px; margin-left: 6px; }
+.session-summary { gap: 17px; margin: 12px 0; }
+.session-type { background: #1c3e54; color: #91d0ff; padding: 8px 11px; font-size: 18px; }
+.session-duration { font-size: 20px; padding-left: 17px; }
+.session-summary > p { font-size: 13px; padding-left: 17px; }
+.workout-timeline { display: flex; gap: 4px; max-width: 850px; overflow-x: auto; }
+.workout-timeline > div { min-width: 65px; display: flex; justify-content: space-between; gap: 6px; border-bottom: 5px solid var(--blue); background: #252b32; padding: 9px 10px; font-size: 11px; color: #c4cdd5; border-radius: 3px; }
+.workout-timeline strong { font-weight: 500; }
+.session-detail-toggle { font-size: 12px; margin: 7px 0 0; padding: 5px 0; }
+.coaching-detail { padding: 12px 0; font-size: 13px; }
+.coaching-detail h3 { font-size: 15px; }
+.session-steps { padding-left: 20px; }
+.session-steps li { padding: 7px 0; }
+.session-steps li p { margin-bottom: 4px; }
+.session-analysis summary { color: var(--lime); padding: 10px 0; }
+.findings { padding: 12px 0; gap: 15px; }
+.findings p { font-size: 13px; }
+.compact-evidence { grid-template-columns: minmax(0,1fr); padding: 22px 0; }
+.chart-heading h2 { font-size: 18px; }
+.chart-heading p { font-size: 11px; }
+.chart-canvas { height: 210px; margin-top: 10px; }
+.chart-data { font-size: 11px; margin: 0; }
+.bar-key::before { background: var(--blue); }
+.line-key::before { background: #c4cbd1; }
+.legend { display: flex; gap: 15px; font-size: 11px; }
+.garmin-rest, .load-forecast { padding: 18px 0; }
+.forecast-heading { align-items: center; }
+.forecast-heading h2 { font-size: 20px; }
+.forecast-heading h2 .quiet { font-size: 12px; margin-left: 7px; font-weight: 400; }
+.forecast-heading .eyebrow { font-size: 10px; margin-bottom: 4px; }
+.forecast-heading .quiet { font-size: 12px; }
+.forecast-tag { font-size: 10px; padding: 5px 8px; color: #aad5f7; border-color: #46677f; }
+.forecast-calibration { display: flex; flex-wrap: wrap; gap: 5px 10px; font-size: 10px; color: #aab5bf; }
+.garmin-rest-summary { display: grid; grid-template-columns: .8fr 1.2fr 1fr; align-items: center; gap: 20px; padding: 12px 0 0; }
+.garmin-ratio-shift > div { display: flex; align-items: center; gap: 12px; }
+.garmin-ratio-shift strong { font-size: 29px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.garmin-ratio-shift > strong { display: block; }
+.garmin-ratio-shift small, .forecast-stat-label { color: #aab5bf; font-size: 10px; }
+.garmin-ratio-shift > small { display: block; margin-top: 4px; }
+.forecast-load-deltas { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 0; }
+.forecast-load-deltas dt { color: #aab5bf; font-size: 11px; }
+.forecast-load-deltas dd { margin: 5px 0 0; font-size: 17px; font-variant-numeric: tabular-nums; }
+.forecast-load-deltas dd span { color: #82909c; font-size: 13px; }
+.forecast-load-deltas dd strong { font-weight: 600; }
+.forecast-mini-chart { display: block; width: 100%; max-width: 360px; }
+.forecast-chart-label, .forecast-chart-value { fill: #d8e0e7; font-family: inherit; font-size: 11px; }
+.forecast-controls { gap: 12px; margin-top: 15px; }
+.forecast-controls label, .forecast-auto-load > span { font-size: 11px; gap: 6px; }
+.forecast-controls input, .forecast-controls select { min-height: 39px; padding: 8px 10px; font-size: 13px; }
+.forecast-auto-load { gap: 6px; }
+.forecast-auto-load output { min-height: 39px; padding: 6px 10px; border-color: #42657f; background: #1e2b35; color: #77c6ff; font-size: 20px; }
+.forecast-auto-load small { font-size: 10px; }
+.forecast-output { margin-top: 12px; }
+.forecast-results-compact { grid-template-columns: repeat(2,minmax(0,1fr)); background: #20262d; border-color: #424e5b; border-radius: 5px; }
+.forecast-stat { padding: 14px 18px; }
+.forecast-stat + .forecast-stat { border-color: #424e5b; }
+.forecast-stat > span, .forecast-state-values span { font-size: 11px; color: #b7c0c9; }
+.forecast-stat strong { font-size: 29px; color: #77c6ff; margin: 3px 0; }
+.forecast-stat small { font-size: 10px; }
+.forecast-stat .forecast-mini-chart { max-width: none; max-height: 92px; margin-top: 8px; }
+.forecast-state-values { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 15px; }
+.forecast-state-values strong { display: block; }
+.forecast-compact-status, .forecast-config-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; color: #aab5bf; font-size: 11px; margin: 10px 0 0; }
+.forecast-compact-status > span:first-child { color: var(--amber); }
+.forecast-details { padding: 11px 0; }
+.forecast-details summary { font-size: 12px; }
+.forecast-details .forecast-controls { margin-block: 12px; }
+.forecast-today-toggle { font-size: 12px; margin: 12px 0; }
+.forecast-use { font-size: 11px; min-height: 32px; padding: 5px 9px; }
+.activity-section { padding: 20px 0 8px; }
+.activity-section h2 { font-size: 20px; }
+.activity-controls { margin: 12px 0; gap: 10px; }
+.activity-search { font-size: 12px; }
+.activity-search input, .filter select { min-height: 36px; font-size: 12px; padding: 7px 9px; }
+.filter, .check-filter, .results-count { font-size: 11px; }
+td, th { padding-block: 10px; font-size: 12px; }
+th { font-size: 10px; }
+td small { font-size: 10px; }
+.week-comparison { padding: 16px 0 20px; }
+.week-comparison h2 { font-size: 18px; }
+.period-dates { font-size: 11px; margin: 6px 0 14px; }
+.comparison-grid { gap: 20px; }
+.comparison-grid > div { padding: 0 18px; }
+.comparison-grid > div:first-child { padding-left: 0; }
+.comparison-grid > div > span { font-size: 11px; }
+.comparison-grid strong { font-size: 27px; }
+.comparison-grid small { font-size: 11px; }
+.period-bars { display: grid; gap: 5px; margin-top: 10px; width: 100%; }
+.period-bars > div { position: relative; height: 8px; padding-left: 55px; background: #2f353c; border-radius: 2px; margin-left: 55px; }
+.period-bars span { position: absolute; left: -55px; top: -3px; font-size: 9px; color: #aab5bf; }
+.period-bars i { display: block; position: absolute; left: 0; top: 0; height: 100%; border-radius: 2px; max-width: 100%; }
+.period-bars b { position: absolute; right: 0; top: -3px; font-size: 9px; font-weight: 500; color: #e7edf2; background: #20262d; padding: 0 3px; line-height: 13px; }
+.sport-mix-bar { margin: 15px 0 0; height: 13px; }
+.sport-mix { gap: 20px; padding: 14px 0 24px; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); }
+.sport-mix h3 { font-size: 12px; }
+.sport-mix h3 i { width: 7px; height: 7px; margin-right: 7px; }
+.sport-mix strong { font-size: 25px; margin-top: 5px; }
+.sport-mix p { font-size: 11px; margin-bottom: 0; }
+.mix-title { font-size: 18px; }
+.archive-list > button { grid-template-columns: 190px 1fr 70px; padding: 17px 0; gap: 20px; }
+.archive-list > button strong { font-size: 18px; }
+.archive-list time, .archive-list > button span { font-size: 12px; }
+.archive-actions { margin: 18px 0; }
+.archive-actions button { font-size: 12px; padding: 9px 12px; }
+.reference-search { display: flex; align-items: center; gap: 15px; font-size: 12px; margin: 0 0 15px; }
+.reference-search input { min-height: 38px; padding: 8px 12px; width: min(400px,100%); border: 1px solid #58616b; border-radius: 4px; background: #232930; color: #edf3f8; }
+.reference-table th { text-transform: none; letter-spacing: 0; color: #e1e8ee; min-width: 125px; font-size: 12px; }
+.reference-table th small { display: block; font-weight: 400; color: #99a6b2; font-size: 10px; }
+.reference-table td, .source-table td, .source-table th { white-space: normal; }
+.reference-table td:nth-child(2) { min-width: 100px; }
+.reference-table td:last-child { width: 65%; font-size: 12px; }
+.reference-methods { margin-top: 20px; }
+.reference-methods > details { border-top: 1px solid #414b55; padding: 13px 0; }
+.reference-methods summary { color: var(--lime); font-size: 13px; }
+.reference-methods p { font-size: 12px; max-width: 1040px; }
+.reference-metadata { display: flex; gap: 20px 40px; flex-wrap: wrap; font-size: 12px; }
+.reference-metadata dt { color: #99a6b2; font-size: 10px; }
+.reference-metadata dd { margin: 4px 0 0; }
+.reference-formulas code { color: #b8d9f1; font-size: 12px; }
+.source-table th { text-transform: none; letter-spacing: 0; color: #d5dee7; }
+footer { margin-top: 6px; padding: 16px 0 24px; font-size: 11px; }
+footer button { font-size: 11px; }
+.primary { background: #65bfff; color: #0c2131; }
+.primary:hover { background: #91d0ff; }
+@media (max-width: 1180px) {
+  .body-primary { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .body-secondary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .body-secondary > section:nth-child(3) { border-left: 0; padding-left: 0; }
+  .garmin-rest-summary { grid-template-columns: 1fr 1.3fr; gap: 12px 25px; }
+  .forecast-load-deltas { grid-column: 1/-1; max-width: 400px; }
+}
+@media (max-width: 700px) {
+  .body-overview { padding: 12px; }
+  .body-primary { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; }
+  .body-tile { padding: 10px; }
+  .body-tile dd > strong { font-size: 28px; }
+  .body-secondary { gap: 16px 12px; }
+  .body-secondary > section + section { padding-left: 12px; }
+  .body-secondary > section:nth-child(3) { padding-left: 0; }
+  .body-stat-row { gap: 6px; }
+  .body-stat-row dd { font-size: 21px; }
+  .body-stat-row dt, .body-stat-row small { font-size: 9px; }
+  .body-secondary h3 { font-size: 11px; }
+  .garmin-rest-summary { grid-template-columns: 1fr; gap: 10px; }
+  .garmin-rest-summary .forecast-mini-chart { max-width: none; }
+  .forecast-load-deltas { grid-column: auto; max-width: none; }
+  .forecast-heading { align-items: flex-start; gap: 8px; }
+  .forecast-results-compact { grid-template-columns: 1fr; }
+  .forecast-stat + .forecast-stat { border-left: 0; border-top: 1px solid #424e5b; }
+  .forecast-stat { padding: 13px; }
+  .session-summary { gap: 10px; }
+  .session-type { font-size: 16px; }
+  .session-duration { font-size: 18px; }
+  .session-summary > p { font-size: 12px; padding: 0; }
+  .decision h1, .page-title h1 { font-size: 25px; }
+  .comparison-grid { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+  .comparison-grid > div { padding: 0 8px; border: 0; border-left: 1px solid #41484f; }
+  .comparison-grid > div:first-child { border-left: 0; }
+  .comparison-grid strong { font-size: 22px; }
+  .comparison-grid > div > span, .comparison-grid small { font-size: 10px; }
+  .period-bars > div { margin-left: 0; padding-left: 0; height: 6px; }
+  .period-bars span { position: static; display: none; }
+  .archive-list > button { grid-template-columns: 1fr 60px; gap: 8px; }
+  .archive-list > button time { grid-column: 1/-1; }
+  .archive-list > button strong { font-size: 16px; }
+  .legend { font-size: 10px; gap: 10px; }
+  .legend span { gap: 5px; }
+  .reference-search { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .reference-table { min-width: 570px; }
+  .reference-metadata { gap: 15px; }
+  .workout-timeline > div { padding: 8px; }
 }

@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { formatDate, jakartaDate } from "./report.js";
 import { parseAccessInput, unlockReports } from "./archive.js";
 import { demoReport } from "./demo.js";
-import { ActivityTable, Session, Sources, TrainingChart, Trends } from "./components.jsx";
+import { ActivityTable, Session, TrainingChart, Trends } from "./components.jsx";
 import { LoadForecast } from "./LoadForecast.jsx";
 import { ConditionOverview } from "./ConditionOverview.jsx";
+import { Reference } from "./Reference.jsx";
 
-const sections = ["Daily", "Trends", "Archive", "Sources"];
+const sections = ["Daily", "Trends", "Archive", "Reference"];
 
 function Locked({ onUnlock, error, loading }) {
   const [key, setKey] = useState("");
@@ -127,35 +128,31 @@ export function App() {
           {copyState && <p className="notice" role="status">{copyState}</p>}
           <div className="report-meta">
             <time dateTime={report.date}>{formatDate(report.date, { weekday: "long", year: "numeric", month: "long" })}</time>
-            <span>{preview ? "Design preview / illustrative data" : `${report.date === today ? "Today so far" : "Historical report"} · Captured ${new Date(report.capturedAt).toLocaleString("en-GB", { timeZone: "Asia/Jakarta", dateStyle: "medium", timeStyle: "short" })} WIB`}</span>
+            <span>{preview ? "Demo" : `${report.date === today ? "Snapshot" : "Historical"} · ${new Date(report.capturedAt).toLocaleString("en-GB", { timeZone: "Asia/Jakarta", timeStyle: "short" })} WIB`}</span>
             {reports.length > 1 && <nav className="report-switcher" aria-label="Report dates"><button disabled={reportIndex >= reports.length - 1} onClick={() => selectReport(reportIndex + 1)}>Older report</button><span>{reportIndex + 1} of {reports.length}</span><button disabled={reportIndex === 0} onClick={() => selectReport(reportIndex - 1)}>Newer report</button></nav>}
           </div>
           {section === "Daily" && (
             <>
               <ConditionOverview report={report} />
-              <section className="decision"><h1>{report.coaching.headline}</h1><p>{report.coaching.rationale}</p></section>
+              <section className="decision"><h1>{report.coaching.headline.split(";")[0]}</h1></section>
               <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
               <LoadForecast key={`${report.date}:${report.capturedAt}`} report={report} />
-              <section className="evidence-grid">
-                <TrainingChart report={report} />
-                <aside className="coach-note"><h2>Coach note</h2><span className="confidence">{report.coaching.confidence}</span><p>{report.coaching.note}</p></aside>
-              </section>
+              <section className="evidence-grid compact-evidence"><TrainingChart report={report} /></section>
               {!preview && <ActivityTable key={report.date} report={report} />}
             </>
           )}
           {section === "Trends" && <Trends key={report.date} report={report} />}
-          {section === "Sources" && <Sources report={report} />}
+          {section === "Reference" && <Reference report={report} />}
           {section === "Archive" && (
             <>
-              <div className="page-title"><div><p className="eyebrow">Your coaching history</p><h1>Reports opened on this device.</h1><p className="quiet">Open a coaching email’s private link to add its report here.</p></div></div>
-              <div className="archive-list">{reports.map((item, index) => <button key={item.date} onClick={() => selectReport(index)} aria-current={index === reportIndex ? "true" : undefined}><time>{formatDate(item.date, { weekday: "long", year: "numeric" })}</time><strong>{item.coaching.headline}</strong><span>{index === reportIndex ? "Current report" : "Open report"}</span></button>)}</div>
+              <div className="page-title"><h1>Archive</h1></div>
+              <div className="archive-list">{reports.map((item, index) => <button key={item.date} onClick={() => selectReport(index)} aria-current={index === reportIndex ? "true" : undefined}><time>{formatDate(item.date, { weekday: "short", year: "numeric" })}</time><strong>{item.coaching.headline.split(";")[0]}</strong><span>{index === reportIndex ? "Selected" : "Open"}</span></button>)}</div>
               {!preview && <div className="archive-actions"><button onClick={copyLink}>Copy this report’s private link</button><button onClick={lockArchive}>Lock archive</button></div>}
             </>
           )}
           <footer>
-            <p><strong>Sources</strong> Garmin Connect, Intervals.icu, Strava</p>
-            <p>{preview ? "Sample sync · Thu 5 Nov 2026, 09.24" : `Report captured ${new Date(report.capturedAt).toLocaleString("en-GB", { timeZone: "Asia/Jakarta", dateStyle: "medium", timeStyle: "short" })} WIB`}</p>
-            <button onClick={() => changeSection("Sources")}>Sources and definitions</button>
+            <p>Garmin · Intervals.icu · Strava</p>
+            <button onClick={() => changeSection("Reference")}>Reference</button>
           </footer>
         </main>
       )}

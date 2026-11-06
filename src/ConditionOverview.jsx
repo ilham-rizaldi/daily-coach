@@ -1,60 +1,43 @@
+import { decimal, duration } from "./report.js";
 import { conditionOverview } from "./condition.js";
+import { BaselineMeter, LoadHistory, palette, ScoreMeter, SleepStages, statusColor } from "./MetricGraphics.jsx";
 
-function Metric({ metric, compact = false }) {
-  return <div className={`condition-metric${compact ? " compact" : ""}`} data-metric={metric.id}>
-    <dt>{metric.label}</dt>
-    <dd className={metric.attention ? "amber" : undefined}>
-      <strong className={metric.value === "Unavailable" ? "condition-unavailable" : undefined}>{metric.value}</strong>
-      {metric.unit && <span className="condition-unit">{metric.unit}</span>}
-      {!compact && <p className="condition-context">{metric.context}</p>}
-      {compact && metric.status && <p className="condition-context">{metric.status}</p>}
-      {metric.stamp && <p className="condition-stamp">{metric.stamp}</p>}
-    </dd>
+const num = value => Number.isFinite(value) ? decimal(value) : "—";
+const time = value => Number.isFinite(value) ? duration(value * 60).replace(" 0m", "") : "—";
+
+function Tile({ id, label, value, unit, color, status, children, detail, stamp }) {
+  return <div className="body-tile" data-metric={id} title={stamp}>
+    <dt>{label}</dt><dd><strong style={{color}}>{value}</strong>{unit && <span>{unit}</span>}
+    {children}<div className="body-tile-meta"><span style={{color}}>{status}</span>{detail && <span>{detail}</span>}</div></dd>
   </div>;
 }
 
-function Rows({ rows }) {
-  if (!rows.length) return <p className="condition-empty">Not recorded in this report.</p>;
-  return <dl className="condition-rows">{rows.map(row => <div key={row.label}>
-    <dt>{row.label}</dt><dd>{row.value}{row.context && <small>{row.context}</small>}</dd>
-  </div>)}</dl>;
+function Stat({ label, value, unit, detail, color }) {
+  return <div><dt>{label}</dt><dd style={{color}}>{value}{unit && <small>{unit}</small>}{detail && <span>{detail}</span>}</dd></div>;
 }
 
 export function ConditionOverview({ report }) {
+  const w = report.wellness || {}, intervals = report.intervals || {};
   const data = conditionOverview(report);
-  return <section className="condition-overview" aria-labelledby="condition-title">
-    <div className="condition-heading">
-      <div><p className="eyebrow">Body condition</p><h2 id="condition-title">Your body at a glance</h2></div>
-      <span className="condition-snapshot">{report.preview ? "Illustrative snapshot" : "Recorded in this report"}</span>
-    </div>
-    <dl className="condition-primary">{data.primary.map(metric => <Metric key={metric.id} metric={metric} />)}</dl>
-    <div className="condition-panels">
-      <section className="condition-panel" aria-labelledby="condition-overnight">
-        <div className="condition-panel-heading"><h3 id="condition-overnight">Sleep & overnight vitals</h3><span>Garmin</span></div>
-        <Rows rows={data.overnight} />
-        <p className="condition-stamp">{data.overnightStamp}</p>
-        {data.overnight.some(row => row.label === "Oxygen saturation") && <p className="condition-footnote">Oxygen and respiration are recorded watch readings.</p>}
+  const stamp = id => data.primary.find(item=>item.id===id)?.stamp;
+  const hrvLow = w.hrvBaselineLowMs ?? w.hrvBaselineMs?.[0], hrvHigh = w.hrvBaselineHighMs ?? w.hrvBaselineMs?.[1];
+  return <section className="condition-overview body-overview" aria-labelledby="condition-title">
+    <div className="condition-heading"><h2 id="condition-title">Body metrics</h2><span className="metric-provider">Garmin{report.preview ? " · Demo" : ""}</span></div>
+    <dl className="body-primary">
+      <Tile id="readiness" label="Readiness" value={num(w.readiness)} unit="/100" color={statusColor(w.readinessStatus,"readiness")} status={w.readinessStatus} detail={w.readinessUpdatedAtLocal} stamp={stamp("readiness")}><ScoreMeter label="Readiness" value={w.readiness} readiness /></Tile>
+      <Tile id="battery" label="Body Battery" value={num(w.bodyBattery)} unit="/100" color={palette.blue} detail={Number.isFinite(w.bodyBatteryCharged) && Number.isFinite(w.bodyBatteryDrained) ? `↑${w.bodyBatteryCharged} ↓${w.bodyBatteryDrained}` : null} stamp={stamp("battery")}><ScoreMeter label="Body Battery" value={w.bodyBattery} /></Tile>
+      <Tile id="hrv" label="HRV · overnight" value={num(w.rawHrvMs)} unit="ms" color={statusColor(w.hrvStatus)} status={w.hrvStatus} stamp={stamp("hrv")}><BaselineMeter low={hrvLow} high={hrvHigh} value={w.hrv7dMs} status={w.hrvStatus} /></Tile>
+      <Tile id="resting-hr" label="RHR" value={num(w.restingHr)} unit="bpm" color={palette.red} detail={Number.isFinite(w.restingHr7d) ? `7d ${w.restingHr7d}` : null} stamp={stamp("resting-hr")}><div className="rhr-context"><span>Overnight HR</span><b>{num(w.averageOvernightHr)} <small>bpm</small></b></div></Tile>
+      <Tile id="sleep" label="Sleep" value={time(w.sleepMinutes)} color={palette.light} status={Number.isFinite(w.sleepScore) ? `Score ${w.sleepScore}` : null} detail={w.bedTimeLocal && w.wakeTimeLocal ? `${w.bedTimeLocal}–${w.wakeTimeLocal}` : null} stamp={stamp("sleep")}><SleepStages wellness={w} /></Tile>
+      <Tile id="recovery" label="Recovery" value={time(w.recoveryTimeMinutes)} color={statusColor(w.recoveryTimeStatus)} status={w.recoveryTimeStatus} detail={w.readinessUpdatedAtLocal ? `@ ${w.readinessUpdatedAtLocal}` : null} stamp={stamp("recovery")}><div className="recovery-tags">{w.recentStressStatus && <span>Stress <b>{w.recentStressStatus}</b></span>}{w.recentSleepScoresStatus && <span>Sleep <b>{w.recentSleepScoresStatus}</b></span>}</div></Tile>
+    </dl>
+    <div className="body-secondary">
+      <section className="body-load-panel" aria-labelledby="body-garmin-load"><h3 id="body-garmin-load">Garmin load <span className="status-dot" style={{color:statusColor(w.garminLoadRatioStatus)}}>{w.garminLoadRatioStatus}</span></h3>
+        <dl className="body-stat-row"><Stat label="Acute" value={num(w.garminAcuteLoad)} color={palette.blue} /><Stat label="Chronic" value={num(w.garminChronicLoad)} color={palette.orange} /><Stat label="Ratio" value={num(w.garminLoadRatio)} color={statusColor(w.garminLoadRatioStatus)} /></dl><LoadHistory rows={report.garminLoadHistory?.rows} />
       </section>
-      <section className="condition-panel condition-load" aria-labelledby="condition-load">
-        <div className="condition-panel-heading"><h3 id="condition-load">Training load</h3><span>Separate models</span></div>
-        <h4>Garmin</h4>
-        <dl className="condition-load-values">{data.garminLoad.map(metric => <Metric key={metric.id} metric={metric} compact />)}</dl>
-        <p className="condition-stamp">Acute: {data.garminLoadStamp}</p>
-        <p className="condition-footnote">{data.garminLoadContext}</p>
-        <h4>Intervals.icu</h4>
-        <dl className="condition-load-values">{data.intervals.map(metric => <Metric key={metric.id} metric={metric} compact />)}</dl>
-        <p className="condition-stamp">{data.intervalsStamp}</p>
-      </section>
-      <section className="condition-panel" aria-labelledby="condition-fitness">
-        <div className="condition-panel-heading"><h3 id="condition-fitness">Fitness & adaptation</h3><span>Garmin</span></div>
-        <Rows rows={data.fitness} />
-        <p className="condition-stamp">Training status: {data.fitnessStamp}</p>
-        <p className="condition-footnote">VO₂ max and heat acclimation measurement dates are unrecorded.</p>
-      </section>
-    </div>
-    <div className="condition-bottom">
-      <p>Garmin recovery readings above. Recovery time is a captured snapshot, not a live countdown.</p>
-      {data.more.length > 0 && <details><summary>More recorded detail</summary><Rows rows={data.more} /></details>}
+      <section aria-labelledby="body-intervals"><h3 id="body-intervals">Intervals.icu</h3><dl className="body-stat-row"><Stat label="CTL" value={num(intervals.fitness)} color={palette.blue} /><Stat label="ATL" value={num(intervals.fatigue)} color={palette.purple} /><Stat label="Form" value={Number.isFinite(intervals.form) ? `${intervals.form>0?"+":""}${decimal(intervals.form)}` : "—"} color={palette.orange} /></dl></section>
+      <section aria-labelledby="body-vitals"><h3 id="body-vitals">Vitals</h3><dl className="body-stat-row"><Stat label="SpO₂" value={num(w.averageSpo2)} unit="%" detail={Number.isFinite(w.lowestSpo2)?`Min ${w.lowestSpo2}%`:null} color={palette.blue} /><Stat label="RR" value={num(w.averageRespiration)} unit="br/min" detail={Number.isFinite(w.minimumRespiration)?`Min ${w.minimumRespiration}`:null} /><Stat label="Awake" value={num(w.awakeMinutes)} unit="min" detail={Number.isFinite(w.restlessMoments)?`${w.restlessMoments} restless`:null} /></dl></section>
+      <section aria-labelledby="body-adaptation"><h3 id="body-adaptation">Adaptation · Garmin</h3><dl className="body-stat-row"><Stat label="VO₂ max" value={num(w.vo2Max)} detail={w.vo2MaxCategory} color={palette.blue} /><Stat label="Heat" value={num(w.heatAcclimationPercent)} unit="%" detail={w.heatAcclimationTrend} color={palette.orange} /></dl><ScoreMeter label="Heat acclimation" value={w.heatAcclimationPercent} color={palette.orange} /><div className="adaptation-status">{w.trainingStatus && <span style={{color:statusColor(w.trainingStatus)}}>{w.trainingStatus}</span>}{w.loadFocus && <span>{w.loadFocus}</span>}</div></section>
     </div>
   </section>;
 }

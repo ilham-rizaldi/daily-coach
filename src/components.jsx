@@ -1,5 +1,6 @@
 import { Component, lazy, Suspense, useState } from "react";
 import { compareWeeks, coversWindow, decimal, duration, filterActivities, formatDate, jakartaDate, shiftDate, summarize } from "./report.js";
+import { palette } from "./MetricGraphics.jsx";
 
 const LazyChart = lazy(() => import("./TrainingChart.jsx"));
 
@@ -7,7 +8,7 @@ class ChartBoundary extends Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() {
-    return this.state.failed ? <div className="chart-loading" role="status"><p>The chart could not load. Your session plan and activity data are still available.</p><button className="text-button" onClick={() => location.reload()}>Reload report</button></div> : this.props.children;
+    return this.state.failed ? <div className="chart-loading" role="status"><p>Chart unavailable</p><button className="text-button" onClick={() => location.reload()}>Reload</button></div> : this.props.children;
   }
 }
 
@@ -20,26 +21,27 @@ export function Session({ report, expanded, onExpand }) {
   const historical = !report.preview && report.date < jakartaDate();
   return (
     <section className="session-section" aria-labelledby="session-title">
-      <h2 id="session-title">{historical ? "Planned session" : "Next session"} <span className="quiet">{report.preview ? "" : formatDate(session.date)}</span></h2>
+      <h2 id="session-title">{historical ? "Planned session" : "Session"} <span className="quiet">{report.preview ? "" : formatDate(session.date)}</span></h2>
       <div className="session-summary">
         <span className="session-type">{session.name}</span>
-        <strong className="session-duration">{session.minutes} minutes</strong>
-        <p>{session.target}</p>
-        <p className="alternative"><span>Lower-effort alternative</span> {session.alternative}</p>
+        <strong className="session-duration">{session.minutes} min</strong>
+        <p>{session.target.split(". ")[0]}</p>
       </div>
-      <p className="condition">{session.condition}</p>
-      <button className="primary" onClick={onExpand} aria-expanded={expanded} aria-controls="coaching-detail">{expanded ? "Hide steps and coach notes" : "View steps and coach notes"}</button>
+      <div className="workout-timeline" role="img" aria-label={session.steps.map(step=>`${step.name}, ${step.minutes} minutes`).join("; ")}>{session.steps.map((step,index)=><div key={`${step.name}-${index}`} style={{flex:step.minutes,borderColor:[palette.light,palette.blue,palette.purple][Math.min(index,2)]}}><strong>{step.name.replace(/Warm-up/i,"WU").replace(/Cool-down/i,"CD")}</strong><span>{step.minutes}′</span></div>)}</div>
+      <button className="text-button session-detail-toggle" onClick={onExpand} aria-expanded={expanded} aria-controls="coaching-detail">{expanded ? "Hide detail" : "Session detail"}</button>
       {expanded && (
         <div id="coaching-detail" className="coaching-detail">
-          <ol className="session-steps">{session.steps.map(step => (
-            <li key={step.name}><div><strong>{step.name}</strong><span>{step.minutes} min</span></div><p>{step.detail}</p></li>
+          <p><span className="quiet">Target · </span>{session.target}</p>
+          <ol className="session-steps">{session.steps.map((step,index) => (
+            <li key={`${step.name}-${index}`}><div><strong>{step.name}</strong><span>{step.minutes} min</span></div><p>{step.detail}</p></li>
           ))}</ol>
-          <div className="findings">{report.coaching.findings.map(finding => (
+          <p>{session.condition}</p><p><span className="quiet">Alternative · </span>{session.alternative}</p>
+          <details className="session-analysis"><summary>Analysis</summary><p>{report.coaching.rationale}</p><div className="findings">{report.coaching.findings.map(finding => (
             <article key={finding.title}><h3>{finding.title}</h3><p>{finding.evidence}</p><p className="quiet">{finding.implication}</p></article>
           ))}</div>
-          <h3>Adjust the plan</h3>
+          <h3>Adjustments</h3>
           <ul>{report.coaching.adjustments.map(item => <li key={item}>{item}</li>)}</ul>
-          <p className="feedback">{report.coaching.feedback}</p>
+          </details>
         </div>
       )}
     </section>
@@ -48,7 +50,7 @@ export function Session({ report, expanded, onExpand }) {
 
 export function ActivityTable({ report }) {
   const [sport, setSport] = useState("All");
-  const [days, setDays] = useState("7");
+  const [days, setDays] = useState("all");
   const [query, setQuery] = useState("");
   const [includeExcluded, setIncludeExcluded] = useState(false);
   const [limit, setLimit] = useState(10);
@@ -61,25 +63,25 @@ export function ActivityTable({ report }) {
   function clearFilters() { setSport("All"); setDays("all"); setQuery(""); setIncludeExcluded(false); setLimit(10); }
   return (
     <section className="activity-section" aria-labelledby="activities-title">
-      <div className="section-title"><div><h2 id="activities-title">Activity history</h2><p className="quiet">Explore the sessions behind your coaching report.</p></div></div>
+      <div className="section-title"><h2 id="activities-title">Activities</h2></div>
       <div className="activity-controls">
         <label className="filter" htmlFor="activity-window">Window<select id="activity-window" value={days} onChange={event => update(setDays, event.target.value)}><option value="7">7 days</option><option value="28">28 days</option><option value="all">All available</option></select></label>
         <label className="filter" htmlFor="activity-sport">Sport<select id="activity-sport" value={sport} onChange={event => update(setSport, event.target.value)}><option>All</option>{sports.map(value => <option key={value}>{value}</option>)}</select></label>
         <label className="activity-search" htmlFor="activity-search">Search sessions<input id="activity-search" type="search" placeholder="Name, sport or date" value={query} onChange={event => update(setQuery, event.target.value)} /></label>
       </div>
       {excluded && <label className="check-filter"><input type="checkbox" checked={includeExcluded} onChange={event => update(setIncludeExcluded, event.target.checked)} />Show excluded recordings</label>}
-      <p className="results-count" role="status">{visible.length} of {rows.length} matching recordings · {formatDate(start)} to {formatDate(report.date)} · Through report capture</p>
+      <p className="results-count" role="status">{visible.length}/{rows.length} · {formatDate(start)}–{formatDate(report.date)}</p>
       <div className="table-scroll"><table>
         <caption className="sr-only">Activity history. Excluded recordings contribute no training time or load.</caption>
-        <thead><tr><th scope="col">Date</th><th scope="col">Session</th><th scope="col">Moving time</th><th scope="col">Distance</th><th scope="col">Avg HR</th><th scope="col">Intervals load</th></tr></thead>
+        <thead><tr><th scope="col">Date</th><th scope="col">Session</th><th scope="col">Duration</th><th scope="col">Distance</th><th scope="col">HR avg</th><th scope="col">TL · Intervals</th></tr></thead>
         <tbody>{visible.map((activity, index) => (
           <tr key={`${activity.source}-${Object.values(activity.externalIds || {}).join("-")}-${index}`} className={activity.classification === "non-training" ? "activity-excluded" : undefined}>
             <td>{formatDate(activity.date)}</td>
             <td>{activity.externalIds?.strava ? <a href={`https://www.strava.com/activities/${activity.externalIds.strava}`} target="_blank" rel="noreferrer">{activity.name}</a> : activity.name}<small>{activity.sport}{activity.classification === "non-training" ? " · Excluded from training" : ""}</small></td>
             <td>{duration(activity.movingSeconds)}</td>
-            <td>{Number.isFinite(activity.distanceKm) ? `${decimal(activity.distanceKm, 2)} km` : "Unavailable"}</td>
-            <td>{Number.isFinite(activity.averageHr) ? `${activity.averageHr} bpm` : "Unavailable"}</td>
-            <td>{Number.isFinite(activity.intervalsLoad) ? activity.intervalsLoad : "Unavailable"}</td>
+            <td>{Number.isFinite(activity.distanceKm) ? `${decimal(activity.distanceKm, 2)} km` : "—"}</td>
+            <td>{Number.isFinite(activity.averageHr) ? `${activity.averageHr} bpm` : "—"}</td>
+            <td>{Number.isFinite(activity.intervalsLoad) ? activity.intervalsLoad : "—"}</td>
           </tr>
         ))}</tbody>
       </table></div>
@@ -90,10 +92,16 @@ export function ActivityTable({ report }) {
 }
 
 function changeLabel(value, unit) {
-  if (value == null) return "Comparison unavailable";
-  if (value === 0) return "Same as previous 7 days";
-  const noun = Math.abs(value) === 1 ? unit.replace(/s$/, "") : unit;
-  return `${value > 0 ? "+" : ""}${decimal(value, 0)} ${noun} vs previous 7 days`;
+  if (value == null) return "—";
+  return `${value > 0 ? "+" : ""}${decimal(value, 0)} ${unit}`;
+}
+
+function PeriodBars({ current, previous, label, format = value => decimal(value,0) }) {
+  const max = Math.max(1,current || 0,previous || 0);
+  return <div className="period-bars" role="img" aria-label={`${label}: current ${current ?? "missing"}, previous ${previous ?? "missing"}`}>
+    <div><span>Current</span><i style={{width:`${Number.isFinite(current)?current/max*100:0}%`,background:palette.blue}} /><b>{Number.isFinite(current)?format(current):"—"}</b></div>
+    <div><span>Previous</span><i style={{width:`${Number.isFinite(previous)?previous/max*100:0}%`,background:palette.gray}} /><b>{Number.isFinite(previous)?format(previous):"—"}</b></div>
+  </div>;
 }
 
 export function Trends({ report }) {
@@ -110,26 +118,28 @@ export function Trends({ report }) {
     return { ...window, complete: coversWindow(report, window.start, window.end) };
   });
   const timeChange = comparison.timeChangePercent;
-  const timeLabel = timeChange == null ? "Comparison unavailable" : timeChange === 0 ? "Same as previous 7 days" : `${decimal(Math.abs(timeChange), 1)}% ${timeChange > 0 ? "more" : "less"} recorded time`;
+  const timeLabel = timeChange == null ? "—" : `${timeChange > 0 ? "+" : ""}${decimal(timeChange, 1)}%`;
+  const previousAvailable = previous.sessions > 0 || coversWindow(report, previous.start, previous.end);
+  const mix = summarize(activities, shiftDate(report.date, -27), report.date).bySport;
+  const mixSeconds = mix.reduce((sum,row)=>sum+row.seconds,0);
+  const sportColors = [palette.blue,palette.orange,palette.purple,palette.green];
   return (
     <>
-      <div className="page-title"><div><p className="eyebrow">Progress over time</p><h1>Your training, in context.</h1></div><div className="trend-controls"><label className="filter" htmlFor="trend-sport">Sport<select id="trend-sport" value={sport} onChange={event => setSport(event.target.value)}><option>All</option>{sports.map(value => <option key={value}>{value}</option>)}</select></label><label className="filter" htmlFor="trend-window">Chart window<select id="trend-window" value={days} onChange={event => setDays(Number(event.target.value))}><option value={7}>7 days</option><option value={28}>28 days</option><option value={42}>42 days</option></select></label></div></div>
+      <div className="page-title"><h1>Trends</h1><div className="trend-controls"><label className="filter" htmlFor="trend-sport">Sport<select id="trend-sport" value={sport} onChange={event => setSport(event.target.value)}><option>All</option>{sports.map(value => <option key={value}>{value}</option>)}</select></label><label className="filter" htmlFor="trend-window">Period<select id="trend-window" value={days} onChange={event => setDays(Number(event.target.value))}><option value={7}>7d</option><option value={28}>28d</option><option value={42}>42d</option></select></label></div></div>
       <section className="week-comparison" aria-labelledby="comparison-title">
-        <h2 id="comparison-title">Last 7 complete days</h2>
-        <p className="quiet">{formatDate(current.start)} to {formatDate(current.end)} · Compared with {formatDate(previous.start)} to {formatDate(previous.end)}. The capture day is excluded.</p>
-        <div className="comparison-grid"><div><span>Recorded training</span><strong>{currentAvailable ? duration(current.seconds) : "Unavailable"}</strong><small>{timeLabel}</small></div><div><span>Sessions</span><strong>{currentAvailable ? current.sessions : "Unavailable"}</strong><small>{changeLabel(comparison.sessionChange, "sessions")}</small></div><div><span>Active days</span><strong>{currentAvailable ? current.activeDays : "Unavailable"}{currentAvailable && <small> / 7</small>}</strong><small>{changeLabel(comparison.activeDayChange, "days")}</small></div></div>
-        {!comparison.comparable && <p className="quiet comparison-limit">Both seven-day windows need complete source coverage before a change can be calculated. Totals show available recordings.</p>}
-        <p className="comparison-limit">Changes describe recorded training volume. They do not establish a fitness improvement.</p>
+        <h2 id="comparison-title">7d comparison {!comparison.comparable && <small className="quiet">Partial</small>}</h2>
+        <p className="quiet period-dates">{formatDate(current.start)}–{formatDate(current.end)} / {formatDate(previous.start)}–{formatDate(previous.end)}</p>
+        <div className="comparison-grid"><div><span>Duration</span><strong>{currentAvailable ? duration(current.seconds) : "—"}</strong><small>{timeLabel}</small><PeriodBars label="Duration in seconds" format={duration} current={currentAvailable?current.seconds:null} previous={previousAvailable?previous.seconds:null} /></div><div><span>Sessions</span><strong>{currentAvailable ? current.sessions : "—"}</strong><small>{changeLabel(comparison.sessionChange, "sessions")}</small><PeriodBars label="Sessions" current={currentAvailable?current.sessions:null} previous={previousAvailable?previous.sessions:null} /></div><div><span>Active days</span><strong>{currentAvailable ? current.activeDays : "—"}{currentAvailable && <small> / 7</small>}</strong><small>{changeLabel(comparison.activeDayChange, "days")}</small><PeriodBars label="Active days" current={currentAvailable?current.activeDays:null} previous={previousAvailable?previous.activeDays:null} /></div></div>
       </section>
       <TrainingChart report={report} days={days} sport={sport} />
       <div className="table-scroll"><table>
-        <caption>Aligned seven-day windows ending on the report date. The latest window includes the capture day so far.</caption>
-        <thead><tr><th scope="col">Window</th><th scope="col">Sessions</th><th scope="col">Active days</th><th scope="col">Training</th><th scope="col">Recorded distance</th><th scope="col">Known Intervals load</th></tr></thead>
+        <caption>7d blocks · {formatDate(report.date)} partial</caption>
+        <thead><tr><th scope="col">Period</th><th scope="col">Sessions</th><th scope="col">Days</th><th scope="col">Duration</th><th scope="col">Distance</th><th scope="col">TL · Intervals</th></tr></thead>
         <tbody>{windows.map(window => <tr key={window.end}><td>{formatDate(window.start)} to {formatDate(window.end)}{!window.complete && <small>Partial coverage</small>}</td><td>{window.sessions || window.complete ? window.sessions : "Unavailable"}</td><td>{window.activeDays || window.complete ? window.activeDays : "Unavailable"}</td><td>{window.sessions || window.complete ? duration(window.seconds) : "Unavailable"}</td><td>{window.sessions || window.complete ? `${decimal(window.distanceKm, 2)} km` : "Unavailable"}{window.missingDistance ? ` · ${window.missingDistance} missing` : ""}</td><td>{window.sessions || window.complete ? window.knownLoad : "Unavailable"}{window.missingLoad ? ` · ${window.missingLoad} missing` : ""}</td></tr>)}</tbody>
       </table></div>
-      <h2 className="mix-title">Training mix · latest 28 days</h2>
-      <div className="sport-mix">{summarize(activities, shiftDate(report.date, -27), report.date).bySport.map(row => <div key={row.sport}><h3>{row.sport}</h3><strong>{duration(row.seconds)}</strong><p>{row.sessions} recorded sessions{["Ride", "Run"].includes(row.sport) ? ` · ${decimal(row.distanceKm, 2)} recorded km` : ""}</p></div>)}</div>
-      <div className="report-notes"><h2>What the numbers can support</h2>{report.coaching.findings.map(finding => <article key={finding.title}><h3>{finding.title}</h3><p>{finding.evidence}</p><p className="quiet">{finding.implication}</p></article>)}</div>
+      <h2 className="mix-title">Sport mix · 28d</h2>
+      {mixSeconds>0 && <div className="sport-mix-bar" role="img" aria-label={mix.map(row=>`${row.sport} ${decimal(row.seconds/mixSeconds*100,0)}%`).join(", ")}>{mix.map((row,index)=><span key={row.sport} style={{width:`${row.seconds/mixSeconds*100}%`,background:sportColors[index%sportColors.length]}} />)}</div>}
+      <div className="sport-mix">{mix.map((row,index) => <div key={row.sport}><h3><i style={{background:sportColors[index%sportColors.length]}} />{row.sport}</h3><strong>{duration(row.seconds)}</strong><p>{row.sessions} sessions · {mixSeconds>0?`${decimal(row.seconds/mixSeconds*100,0)}%`:"—"}{["Ride", "Run"].includes(row.sport) ? ` · ${decimal(row.distanceKm, 2)} km` : ""}</p></div>)}</div>
     </>
   );
 }
