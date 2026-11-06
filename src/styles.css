@@ -613,6 +613,94 @@ footer button {
 .error {
   color: var(--amber);
 }
+.load-forecast {
+  border-top: 1px solid var(--rule);
+  padding: 30px 0;
+}
+.forecast-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+.forecast-heading .eyebrow { margin: 0 0 7px; }
+.forecast-heading .quiet { margin: 7px 0 0; font-size: 14px; }
+.forecast-tag {
+  border: 1px solid #747d68;
+  color: var(--lime);
+  padding: 7px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.forecast-intro { max-width: 850px; margin: 20px 0; color: var(--muted); }
+.forecast-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+.forecast-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  min-width: 0;
+}
+.forecast-controls input, .forecast-controls select {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  background: #24272a;
+  color: #f2f2f3;
+  font-weight: 400;
+}
+.forecast-controls :disabled { opacity: .5; cursor: default; }
+.forecast-help { font-size: 13px; color: var(--muted); margin: 13px 0; max-width: 1100px; }
+.text-button { color: var(--lime); text-decoration: underline; text-underline-offset: 4px; padding: 5px 0; margin-left: 8px; }
+.forecast-output { margin-top: 24px; }
+.forecast-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid #4c5543; background: #20251e; }
+.forecast-stat { padding: 21px 22px; min-width: 0; }
+.forecast-stat + .forecast-stat { border-left: 1px solid #4c5543; }
+.forecast-stat > span { display: block; font-size: 13px; color: var(--muted); }
+.forecast-stat strong { display: block; font-size: clamp(24px, 2.8vw, 36px); line-height: 1.4; color: var(--lime); margin: 5px 0; font-variant-numeric: tabular-nums; }
+.forecast-stat small { font-size: 12px; line-height: 1.5; display: block; }
+.forecast-fit { border-left: 3px solid var(--amber); padding: 3px 0 0 19px; margin: 23px 0; }
+.forecast-fit h3 { color: var(--amber); }
+.forecast-fit > p { max-width: 1050px; margin-bottom: 7px; }
+.forecast-garmin { display: grid; grid-template-columns: minmax(210px, .75fr) minmax(0, 2fr); gap: 24px; padding: 20px 0; border-top: 1px solid #41454a; }
+.forecast-garmin span, .forecast-garmin small { display: block; color: var(--muted); font-size: 12px; }
+.forecast-garmin strong { display: block; font-size: 21px; margin: 6px 0; }
+.forecast-garmin p { margin: 0; font-size: 14px; color: var(--muted); }
+.forecast-details { border-top: 1px solid #41454a; padding: 16px 0; }
+.forecast-details summary { color: var(--lime); font-size: 14px; padding: 4px 0; width: fit-content; }
+.forecast-details td, .forecast-details th { white-space: normal; }
+.forecast-details tbody th { min-width: 135px; text-transform: none; font-size: 14px; letter-spacing: 0; color: inherit; }
+.forecast-details td:nth-child(2) { min-width: 90px; }
+.forecast-use { border: 1px solid var(--rule); border-radius: 4px; padding: 8px 11px; font-size: 13px; white-space: nowrap; min-height: 42px; }
+.forecast-use:hover { border-color: var(--lime); color: var(--lime); }
+.forecast-advanced { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 22px 0; }
+.forecast-references { display: flex; flex-wrap: wrap; gap: 15px 24px; margin-top: 20px; font-size: 13px; }
+@media (max-width: 900px) {
+  .forecast-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .forecast-stat { padding: 18px 15px; }
+}
+@media (max-width: 560px) {
+  .forecast-heading { flex-direction: column; gap: 10px; }
+  .forecast-heading h2 { font-size: 24px; }
+  .forecast-controls { gap: 17px 12px; }
+  .forecast-controls label { font-size: 12px; }
+  .forecast-controls input, .forecast-controls select { padding-inline: 8px; font-size: 14px; }
+  .forecast-results { grid-template-columns: 1fr; }
+  .forecast-stat + .forecast-stat { border-left: 0; border-top: 1px solid #4c5543; }
+  .forecast-stat strong { font-size: 29px; }
+  .forecast-garmin { grid-template-columns: 1fr; gap: 13px; }
+  .forecast-details table { min-width: 570px; }
+  .forecast-fit { padding-left: 15px; }
+}
 @media (max-width: 1350px) {
   .athlete-name {
     display: none;

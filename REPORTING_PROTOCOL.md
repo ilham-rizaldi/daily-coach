@@ -45,6 +45,8 @@ Use the available history for depth. A longer report cannot substitute for missi
 
 1. Write the requested report in `.local/report.private.json`, following the shape in `src/demo.js`. Include the real date, source coverage, capture timestamps, deduplicated activity records, coaching rationale, session steps and data-quality notes. Keep supporting detail and source ledgers private.
 2. Read `.local/config.private.json` or the existing `COACH_CONFIG` path. It contains `archiveKey`, `siteUrl`, `email` and `repository`. Keep the key private and backed up. Do not echo configuration or bearer links into public logs.
+
+   For the next-day planner, capture `intervals.date`, fitness/fatigue, actual fitness/fatigue time constants when visible, and per-activity-type contribution percentages. Keep original load and timer fields. Missing settings remain explicitly assumed in the viewer. A prediction is a scenario on the Intervals scale, not an exact Garmin acute/chronic ratio prediction. Do not prescribe extra training to fill a ratio or treat a balanced model ratio as clearance for hard work.
 3. Run:
 
    ```sh

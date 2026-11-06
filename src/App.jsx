@@ -3,6 +3,7 @@ import { decimal, duration, formatDate, jakartaDate } from "./report.js";
 import { parseAccessInput, unlockReports } from "./archive.js";
 import { demoReport } from "./demo.js";
 import { ActivityTable, Session, Sources, TrainingChart, Trends } from "./components.jsx";
+import { LoadForecast } from "./LoadForecast.jsx";
 
 const sections = ["Daily", "Trends", "Archive", "Sources"];
 
@@ -135,6 +136,7 @@ export function App() {
             <>
               <section className="decision"><h1>{report.coaching.headline}</h1><p>{report.coaching.rationale}</p></section>
               <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
+              <LoadForecast key={`${report.date}:${report.capturedAt}`} report={report} />
               <div className="metric-row">
                 <div><span>Sleep</span><strong>{Number.isFinite(sleep) ? `${Math.floor(sleep / 60)}h ${sleep % 60}m` : "Unavailable"}</strong><small>{preview ? "Sample data" : `Garmin${report.wellness.sleepScore != null ? ` · score ${report.wellness.sleepScore}` : ""}`}</small></div>
                 <div><span>Readiness</span><strong className={Number.isFinite(readiness) && readiness < 50 ? "amber" : undefined}>{readiness ?? "Unavailable"}</strong><small>{preview ? "Sample data" : "Garmin · latest synced value"}</small></div>

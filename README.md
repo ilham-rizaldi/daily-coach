@@ -25,6 +25,16 @@ Daily reports show the planned session before the charts. The header keeps Lock 
 
 Chart code loads separately after opening a report, so the locked login does not download the chart library on its initial load.
 
+## Next-day training forecast
+
+Daily reports include a private, browser-local scenario planner after the prescribed session. Compare rest, cycling, running and strength; edit duration, intended effort and expected Intervals load. Estimates use the middle 50% of same-sport load/hour observations from the previous 42 completed days, excluding non-training records, missing load and sessions below 15 minutes. Recorded timers include rests and pauses. Intended effort changes the recovery check, not the estimated load; the sport alone cannot identify intensity.
+
+The forecast advances a dated Intervals fitness/fatigue anchor once using exponential daily weighting. Remaining-today load adds only its weighted delta, avoiding a second decay of the already-updated current-day anchor. Fitness/fatigue time constants start at assumed 42/7 days and can be edited. Captured activity-type contribution settings take precedence; missing weights are explicitly assumed. Planned loads and ranges can be overridden. Empty inputs stay unavailable.
+
+Outputs are estimated end-of-next-day fitness, fatigue, raw form and a **model ATL/CTL ratio**, with a rest comparison. This ratio does not predict Garmin's proprietary acute/chronic load ratio. Garmin observations remain separate. The planner does not forecast aerobic/anaerobic load-focus categories, future readiness, performance gains or safety. Recovery context can conflict with a numerical load scenario. Historical reports forecast the day after their own snapshot, not the user's current tomorrow. Nothing is added to the source calendar, sent by email or stored outside the current page.
+
+Method references: [Intervals exponential calculation](https://forum.intervals.icu/t/change-fatigue-atl-and-fitness-ctl-factors/300?page=2), [activity-type contributions](https://forum.intervals.icu/t/fitness-and-fatigue-for-different-activity-types/652), [Garmin load definitions](https://support.garmin.com/en-SG/?faq=SEkNpdGyhR917js0qQL3Q6).
+
 ## Build and verify
 
 ```sh
