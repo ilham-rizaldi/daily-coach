@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { decimal, formatDate, jakartaDate, shiftDate } from "./report.js";
 import { contributionWeights, estimateSessionLoad, projectTomorrow } from "./forecast.js";
+import { GarminRestForecast } from "./GarminRestForecast.jsx";
 
 const sports = [["Rest", "Rest"], ["Ride", "Cycling"], ["Run", "Running"], ["Weight Training", "Strength"]];
 const number = value => String(value).trim() === "" ? NaN : Number(value);
@@ -37,7 +38,6 @@ export function LoadForecast({ report }) {
   const historical = report.date !== jakartaDate() && !report.preview;
   const invalidDuration = plan.sport !== "Rest" && (!Number.isFinite(number(plan.minutes)) || number(plan.minutes) <= 0 || number(plan.minutes) > 600);
   const available = forecast.available && !invalidDuration;
-  const ready = report.wellness.readiness;
 
   function changePlan(sport, minutes = plan.minutes) {
     setPlan(initialPlan(report, sport, sport === "Rest" ? "0" : number(minutes) > 0 ? minutes : "30"));
@@ -53,6 +53,8 @@ export function LoadForecast({ report }) {
   });
 
   return (
+    <>
+    <GarminRestForecast report={report} />
     <section className="load-forecast" aria-labelledby="forecast-heading">
       <div className="forecast-heading">
         <div><p className="eyebrow">Plan the next day</p><h2 id="forecast-heading">{historical ? "Next-day training fit" : "Tomorrow’s training fit"}</h2><p className="quiet">{formatDate(date, { weekday: "long", year: "numeric", month: "long" })} · end-of-day scenario</p></div>
@@ -82,7 +84,7 @@ export function LoadForecast({ report }) {
           <div className="forecast-fit"><h3>{fit.title}</h3><p>{fit.text}</p><p className="forecast-help">Fitness contribution {decimal(weights.fitness * 100, 0)}% · fatigue contribution {decimal(weights.fatigue * 100, 0)}%. {weights.assumed ? "Contribution settings assumed; verify them in Intervals." : "Uses captured contribution settings or named source contributions."}</p></div>
         </div>
       )}
-      <div className="forecast-garmin"><div><span>Garmin · observed only</span><strong>Load ratio {decimal(report.wellness.garminLoadRatio, 1)}</strong><small>Acute {decimal(report.wellness.garminAcuteLoad, 0)} · chronic {decimal(report.wellness.garminChronicLoad, 0)}{Number.isFinite(ready) ? ` · readiness ${ready}/100` : ""}</small></div><p>Garmin’s next ratio is unavailable from this snapshot. Its weighted load model differs from Intervals. The forecast above uses ATL/CTL and does not predict your watch’s ratio or aerobic/anaerobic load-focus bars.</p></div>
+      <p className="forecast-help">The workout simulator above uses the Intervals model. Garmin’s no-new-training estimate is shown separately at the top. Neither model predicts aerobic/anaerobic load-focus bars or tomorrow’s readiness.</p>
 
       <details className="forecast-details"><summary>Compare rest and training types</summary>
         <p className="forecast-help">Same baseline and remaining-today assumptions. Estimates use each sport’s history and captured or explicitly assumed contribution settings; these are comparisons, not ranked recommendations.</p>
@@ -106,5 +108,6 @@ export function LoadForecast({ report }) {
         <div className="forecast-references"><a href="https://forum.intervals.icu/t/change-fatigue-atl-and-fitness-ctl-factors/300?page=2" target="_blank" rel="noreferrer">Intervals calculation</a><a href="https://forum.intervals.icu/t/fitness-and-fatigue-for-different-activity-types/652" target="_blank" rel="noreferrer">Sport contributions</a><a href="https://support.garmin.com/en-SG/?faq=SEkNpdGyhR917js0qQL3Q6" target="_blank" rel="noreferrer">Garmin load definitions</a></div>
       </details>
     </section>
+    </>
   );
 }

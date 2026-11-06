@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test:sites": "node --test tests/sites-worker.test.mjs",
     "build:github": "vite build --base=./ && node scripts/build-github.mjs",
-    "test": "node --test tests/report.test.mjs tests/forecast.test.mjs",
+    "test": "node --test tests/report.test.mjs tests/forecast.test.mjs tests/garmin-forecast.test.mjs",
     "report": "node scripts/publish-report.mjs"
   },
   "dependencies": {

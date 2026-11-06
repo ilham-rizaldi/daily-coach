@@ -47,6 +47,8 @@ Use the available history for depth. A longer report cannot substitute for missi
 2. Read `.local/config.private.json` or the existing `COACH_CONFIG` path. It contains `archiveKey`, `siteUrl`, `email` and `repository`. Keep the key private and backed up. Do not echo configuration or bearer links into public logs.
 
    For the next-day planner, capture `intervals.date`, fitness/fatigue, actual fitness/fatigue time constants when visible, and per-activity-type contribution percentages. Keep original load and timer fields. Missing settings remain explicitly assumed in the viewer. A prediction is a scenario on the Intervals scale, not an exact Garmin acute/chronic ratio prediction. Do not prescribe extra training to fill a ratio or treat a balanced model ratio as clearance for hard work.
+
+   For the separate Garmin rest-day estimate, capture dated daily acute/chronic chart values in `garminLoadHistory.rows`, with observation time, source URL and extraction method. Verify the current chart anchor against the report and native tooltips. Use complete activity coverage to identify completed days without any recording, including excluded non-training recordings. Preserve both components' paired changes, sample dates, scenario spread and extrapolation limits. A fresh data-enriched private link is required for old reports that lack the history; refreshing the public viewer cannot add private source data to an immutable emailed payload.
 3. Run:
 
    ```sh
