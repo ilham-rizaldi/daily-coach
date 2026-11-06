@@ -13,7 +13,7 @@ export function GarminRestForecast({ report }) {
       {historical && <p className="condition">This is the day after the report’s historical snapshot, not tomorrow from live readings.</p>}
       <div className="garmin-rest-grid">
         <div><span>Current Garmin ratio</span><strong>{decimal(displayedRatio, 1)}</strong><small>Acute {decimal(result.baseline?.acute ?? report.wellness.garminAcuteLoad, 0)} · chronic {decimal(result.baseline?.chronic ?? report.wellness.garminChronicLoad, 0)}</small></div>
-        <div><span>{historical ? "Next day with no new training" : "Tomorrow with no new training"}</span><strong>{result.available ? `≈ ${decimal(result.estimate.ratio, 1)}` : "Unavailable"}</strong><small>{result.available ? `Acute ≈ ${decimal(result.estimate.acute, 0)} · chronic ≈ ${decimal(result.estimate.chronic, 0)}` : "Daily load history needed"}</small></div>
+        <div><span>{historical ? "Next day with no new training" : "Tomorrow with no new training"}</span><strong className={result.available ? undefined : "garmin-missing"}>{result.available ? `≈ ${decimal(result.estimate.ratio, 1)}` : "Needs history"}</strong><small>{result.available ? `Acute ≈ ${decimal(result.estimate.acute, 0)} · chronic ≈ ${decimal(result.estimate.chronic, 0)}` : "Daily load history needed"}</small></div>
       </div>
       {result.available ? <>
         <p className="forecast-help">Historical scenarios: ratio {decimal(result.range.ratio.low, 2)}–{decimal(result.range.ratio.high, 2)}. Derived from {result.n} completed days with no recorded activity. This spread is not a confidence interval, and tomorrow can fall outside it.</p>

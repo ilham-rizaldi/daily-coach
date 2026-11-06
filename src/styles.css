@@ -623,6 +623,7 @@ footer button {
 .garmin-rest-grid > div + div { border-left: 1px solid #4c5543; }
 .garmin-rest-grid span, .garmin-rest-grid small { display: block; color: var(--muted); font-size: 13px; }
 .garmin-rest-grid strong { display: block; font-size: 44px; color: var(--lime); padding: 5px 0; font-variant-numeric: tabular-nums; }
+.garmin-rest-grid strong.garmin-missing { font-size: 22px; line-height: 1.4; overflow-wrap: anywhere; }
 @media (max-width: 560px) {
   .garmin-rest-grid > div { padding: 18px 12px; }
   .garmin-rest-grid strong { font-size: 34px; }
