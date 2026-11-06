@@ -1557,3 +1557,38 @@ footer button { font-size: 11px; }
   .reference-metadata { gap: 15px; }
   .workout-timeline > div { padding: 8px; }
 }
+
+/* Athlete scan: one heading, compact controls, optional analysis. */
+.app-header { min-height: 56px; gap: 18px; }
+.wordmark { font-size: 21px; letter-spacing: -.5px; }
+.app-header nav { margin-left: auto; gap: 25px; }
+.app-header nav button { font-size: 14px; border-bottom-width: 3px; }
+.header-lock { font-size: 12px; min-height: 36px; padding: 7px 12px; }
+.report-meta { padding: 12px 0; font-size: 12px; gap: 12px; }
+.report-meta > span { padding-left: 12px; }
+.report-switcher { margin-left: auto; }
+.report-switcher button { min-width: 36px; font-size: 16px; }
+.session-adjustments { font-size: 12px; }
+.session-adjustments summary, .trend-blocks summary { padding: 9px 0; color: var(--blue); font-size: 12px; }
+.session-adjustments ul { padding-left: 18px; }
+.trend-blocks { margin-top: 14px; border-top: 1px solid #414b55; }
+.week-comparison { margin-bottom: 18px; padding-bottom: 10px; }
+.comparison-grid { margin: 14px 0; }
+.period-bars > div { padding-left: 0; }
+.period-bars span { font-size: 10px; }
+.page-title { padding: 16px 0; }
+main:not(.unlock) { padding-bottom: 24px; }
+@media (max-width: 900px) {
+  .app-header { min-height: 86px; padding-top: 10px; gap: 5px 14px; }
+  .app-header nav { height: 36px; margin-left: 0; }
+  .app-header nav button { font-size: 13px; }
+  .header-lock { margin-left: auto; }
+}
+@media (max-width: 560px) {
+  .app-header { padding-inline: 16px; }
+  .report-meta { gap: 8px; }
+  .report-meta > span { padding-left: 8px; font-size: 11px; }
+  .report-switcher { width: auto; margin: 0 0 0 auto; gap: 3px; }
+  .report-switcher > span { font-size: 10px; }
+  .report-switcher button { min-width: 32px; padding-inline: 7px; }
+}

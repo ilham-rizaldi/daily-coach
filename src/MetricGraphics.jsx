@@ -9,7 +9,7 @@ export function statusColor(status, metric = "") {
   if (/very high|poor|unbalanced|strained/.test(text)) return palette.red;
   if (/shortage|high|low|fair|unproductive/.test(text)) return palette.orange;
   if (/balanced|optimal|productive|good|maintaining/.test(text)) return palette.green;
-  return palette.blue;
+  return palette.gray;
 }
 
 export function ScoreMeter({ value, color = palette.blue, readiness = false, label }) {

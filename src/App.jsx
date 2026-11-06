@@ -116,20 +116,17 @@ export function App() {
     <>
       <a className="skip-link" href="#main">Skip to report</a>
       <header className="app-header">
-        <a className="wordmark" href={location.pathname} onClick={event => { event.preventDefault(); selectReport(0); }}>Daily Coach</a>
-        <span className="product-name">Performance Desk <span className="athlete-name">for Riezaldd</span></span>
+        <a className="wordmark" href={location.pathname} onClick={event => { event.preventDefault(); selectReport(0); }}>Performance Desk</a>
         {report && <nav aria-label="Report sections">{sections.map(name => <button key={name} onClick={() => changeSection(name)} aria-current={section === name ? "page" : undefined}>{name}</button>)}</nav>}
-        <span className="header-private">Private archive</span>
-        {report && <time dateTime={report.date}>{formatDate(report.date, { weekday: "short", year: "numeric" })}</time>}
         {!preview && <button className="header-lock" onClick={lockArchive}>Lock</button>}
       </header>
       {!report ? <Locked onUnlock={unlock} loading={loading} error={error} /> : (
         <main id="main" ref={mainRef} tabIndex={-1}>
           {copyState && <p className="notice" role="status">{copyState}</p>}
           <div className="report-meta">
-            <time dateTime={report.date}>{formatDate(report.date, { weekday: "long", year: "numeric", month: "long" })}</time>
+            <time dateTime={report.date}>{formatDate(report.date, { weekday: "short", year: "numeric" })}</time>
             <span>{preview ? "Demo" : `${report.date === today ? "Snapshot" : "Historical"} · ${new Date(report.capturedAt).toLocaleString("en-GB", { timeZone: "Asia/Jakarta", timeStyle: "short" })} WIB`}</span>
-            {reports.length > 1 && <nav className="report-switcher" aria-label="Report dates"><button disabled={reportIndex >= reports.length - 1} onClick={() => selectReport(reportIndex + 1)}>Older report</button><span>{reportIndex + 1} of {reports.length}</span><button disabled={reportIndex === 0} onClick={() => selectReport(reportIndex - 1)}>Newer report</button></nav>}
+            {reports.length > 1 && <nav className="report-switcher" aria-label="Report dates"><button disabled={reportIndex >= reports.length - 1} onClick={() => selectReport(reportIndex + 1)} aria-label="Older report">←</button><span>{reportIndex + 1} of {reports.length}</span><button disabled={reportIndex === 0} onClick={() => selectReport(reportIndex - 1)} aria-label="Newer report">→</button></nav>}
           </div>
           {section === "Daily" && (
             <>
@@ -147,13 +144,9 @@ export function App() {
             <>
               <div className="page-title"><h1>Archive</h1></div>
               <div className="archive-list">{reports.map((item, index) => <button key={item.date} onClick={() => selectReport(index)} aria-current={index === reportIndex ? "true" : undefined}><time>{formatDate(item.date, { weekday: "short", year: "numeric" })}</time><strong>{item.coaching.headline.split(";")[0]}</strong><span>{index === reportIndex ? "Selected" : "Open"}</span></button>)}</div>
-              {!preview && <div className="archive-actions"><button onClick={copyLink}>Copy this report’s private link</button><button onClick={lockArchive}>Lock archive</button></div>}
+              {!preview && <div className="archive-actions"><button onClick={copyLink}>Copy link</button><button onClick={lockArchive}>Lock</button></div>}
             </>
           )}
-          <footer>
-            <p>Garmin · Intervals.icu · Strava</p>
-            <button onClick={() => changeSection("Reference")}>Reference</button>
-          </footer>
         </main>
       )}
     </>

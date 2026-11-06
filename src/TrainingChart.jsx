@@ -7,8 +7,8 @@ export default function TrainingChart({ report, days = 28, sport = "All" }) {
     <div className="training-chart">
       <div className="chart-heading">
         <div>
-          <h2>Training duration · {days}d</h2>
-          <p>{sport !== "All" ? `${sport} · ` : ""}min{report.preview ? " · Demo" : ""}</p>
+          <h2>Duration · min · {days}d</h2>
+          {sport !== "All" && <p>{sport}</p>}
         </div>
         <div className="legend"><span className="bar-key">Duration</span><span className="line-key">7d mean</span></div>
       </div>

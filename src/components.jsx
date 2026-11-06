@@ -36,12 +36,8 @@ export function Session({ report, expanded, onExpand }) {
             <li key={`${step.name}-${index}`}><div><strong>{step.name}</strong><span>{step.minutes} min</span></div><p>{step.detail}</p></li>
           ))}</ol>
           <p>{session.condition}</p><p><span className="quiet">Alternative · </span>{session.alternative}</p>
-          <details className="session-analysis"><summary>Analysis</summary><p>{report.coaching.rationale}</p><div className="findings">{report.coaching.findings.map(finding => (
-            <article key={finding.title}><h3>{finding.title}</h3><p>{finding.evidence}</p><p className="quiet">{finding.implication}</p></article>
-          ))}</div>
-          <h3>Adjustments</h3>
-          <ul>{report.coaching.adjustments.map(item => <li key={item}>{item}</li>)}</ul>
-          </details>
+          {report.coaching.adjustments?.length > 0 && <details className="session-adjustments"><summary>Adjustment rules</summary><ul>{report.coaching.adjustments.map(item => <li key={item}>{item}</li>)}</ul></details>}
+
         </div>
       )}
     </section>
@@ -65,9 +61,9 @@ export function ActivityTable({ report }) {
     <section className="activity-section" aria-labelledby="activities-title">
       <div className="section-title"><h2 id="activities-title">Activities</h2></div>
       <div className="activity-controls">
-        <label className="filter" htmlFor="activity-window">Window<select id="activity-window" value={days} onChange={event => update(setDays, event.target.value)}><option value="7">7 days</option><option value="28">28 days</option><option value="all">All available</option></select></label>
+        <label className="filter" htmlFor="activity-window">Window<select id="activity-window" value={days} onChange={event => update(setDays, event.target.value)}><option value="7">7 days</option><option value="28">28 days</option><option value="all">All</option></select></label>
         <label className="filter" htmlFor="activity-sport">Sport<select id="activity-sport" value={sport} onChange={event => update(setSport, event.target.value)}><option>All</option>{sports.map(value => <option key={value}>{value}</option>)}</select></label>
-        <label className="activity-search" htmlFor="activity-search">Search sessions<input id="activity-search" type="search" placeholder="Name, sport or date" value={query} onChange={event => update(setQuery, event.target.value)} /></label>
+        <label className="activity-search" htmlFor="activity-search">Search<input id="activity-search" type="search" placeholder="Name, sport or date" value={query} onChange={event => update(setQuery, event.target.value)} /></label>
       </div>
       {excluded && <label className="check-filter"><input type="checkbox" checked={includeExcluded} onChange={event => update(setIncludeExcluded, event.target.checked)} />Show excluded recordings</label>}
       <p className="results-count" role="status">{visible.length}/{rows.length} · {formatDate(start)}–{formatDate(report.date)}</p>
@@ -96,11 +92,11 @@ function changeLabel(value, unit) {
   return `${value > 0 ? "+" : ""}${decimal(value, 0)} ${unit}`;
 }
 
-function PeriodBars({ current, previous, label, format = value => decimal(value,0) }) {
-  const max = Math.max(1,current || 0,previous || 0);
+function PeriodBars({ current, previous, label, format = value => decimal(value, 0) }) {
+  const max = Math.max(1, current || 0, previous || 0);
   return <div className="period-bars" role="img" aria-label={`${label}: current ${current ?? "missing"}, previous ${previous ?? "missing"}`}>
-    <div><span>Current</span><i style={{width:`${Number.isFinite(current)?current/max*100:0}%`,background:palette.blue}} /><b>{Number.isFinite(current)?format(current):"—"}</b></div>
-    <div><span>Previous</span><i style={{width:`${Number.isFinite(previous)?previous/max*100:0}%`,background:palette.gray}} /><b>{Number.isFinite(previous)?format(previous):"—"}</b></div>
+    <div><span>Current</span><i style={{ width: `${Number.isFinite(current) ? current / max * 100 : 0}%`, background: palette.blue }} /></div>
+    <div><span>Previous</span><i style={{ width: `${Number.isFinite(previous) ? previous / max * 100 : 0}%`, background: palette.gray }} /><b>{Number.isFinite(previous) ? format(previous) : "—"}</b></div>
   </div>;
 }
 
@@ -136,11 +132,11 @@ export function Trends({ report }) {
         <div className="comparison-grid"><div><span>Duration</span><strong>{currentAvailable ? duration(current.seconds) : "—"}</strong><small>{timeLabel}</small><PeriodBars label="Duration in seconds" format={duration} current={currentAvailable?current.seconds:null} previous={previousAvailable?previous.seconds:null} /></div><div><span>Sessions</span><strong>{currentAvailable ? current.sessions : "—"}</strong><small>{changeLabel(comparison.sessionChange, "sessions")}</small><PeriodBars label="Sessions" current={currentAvailable?current.sessions:null} previous={previousAvailable?previous.sessions:null} /></div><div><span>Active days</span><strong>{currentAvailable ? current.activeDays : "—"}{currentAvailable && <small> / 7</small>}</strong><small>{changeLabel(comparison.activeDayChange, "days")}</small><PeriodBars label="Active days" current={currentAvailable?current.activeDays:null} previous={previousAvailable?previous.activeDays:null} /></div></div>
       </section>
       <TrainingChart report={report} days={days} sport={sport} />
-      <div className="table-scroll"><table>
+      <details className="trend-blocks"><summary>Weekly totals</summary><div className="table-scroll"><table>
         <caption>7d blocks · {formatDate(report.date)} partial</caption>
         <thead><tr><th scope="col">Period</th><th scope="col">Sessions</th><th scope="col">Days</th><th scope="col">Duration</th><th scope="col">Distance · known</th><th scope="col">TL · Intervals</th></tr></thead>
         <tbody>{windows.map(window => <tr key={window.end}><td>{formatDate(window.start)} to {formatDate(window.end)}{!window.complete && <small>Partial coverage</small>}</td><td>{window.sessions || window.complete ? window.sessions : "Unavailable"}</td><td>{window.activeDays || window.complete ? window.activeDays : "Unavailable"}</td><td>{window.sessions || window.complete ? duration(window.seconds) : "Unavailable"}</td><td>{window.sessions || window.complete ? `${decimal(window.distanceKm, 2)} km` : "Unavailable"}{window.missingDistance ? ` · ${window.missingDistance} missing` : ""}</td><td>{window.sessions || window.complete ? window.knownLoad : "Unavailable"}{window.missingLoad ? ` · ${window.missingLoad} missing` : ""}</td></tr>)}</tbody>
-      </table></div>
+      </table></div></details>
       <h2 className="mix-title">Sport mix · 28d</h2>
       {mixSeconds>0 && <div className="sport-mix-bar" role="img" aria-label={mix.map(row=>`${row.sport} ${decimal(row.seconds/mixSeconds*100,0)}%`).join(", ")}>{mix.map(row=><span key={row.sport} style={{width:`${row.seconds/mixSeconds*100}%`,background:sportColors[row.sport] ?? palette.green}} />)}</div>}
       <div className="sport-mix">{mix.map(row => <div key={row.sport}><h3><i style={{background:sportColors[row.sport] ?? palette.green}} />{row.sport}</h3><strong>{duration(row.seconds)}</strong><p>{row.sessions} sessions · {mixSeconds>0?`${decimal(row.seconds/mixSeconds*100,0)}%`:"—"}{["Ride", "Run"].includes(row.sport) ? ` · ${row.distanceAvailable ? decimal(row.distanceKm, 2) : "—"} km` : ""}</p></div>)}</div>
@@ -148,20 +144,3 @@ export function Trends({ report }) {
   );
 }
 
-export function Sources({ report }) {
-  return (
-    <>
-      <div className="page-title"><div><p className="eyebrow">Evidence and definitions</p><h1>Know what each number means.</h1></div></div>
-      <div className="source-list">{report.sources.map(source => <article key={source.name}><div><h2>{source.name}</h2><span className="source-status">{source.status}</span></div><p>{source.detail}</p><p className="quiet">Observed {source.observedAt}{source.syncAge ? ` · Last device sync ${source.syncAge}` : ""}</p></article>)}</div>
-      <h2>Data checks</h2><ul className="quality-list">{report.quality.map(item => <li key={item}>{item}</li>)}</ul>
-      <div className="definitions">
-        <h2>Calculations and limits</h2>
-        <p>Duration totals sum moving time for deduplicated completed training. Distance totals sum available distances, with missing distances counted separately. A zero in the chart means zero recorded training in a complete checked source window. Unavailable means the source coverage is incomplete.</p>
-        <p>The 7-day mean equals recorded training minutes over the current day and preceding six days, divided by seven. The capture day is partial. Weekly comparisons exclude that day and require complete coverage for both windows.</p>
-        <p>Intervals form equals its displayed fitness minus fatigue. Garmin acute/chronic load and Intervals load use different models and remain on their own scales. Strength assessment also needs exercise, set, repetition, load, effort, and soreness context.</p>
-        <p>Power targets require measured power and a validated threshold. Session titles and configured FTP values provide context. Device estimates remain estimates.</p>
-        <h3>Guidance references</h3>{report.coaching.references.map(reference => <p key={reference.url}><a href={reference.url} target="_blank" rel="noreferrer">{reference.title}</a></p>)}
-      </div>
-    </>
-  );
-}

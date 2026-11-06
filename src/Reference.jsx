@@ -121,6 +121,10 @@ export function Reference({ report }) {
     {!terms.length && <p className="quiet" role="status">No matching terms.</p>}
 
     <div className="reference-methods">
+      <details><summary>Coaching analysis</summary>
+        <p>{report.coaching.rationale}</p>
+        <div className="findings">{report.coaching.findings.map(finding => <article key={finding.title}><h3>{finding.title}</h3><p>{finding.evidence}</p><p className="quiet">{finding.implication}</p></article>)}</div>
+      </details>
       <details><summary>Color key</summary>
         <div className="table-scroll"><table className="reference-table"><caption className="sr-only">Metric color key</caption><thead><tr><th scope="col">Metric</th><th scope="col">Colors</th></tr></thead><tbody>
           <tr><th scope="row">Readiness</th><td><ColorKey items={[["Poor", "#f35858"], ["Low", "#ff9c36"], ["Moderate", "#6cc45b"], ["High", "#36a8ff"], ["Prime", "#b083ef"]]} /></td></tr>
