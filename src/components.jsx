@@ -120,9 +120,13 @@ export function Trends({ report }) {
   const timeChange = comparison.timeChangePercent;
   const timeLabel = timeChange == null ? "—" : `${timeChange > 0 ? "+" : ""}${decimal(timeChange, 1)}%`;
   const previousAvailable = previous.sessions > 0 || coversWindow(report, previous.start, previous.end);
-  const mix = summarize(activities, shiftDate(report.date, -27), report.date).bySport;
+  const mixStart = shiftDate(report.date, -27);
+  const mix = summarize(activities, mixStart, report.date).bySport.map(row => ({
+    ...row,
+    distanceAvailable: activities.some(activity => activity.sport === row.sport && activity.classification !== "non-training" && activity.date >= mixStart && activity.date <= report.date && Number.isFinite(activity.distanceKm)),
+  }));
   const mixSeconds = mix.reduce((sum,row)=>sum+row.seconds,0);
-  const sportColors = [palette.blue,palette.orange,palette.purple,palette.green];
+  const sportColors = { Ride: palette.blue, Run: palette.orange, "Weight Training": palette.purple, Other: palette.green };
   return (
     <>
       <div className="page-title"><h1>Trends</h1><div className="trend-controls"><label className="filter" htmlFor="trend-sport">Sport<select id="trend-sport" value={sport} onChange={event => setSport(event.target.value)}><option>All</option>{sports.map(value => <option key={value}>{value}</option>)}</select></label><label className="filter" htmlFor="trend-window">Period<select id="trend-window" value={days} onChange={event => setDays(Number(event.target.value))}><option value={7}>7d</option><option value={28}>28d</option><option value={42}>42d</option></select></label></div></div>
@@ -134,12 +138,12 @@ export function Trends({ report }) {
       <TrainingChart report={report} days={days} sport={sport} />
       <div className="table-scroll"><table>
         <caption>7d blocks · {formatDate(report.date)} partial</caption>
-        <thead><tr><th scope="col">Period</th><th scope="col">Sessions</th><th scope="col">Days</th><th scope="col">Duration</th><th scope="col">Distance</th><th scope="col">TL · Intervals</th></tr></thead>
+        <thead><tr><th scope="col">Period</th><th scope="col">Sessions</th><th scope="col">Days</th><th scope="col">Duration</th><th scope="col">Distance · known</th><th scope="col">TL · Intervals</th></tr></thead>
         <tbody>{windows.map(window => <tr key={window.end}><td>{formatDate(window.start)} to {formatDate(window.end)}{!window.complete && <small>Partial coverage</small>}</td><td>{window.sessions || window.complete ? window.sessions : "Unavailable"}</td><td>{window.activeDays || window.complete ? window.activeDays : "Unavailable"}</td><td>{window.sessions || window.complete ? duration(window.seconds) : "Unavailable"}</td><td>{window.sessions || window.complete ? `${decimal(window.distanceKm, 2)} km` : "Unavailable"}{window.missingDistance ? ` · ${window.missingDistance} missing` : ""}</td><td>{window.sessions || window.complete ? window.knownLoad : "Unavailable"}{window.missingLoad ? ` · ${window.missingLoad} missing` : ""}</td></tr>)}</tbody>
       </table></div>
       <h2 className="mix-title">Sport mix · 28d</h2>
-      {mixSeconds>0 && <div className="sport-mix-bar" role="img" aria-label={mix.map(row=>`${row.sport} ${decimal(row.seconds/mixSeconds*100,0)}%`).join(", ")}>{mix.map((row,index)=><span key={row.sport} style={{width:`${row.seconds/mixSeconds*100}%`,background:sportColors[index%sportColors.length]}} />)}</div>}
-      <div className="sport-mix">{mix.map((row,index) => <div key={row.sport}><h3><i style={{background:sportColors[index%sportColors.length]}} />{row.sport}</h3><strong>{duration(row.seconds)}</strong><p>{row.sessions} sessions · {mixSeconds>0?`${decimal(row.seconds/mixSeconds*100,0)}%`:"—"}{["Ride", "Run"].includes(row.sport) ? ` · ${decimal(row.distanceKm, 2)} km` : ""}</p></div>)}</div>
+      {mixSeconds>0 && <div className="sport-mix-bar" role="img" aria-label={mix.map(row=>`${row.sport} ${decimal(row.seconds/mixSeconds*100,0)}%`).join(", ")}>{mix.map(row=><span key={row.sport} style={{width:`${row.seconds/mixSeconds*100}%`,background:sportColors[row.sport] ?? palette.green}} />)}</div>}
+      <div className="sport-mix">{mix.map(row => <div key={row.sport}><h3><i style={{background:sportColors[row.sport] ?? palette.green}} />{row.sport}</h3><strong>{duration(row.seconds)}</strong><p>{row.sessions} sessions · {mixSeconds>0?`${decimal(row.seconds/mixSeconds*100,0)}%`:"—"}{["Ride", "Run"].includes(row.sport) ? ` · ${row.distanceAvailable ? decimal(row.distanceKm, 2) : "—"} km` : ""}</p></div>)}</div>
     </>
   );
 }
