@@ -1,5 +1,9 @@
 # Prototype Instructions
 
+Reports run on the owner's command only. Follow `REPORTING_PROTOCOL.md`. Do not enable schedules, background refreshes, automatic email, or report-generation hooks on GitHub pushes. The current command may invoke the owner's already authorized full report-and-email protocol; do not ask for the same authorization again. Otherwise prepare and show the report, and send email only when requested. Read the recipient and all credentials from private configuration. Never publish the owner's health data, source captures, encrypted payloads, private report URLs or credentials to this public repository.
+
+Use professional cycling-coaching analysis with explicit evidence, uncertainty and adjustment rules, without claiming a UCI credential. Verify source access and capture times for each run. Separate today's partial observations, completed-day comparisons, provider-specific load models and unverified estimates. Never present a browser or extraction service as authenticated unless its own observed result proves it.
+
 The selected visual target is Performance Desk: charcoal background, lime accents, coaching decision first, readable charts and a next-session plan. GitHub hosts the public source and viewer. Personal report data stays in local private files and emailed URL fragments; never publish personal ciphertext or keys to GitHub. The archive is local to the browser that opened each report. Buildkite is excluded from the workflow.
 
 The locked login page shows only the Performance Desk eyebrow, the two-line "Your training. Your private report." heading, the private-link instruction, the access-key input and the Open my report button. Do not show the global header, extra privacy paragraph or design-preview link on this screen. Show errors and loading state only when needed.

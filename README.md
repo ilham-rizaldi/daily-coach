@@ -1,6 +1,12 @@
 # Daily Coach
 
-A personal coaching email and web archive for cycling, running and strength training. The Performance Desk design uses a charcoal background, lime accents, a coaching decision, training history, a next-session plan, and inspectable sources.
+A personal coaching email and web archive for cycling, running and strength training. Reports run on the owner's command. The Performance Desk design uses a charcoal background, lime accents, a coaching decision, training history, a next-session plan, and inspectable sources.
+
+## Reporting protocol
+
+Follow [REPORTING_PROTOCOL.md](REPORTING_PROTOCOL.md) for a requested run, source verification, coaching depth, validation and email delivery. Run only when the owner asks. Do not install or enable recurring schedules, background refreshes, automatic email, or repository-triggered report runs.
+
+The owner's current request determines whether to capture and analyze data, prepare a private report, or also email it. A request invoking the already authorized full report-and-email protocol authorizes that delivery without a second confirmation. A preview, code change or data-access check does not itself authorize email. Keep the recipient in private configuration rather than public source.
 
 ## Run the app
 
@@ -30,14 +36,14 @@ The `docs/` directory is ready for GitHub Pages. Configure Pages to deploy `main
 
 ## Prepare a report
 
-1. Read the owner's current authorized source data.
+1. Start from the owner's current command and read the authorized source data. Verify each source's signed-in state, capture time, latest activity and available date range; record any source that could not be read.
 2. Write a report matching `src/demo.js` into `.local/report.private.json`. Supply real per-field sources, a verified date window, raw activities, coaching rationale, session steps and data-quality notes.
 3. Put the private configuration in `.local/config.private.json`, using `archiveKey` as a cryptographically random 32-byte base64url string, plus `siteUrl`, `email` and `repository`.
-4. Run `node scripts/publish-report.mjs .local/report.private.json`.
+4. Run `npm run report -- .local/report.private.json` to prepare the encrypted report and email files. This command does not retrieve source data, send email, commit code or deploy the viewer.
 5. Keep all personal report files in `.local/`. Publish only the viewer code, illustrative data and static assets in `docs/`. Report generation does not require a public repository update.
-6. Verify that the private link decrypts to the intended report, then deliver the prepared MIME payload from `.local/email.private.json` through the authorized email connector. Search sent mail for the subject and date before sending.
+6. Verify that the private link decrypts to the intended report. If the owner's command authorizes email, verify the configured recipient, search sent mail for the subject and report date to avoid an accidental duplicate, then deliver the prepared MIME payload from `.local/email.private.json` through the authorized email connector. Confirm the sent message before claiming delivery.
 
-The script preserves local report history, replaces a report for the same date, authenticates compressed encrypted data with AES-256-GCM, writes files atomically, and prepares both HTML and plain-text email. Each email link carries its single encrypted report and access key in the URL fragment. Private configuration and generated email stay in `.local/`. Keep the archive key in a private credential store with a backup. Daily sending and source retrieval require an authorized external scheduler and connected data sources.
+The script preserves local report history, replaces a report for the same date, authenticates compressed encrypted data with AES-256-GCM, writes files atomically, and prepares both HTML and plain-text email. Each email link carries its single encrypted report and access key in the URL fragment. Private configuration and generated email stay in `.local/`. Keep the archive key in a private credential store with a backup. Source retrieval and email delivery are separate, explicitly requested actions through available authorized tools.
 
 ## Sources and interpretation
 
