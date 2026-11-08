@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, useState } from "react";
+import { Component, Fragment, lazy, Suspense, useId, useState } from "react";
 import { compareWeeks, coversWindow, decimal, duration, filterActivities, formatDate, jakartaDate, shiftDate, summarize } from "./report.js";
 import { palette } from "./MetricGraphics.jsx";
 import { DurationValue } from "./Readout.jsx";
@@ -45,19 +45,119 @@ export function Session({ report, expanded, onExpand }) {
   );
 }
 
+function activityClock(seconds) {
+  const rounded = Math.round(seconds);
+  const hours = Math.floor(rounded / 3600), minutes = Math.floor(rounded % 3600 / 60);
+  return `${hours ? `${hours}h ` : ""}${minutes}m ${String(rounded % 60).padStart(2, "0")}s`;
+}
+
+const firstRecorded = (...values) => values.find(Number.isFinite);
+
+function activityMetrics(activity) {
+  const metrics = [];
+  function add(label, value, unit, places = 0, minimum = 0) {
+    if (!Number.isFinite(value) || value < minimum) return;
+    const gap = unit === "%" || unit.startsWith("/") ? "" : " ";
+    metrics.push({ label, value: `${decimal(value, places)}${gap}${unit}` });
+  }
+  function addTime(label, value) {
+    if (Number.isFinite(value) && value >= 0) metrics.push({ label, value: activityClock(value) });
+  }
+  addTime("Timer", activity.timerSeconds);
+  addTime("Moving time", activity.providerMovingSeconds);
+  addTime("Elapsed time", activity.elapsedSeconds);
+  add("HR max", activity.maxHr, "bpm", 0, 1);
+  add("Speed avg", activity.averageSpeedKph, "km/h", 1);
+  add("Moving speed avg", activity.averageMovingSpeedKph, "km/h", 1);
+  add("Speed max", firstRecorded(activity.maximumSpeedKph, activity.maxSpeedKph), "km/h", 1);
+  add("Elevation gain", activity.elevationMeters, "m");
+  add("Elevation loss", activity.descentMeters, "m");
+  add("Elevation min", activity.minElevationMeters, "m", 0, -Infinity);
+  add("Elevation max", activity.maxElevationMeters, "m", 0, -Infinity);
+  add("Aerobic TE · Garmin", activity.garminAerobicTrainingEffect, "/5", 1);
+  add("Anaerobic TE · Garmin", activity.garminAnaerobicTrainingEffect, "/5", 1);
+  add("Exercise Load · Garmin", activity.garminExerciseLoad, "pts");
+  add("TSS · Garmin", activity.garminTrainingStressScore, "pts", 1, 0.1);
+  add("TRIMP · Intervals", activity.intervalsTrimp, "AU", 1);
+  add("Intensity · Intervals", activity.intervalsIntensityPercent, "%");
+  if (activity.intervalsListLoad !== activity.intervalsLoad) add("List TL · Intervals", activity.intervalsListLoad, "pts", 1);
+  add("HR avg · Intervals", activity.intervalsAverageHr, "bpm", 0, 1);
+  if (activity.sport !== "Run") {
+    add("Power avg", firstRecorded(activity.averagePowerWatts, activity.averageCyclingPowerWatts), "W");
+    add("Power max", firstRecorded(activity.maximumPowerWatts, activity.maxPowerWatts, activity.maximumCyclingPowerWatts), "W");
+    add("Normalized power", firstRecorded(activity.normalizedPowerWatts, activity.normalizedCyclingPowerWatts), "W");
+  }
+  add("Power avg · Strava est.", activity.stravaEstimatedPowerWatts, "W");
+  add("Run power avg · est.", activity.averageRunningPowerWatts, "W");
+  add("Run power max · est.", activity.maximumRunningPowerWatts, "W");
+  add("Run power normalized · est.", activity.normalizedRunningPowerWatts, "W");
+  add("Cadence avg", firstRecorded(activity.averageCadenceRpm, activity.averageBikeCadenceRpm), "rpm");
+  add("Cadence max", firstRecorded(activity.maximumCadenceRpm, activity.maximumBikeCadenceRpm), "rpm");
+  add("Run cadence avg", activity.averageRunCadence, "spm");
+  add("Run cadence max", activity.maxRunCadence, "spm");
+  add("Stride length", activity.averageStrideLengthMeters, "m", 2);
+  add("Vertical ratio", activity.averageVerticalRatioPercent, "%", 1);
+  add("Vertical oscillation", activity.averageVerticalOscillationCm, "cm", 1);
+  add("Ground contact time", activity.averageGroundContactTimeMs, "ms");
+  add("Respiration avg", activity.averageRespiration, "breaths/min", 1);
+  add("Respiration min", activity.minimumRespiration, "breaths/min", 1);
+  add("Respiration max", activity.maximumRespiration, "breaths/min", 1);
+  add("Temperature avg", activity.averageTempC, "°C", 1, -Infinity);
+  add("Temperature min", activity.minTempC, "°C", 1, -Infinity);
+  add("Temperature max", activity.maxTempC, "°C", 1, -Infinity);
+  add("Energy total", activity.caloriesKcal, "kcal");
+  add("Energy active", activity.activeCaloriesKcal, "kcal");
+  add("Energy resting", activity.restingCaloriesKcal, "kcal");
+  add("Sweat loss · est.", activity.estimatedSweatLossMl, "mL");
+  add("Moderate intensity", activity.moderateIntensityMinutes, "min");
+  add("Vigorous intensity", activity.vigorousIntensityMinutes, "min");
+  add("Intensity total · Garmin", activity.totalIntensityMinutes, "min");
+  add("Body Battery drain", activity.bodyBatteryDrain, "pts", 0, -Infinity);
+  add("Lap count", activity.laps, "laps");
+  add("Step count", activity.totalSteps, "steps");
+  add("Stroke count", activity.totalStrokes, "strokes");
+  addTime("Work time", activity.workSeconds);
+  addTime("Rest time", activity.restSeconds);
+  add("Total sets", activity.totalSets, "sets");
+  add("Total reps", activity.totalReps, "reps");
+  add("Strength volume", activity.strengthVolumeKg, "kg");
+  const deadlift = activity.exerciseDetailCheck?.deadlift;
+  if (deadlift && [deadlift.sets, deadlift.repsPerSet, deadlift.recordedWeightKg].every(value => Number.isFinite(value) && value > 0)) {
+    metrics.push({ label: deadlift.recordedName || "Deadlift", value: `${deadlift.sets} × ${deadlift.repsPerSet} · ${decimal(deadlift.recordedWeightKg, 1)} kg` });
+  }
+  return metrics;
+}
+
+const detailLayout = {
+  display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,112px),1fr))",
+  gap: "9px 14px", margin: 0, padding: "10px 12px",
+  boxSizing: "border-box", width: "min(100%, calc(100vw - 48px))",
+  whiteSpace: "normal", background: "#20262c", border: "1px solid #39444f", borderRadius: 5,
+  position: "sticky", left: 0,
+};
+
+function ActivityDetails({ metrics }) {
+  return <dl style={detailLayout}>{metrics.map(({ label, value }) => <div key={label}>
+    <dt className="quiet" style={{ fontSize: 11 }}>{label}</dt>
+    <dd style={{ margin: 0, fontWeight: 600 }}>{value}</dd>
+  </div>)}</dl>;
+}
+
 export function ActivityTable({ report }) {
   const [sport, setSport] = useState("All");
   const [days, setDays] = useState("all");
   const [query, setQuery] = useState("");
   const [includeExcluded, setIncludeExcluded] = useState(false);
   const [limit, setLimit] = useState(10);
+  const [selected, setSelected] = useState(null);
+  const detailId = useId();
   const rows = filterActivities(report, { sport, days, query, includeExcluded });
   const visible = rows.slice(0, limit);
   const start = days === "all" ? report.coverage.start : shiftDate(report.date, 1 - Number(days));
   const sports = [...new Set(report.activities.map(activity => activity.sport))];
   const excluded = report.activities.some(activity => activity.classification === "non-training");
-  const update = (setter, value) => { setter(value); setLimit(10); };
-  function clearFilters() { setSport("All"); setDays("all"); setQuery(""); setIncludeExcluded(false); setLimit(10); }
+  const update = (setter, value) => { setter(value); setLimit(10); setSelected(null); };
+  function clearFilters() { setSport("All"); setDays("all"); setQuery(""); setIncludeExcluded(false); setLimit(10); setSelected(null); }
   return (
     <section className="activity-section" aria-labelledby="activities-title">
       <div className="section-title"><h2 id="activities-title">Activities</h2></div>
@@ -71,19 +171,35 @@ export function ActivityTable({ report }) {
       <div className="table-scroll"><table>
         <caption className="sr-only">Activity history. Excluded recordings contribute no training time or load.</caption>
         <thead><tr><th scope="col">Date</th><th scope="col">Session</th><th scope="col">Duration</th><th scope="col">Distance</th><th scope="col">HR avg</th><th scope="col">TL · Intervals</th></tr></thead>
-        <tbody>{visible.map((activity, index) => (
-          <tr key={`${activity.source}-${Object.values(activity.externalIds || {}).join("-")}-${index}`} className={activity.classification === "non-training" ? "activity-excluded" : undefined}>
-            <td>{formatDate(activity.date)}</td>
-            <td>{activity.externalIds?.strava ? <a href={`https://www.strava.com/activities/${activity.externalIds.strava}`} target="_blank" rel="noreferrer">{activity.name}</a> : activity.name}<small>{activity.sport}{activity.classification === "non-training" ? " · Excluded from training" : ""}</small></td>
-            <td>{duration(activity.movingSeconds)}</td>
-            <td>{Number.isFinite(activity.distanceKm) ? `${decimal(activity.distanceKm, 2)} km` : "—"}</td>
-            <td>{Number.isFinite(activity.averageHr) ? `${activity.averageHr} bpm` : "—"}</td>
-            <td>{Number.isFinite(activity.intervalsLoad) ? activity.intervalsLoad : "—"}</td>
-          </tr>
-        ))}</tbody>
+        <tbody>{visible.map((activity, index) => {
+          const metrics = activityMetrics(activity), open = selected === activity;
+          const rowDetailId = `${detailId}-${index}`;
+          return <Fragment key={`${activity.source}-${Object.values(activity.externalIds || {}).join("-")}-${index}`}>
+            <tr className={activity.classification === "non-training" ? "activity-excluded" : undefined}>
+              <td>{formatDate(activity.date)}</td>
+              <td>
+                {activity.externalIds?.strava ? <a href={`https://www.strava.com/activities/${activity.externalIds.strava}`} target="_blank" rel="noreferrer">{activity.name}</a> : activity.name}
+                <small>
+                  {activity.sport}{activity.classification === "non-training" ? " · Excluded from training" : ""}
+                  {metrics.length > 0 && <button type="button" onClick={() => setSelected(open ? null : activity)}
+                    aria-expanded={open} aria-controls={open ? rowDetailId : undefined}
+                    aria-label={`${open ? "Hide" : "Show"} details for ${activity.name}`}
+                    style={{ padding: "3px 0", marginInlineStart: 8, fontSize: 11, color: palette.light, minHeight: 28 }}>
+                    {open ? "− Details" : "+ Details"}
+                  </button>}
+                </small>
+              </td>
+              <td>{duration(activity.movingSeconds)}</td>
+              <td>{Number.isFinite(activity.distanceKm) ? `${decimal(activity.distanceKm, 2)} km` : "—"}</td>
+              <td>{Number.isFinite(activity.averageHr) ? `${activity.averageHr} bpm` : "—"}</td>
+              <td>{Number.isFinite(activity.intervalsLoad) ? activity.intervalsLoad : "—"}</td>
+            </tr>
+            {open && <tr id={rowDetailId}><td colSpan={6} style={{ padding: "0 0 10px" }}><ActivityDetails metrics={metrics} /></td></tr>}
+          </Fragment>;
+        })}</tbody>
       </table></div>
       {!rows.length && <div className="empty-state"><p>{report.activities.length ? "No sessions match these filters." : "No activities were included in this report."}</p>{report.activities.length > 0 && <button className="text-button" onClick={clearFilters}>Clear filters</button>}</div>}
-      {rows.length > 10 && <div className="table-actions">{visible.length < rows.length && <button className="text-button" onClick={() => setLimit(limit + 10)}>Show {Math.min(10, rows.length - visible.length)} more</button>}{limit > 10 && <button className="text-button" onClick={() => setLimit(10)}>Show fewer</button>}</div>}
+      {rows.length > 10 && <div className="table-actions">{visible.length < rows.length && <button className="text-button" onClick={() => setLimit(limit + 10)}>Show {Math.min(10, rows.length - visible.length)} more</button>}{limit > 10 && <button className="text-button" onClick={() => { setLimit(10); setSelected(null); }}>Show fewer</button>}</div>}
     </section>
   );
 }

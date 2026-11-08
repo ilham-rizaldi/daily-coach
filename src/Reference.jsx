@@ -23,6 +23,9 @@ const glossary = [
   ["SpO₂", "Vitals", "%", "Recorded oxygen saturation; mean and minimum are separate watch readings."],
   ["RR / Respiration", "Vitals", "br/min", "Respiratory rate; mean and minimum are separate readings."],
   ["VO₂ max", "Fitness", "ml/kg/min", "Estimated maximal oxygen uptake relative to body mass."],
+  ["Personal record (PR)", "Performance", "Source unit", "Best result confirmed by the provider. Sport, record date and capture time are tracked separately."],
+  ["Average speed / pace", "Performance", "km/h / min/km", "Recorded averages and values calculated from distance and timer or moving time are separate series. Comparisons match activity scope and timing basis."],
+  ["Next sleep need", "Sleep", "h", "Garmin's upcoming-night recommendation. Historical sleep gap uses the need for the completed night."],
   ["Heat acclimation", "Adaptation", "%", "Garmin's estimated heat-adaptation level."],
   ["Training status", "Garmin", "Category", "Source classification of training-load and fitness context."],
   ["Load focus", "Garmin", "Category", "Distribution of low-aerobic, high-aerobic and anaerobic training effects."],
@@ -74,6 +77,106 @@ function valueWithUnit(value, unit) {
   return Number.isFinite(value) ? `${decimal(value)} ${unit}` : "—";
 }
 
+const positive = value => Number.isFinite(value) && value > 0;
+const capturedStatuses = new Set(["accepted", "confirmed", "current", "recorded", "verified", "official"]);
+const sportLabels = { Ride: "Cycling", Run: "Running" };
+
+function evidenceDay(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return null;
+  const time = Date.parse(`${value}T12:00:00Z`);
+  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value ? value : null;
+}
+
+function EvidenceDate({ day }) {
+  return day ? <time dateTime={day}>{formatDate(day, { year: "numeric" })}</time> : "Date not recorded";
+}
+
+const captureTime = value => value ? timestamp(value) : "Time not recorded";
+
+function EvidenceSource({ row }) {
+  let link;
+  try {
+    const url = new URL(row.sourceUrl || row.url);
+    if (url.protocol === "https:" && !url.username && !url.password) link = url.href;
+  } catch { /* A source can be captured without a direct link. */ }
+  return link ? <a href={link} target="_blank" rel="noreferrer">{row.source}</a> : row.source;
+}
+
+function PerformanceEvidence({ report }) {
+  const history = Array.isArray(report.performance?.vo2History) ? report.performance.vo2History : [];
+  const records = Array.isArray(report.performance?.records) ? report.performance.records : [];
+  const groups = new Map();
+  for (const row of history) {
+    const day = evidenceDay(row?.date);
+    if (!day || day > report.date || !row.sport || !row.source || !positive(row.value)) continue;
+    const key = JSON.stringify([row.sport, row.source]);
+    if (!groups.has(key)) groups.set(key, new Map());
+    const days = groups.get(key);
+    if (!days.has(day)) days.set(day, row);
+    else if (days.get(day)?.value !== row.value) days.set(day, null);
+  }
+  const series = [...groups.entries()].map(([key, days]) => ({
+    key,
+    points: [...days.values()].filter(Boolean).sort((a, b) => a.date.localeCompare(b.date)),
+  })).filter(group => group.points.length);
+  const captured = new Map();
+  for (const row of records) {
+    if (!row?.sport || !row.source || !row.label || !row.unit || !positive(row.value)) continue;
+    if (row.status && !capturedStatuses.has(String(row.status).trim().toLowerCase())) continue;
+    const day = evidenceDay(row.date);
+    if (row.date && (!day || day > report.date)) continue;
+    const key = JSON.stringify([row.sport, row.source, row.label, day, row.value, row.unit]);
+    captured.set(key, row);
+  }
+  const recordRows = [...captured].sort(([, a], [, b]) => (b.date || "").localeCompare(a.date || ""));
+
+  return <details><summary>Performance evidence</summary>
+    {!series.length ? <p>VO₂ max history: not captured.</p> : <div className="table-scroll"><table className="source-table">
+      <caption>VO₂ max history · ml/kg/min</caption>
+      <thead><tr><th scope="col">Sport</th><th scope="col">Source</th><th scope="col">Coverage</th><th scope="col">Latest</th><th scope="col">Captured</th></tr></thead>
+      <tbody>{series.map(({ key, points }) => {
+        const first = points[0], latest = points.at(-1);
+        return <tr key={key}><th scope="row">{sportLabels[latest.sport] || latest.sport}</th><td><EvidenceSource row={latest} /></td>
+          <td>{points.length} {points.length === 1 ? "reading" : "readings"}{points.length > 1 && <small><EvidenceDate day={first.date} />–<EvidenceDate day={latest.date} /></small>}</td>
+          <td>{decimal(latest.value)} <small><EvidenceDate day={latest.date} /></small></td><td>{captureTime(latest.observedAt)}</td></tr>;
+      })}</tbody>
+    </table></div>}
+    {!recordRows.length ? <p>Personal records: not captured.</p> : <div className="table-scroll"><table className="source-table">
+      <caption>Personal records</caption>
+      <thead><tr><th scope="col">Record</th><th scope="col">Result</th><th scope="col">Source</th><th scope="col">Record date</th><th scope="col">Captured</th></tr></thead>
+      <tbody>{recordRows.map(([key, row]) => <tr key={key}><th scope="row">{row.label}<small>{sportLabels[row.sport] || row.sport}</small></th>
+        <td>{decimal(row.value, 3)} {row.unit}</td><td><EvidenceSource row={row} /></td><td><EvidenceDate day={row.date} /></td><td>{captureTime(row.observedAt)}</td></tr>)}</tbody>
+    </table></div>}
+  </details>;
+}
+
+function coverageLabel(value) {
+  const label = value.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replace(/[_-]+/g, " ")
+    .replace(/\b(hrv|rhr|ctl|atl|tsb|ftp)\b/gi, acronym => acronym.toUpperCase())
+    .replace(/\bvo2\b/gi, "VO₂").replace(/\bspo2\b/gi, "SpO₂");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function MetricCoverage({ availability }) {
+  const categories = Object.entries(availability?.categories || {});
+  if (!categories.length) return null;
+  return <details><summary>Metric coverage</summary>
+    <div className="table-scroll"><table className="source-table">
+      <caption className="sr-only">Captured and missing metrics</caption>
+      <thead><tr><th scope="col">Category</th><th scope="col">Available</th><th scope="col">Missing</th></tr></thead>
+      <tbody>{categories.map(([category, entry]) => {
+        const available = Array.isArray(entry?.available) ? entry.available : [];
+        const missing = Object.entries(entry?.missing || {});
+        return <tr key={category}><th scope="row">{coverageLabel(category)}</th><td>{available.length}</td><td>
+          {missing.length ? missing.map(([field, item]) => <div key={field}>
+            {item?.label || coverageLabel(field)} · {typeof item?.status === "string" ? coverageLabel(item.status) : "Not recorded"}
+          </div>) : "None"}
+        </td></tr>;
+      })}</tbody>
+    </table></div>
+  </details>;
+}
+
 export function Reference({ report }) {
   const [query, setQuery] = useState("");
   const search = query.trim().toLowerCase();
@@ -81,20 +184,23 @@ export function Reference({ report }) {
   const w = report.wellness || {};
   const r = w.provenance?.datedRecovery || {};
   const load = w.provenance?.currentLoadContext || {};
+  const evidence = w.provenance?.fields || {};
+  const captured = reading => reading?.observedAt ?? (reading?.observationWindow ? `${timestamp(reading.observationWindow.start)} – ${timestamp(reading.observationWindow.end)}` : null);
   const loadRows = (report.garminLoadHistory?.rows || []).filter(row => row?.date === report.date && row.acute === w.garminAcuteLoad && row.chronic === w.garminChronicLoad);
   const pair = loadRows.length === 1 ? loadRows[0] : null;
   const chronicDated = load.chronic?.date || load.chronic?.metricDate;
   const readingDates = [
     ["Readiness / recovery", w.date || r.date, r.readiness?.observedAt, w.readinessUpdatedAtLocal ? `${w.readinessUpdatedAtLocal} WIB` : "—"],
-    ["Body Battery", w.date || r.date, r.bodyBattery?.observedAt, "—"],
-    ["Sleep / overnight vitals", w.date || r.date, r.sleep?.observedAt, "—"],
-    ["HRV", w.date || r.date, r.hrv?.observedAt, "—"],
-    ["RHR", w.date || r.date, r.heartRate?.observedAt, "—"],
-    ["Garmin acute", load.acute?.date || pair?.date, load.acute?.observedAt, "—"],
-    ["Garmin chronic", chronicDated || pair?.date, chronicDated ? load.chronic?.observedAt : pair ? report.garminLoadHistory?.observedAt : load.chronic?.observedAt, "—"],
-    ["Garmin ratio", load.ratio?.date || load.ratio?.metricDate, load.ratio?.observedAt, "—"],
-    ["Training status", null, load.trainingStatusObservedAt, "—"],
-    ["VO₂ max / heat acclimation", null, null, "—"],
+    ["Body Battery", w.date || r.date, captured(evidence.bodyBattery ?? evidence.bodyBatteryDailyHigh ?? r.bodyBattery), "—"],
+    ["Sleep / overnight vitals", w.date || r.date, captured(r.sleep), "—"],
+    ["HRV", w.date || r.date, captured(evidence.rawHrvMs ?? r.hrv), "—"],
+    ["RHR", w.date || r.date, captured(evidence.restingHr ?? r.heartRate), "—"],
+    ["Garmin acute", load.acute?.date || load.acute?.metricDate || pair?.date, captured(load.acute), "—"],
+    ["Garmin chronic", chronicDated || pair?.date, captured(load.chronic) ?? (pair ? report.garminLoadHistory?.observedAt : null), "—"],
+    ["Garmin ratio", load.ratio?.date || load.ratio?.metricDate, captured(load.ratio), load.ratio?.basis || "—"],
+    ["Training status", w.trainingStatusSince, captured(evidence.trainingStatus) ?? load.trainingStatusObservedAt, "—"],
+    ["VO₂ max", evidence.vo2Max?.measurementDate, captured(evidence.vo2Max), "—"],
+    ["Heat acclimation", evidence.heatAcclimationPercent?.measurementDate, captured(evidence.heatAcclimationPercent), "—"],
     ["Intervals CTL / ATL / Form", report.intervals?.date, report.intervals?.provenance?.observedAt, "—"],
   ];
   const rates = ["Ride", "Run", "Weight Training"].map(sport => ({ sport, history: historicalLoadRate(report, sport), weights: contributionWeights(report, sport) }));
@@ -113,6 +219,7 @@ export function Reference({ report }) {
     ["Running LT · HR", valueWithUnit(runningThreshold.heartRateBpm, "bpm"), valueWithUnit(runSettings.thresholdHr, "bpm"), runningDate ? date(runningDate) : "Undated"],
     ["Running LT · pace", runningThreshold.pace || "—", runSettings.thresholdPace ?? "—", runningDate ? date(runningDate) : "Undated"],
     ["Running LT · power", valueWithUnit(runningThreshold.runningPowerWatts, "W"), valueWithUnit(runSettings.runningFtpWatts, "W"), runningDate ? date(runningDate) : "Undated"],
+    ...(Number.isFinite(runningThreshold.runningPowerWattsPerKg) ? [["Running LT · relative power", `${decimal(runningThreshold.runningPowerWattsPerKg, 2)}W/kg`, "—", runningDate ? date(runningDate) : "Undated"]] : []),
   ];
   const links = [...new Map([...methodLinks, ...(report.coaching?.references || [])].map(link => [link.url, link])).values()];
 
@@ -168,15 +275,18 @@ export function Reference({ report }) {
         <p>Paired day-to-day acute/chronic change factors from consecutive completed dates with no recorded activity. Window: previous 56 days; minimum n = 3. The representative pair is closest to the median projected ratio.</p>
         <p>Acute and chronic factors stay paired. Range = minimum–maximum historical scenarios. Confidence: low. Current partial dates and every recorded activity date are excluded, including locally excluded recordings.</p>
         <dl className="reference-metadata"><div><dt>Calibration</dt><dd>{rest.available ? `n = ${rest.n}${rest.extrapolation ? " · Extrapolation" : ""}` : `n = ${rest.n} · Unavailable`}</dd></div><div><dt>History capture</dt><dd>{timestamp(report.garminLoadHistory?.observedAt)}</dd></div><div><dt>Method</dt><dd>Empirical paired transitions</dd></div></dl>
+        {!rest.available && <p>{rest.error}</p>}
       </details>
       <details><summary>Field verification</summary>
         <div className="table-scroll"><table className="reference-table"><caption>Garmin estimates / Intervals settings</caption><thead><tr><th scope="col">Metric</th><th scope="col">Recorded estimate</th><th scope="col">Configured</th><th scope="col">Date / status</th></tr></thead><tbody>{thresholdRows.map(([metric, recorded, configured, status]) => <tr key={metric}><th scope="row">{metric}</th><td>{recorded}</td><td>{configured}</td><td>{status}</td></tr>)}</tbody></table></div>
         <dl className="reference-metadata"><div><dt>Physiological validation</dt><dd>{settings.validatedPhysiologicalThresholds === false ? "Not validated" : settings.validatedPhysiologicalThresholds === true ? "Validated" : "—"}</dd></div><div><dt>Settings capture</dt><dd>{settings.observedAt ? timestamp(settings.observedAt) : date(settings.observedDate)}</dd></div></dl>
       </details>
+      <PerformanceEvidence report={report} />
       <details><summary>Data & capture</summary>
         <dl className="reference-metadata"><div><dt>Coverage</dt><dd>{date(report.coverage?.start)}–{date(report.coverage?.end)} · {report.coverage?.complete ? "Complete captured window" : "Partial coverage"}</dd></div><div><dt>Report capture</dt><dd>{timestamp(report.capturedAt)}</dd></div>{report.compiledAt && <div><dt>Compiled</dt><dd>{timestamp(report.compiledAt)}</dd></div>}</dl>
         <div className="table-scroll"><table className="source-table"><caption className="sr-only">Source capture</caption><thead><tr><th scope="col">Source</th><th scope="col">Captured</th><th scope="col">Status</th></tr></thead><tbody>{(report.sources || []).map(source => <tr key={source.name}><th scope="row">{source.name}</th><td>{timestamp(source.observedAt)}</td><td>{source.status}</td></tr>)}</tbody></table></div>
-        <div className="table-scroll"><table className="source-table"><caption>Metric provenance · — = unrecorded</caption><thead><tr><th scope="col">Metric</th><th scope="col">Reading date</th><th scope="col">Captured</th><th scope="col">Source update</th></tr></thead><tbody>{readingDates.map(([metric, metricDate, captured, updated]) => <tr key={metric}><th scope="row">{metric}</th><td>{date(metricDate)}</td><td>{timestamp(captured)}</td><td>{updated}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="source-table"><caption>Snapshot provenance · — = unrecorded</caption><thead><tr><th scope="col">Metric</th><th scope="col">Reading date</th><th scope="col">Captured</th><th scope="col">Source update</th></tr></thead><tbody>{readingDates.map(([metric, metricDate, captured, updated]) => <tr key={metric}><th scope="row">{metric}</th><td>{date(metricDate)}</td><td>{timestamp(captured)}</td><td>{updated}</td></tr>)}</tbody></table></div>
+        <MetricCoverage availability={report.metricAvailability} />
         <p>Totals use deduplicated canonical session timers. Excluded recordings contribute no local training totals. Missing fields remain null; zero training requires complete captured coverage.</p>
         <p>Weekly comparisons use completed calendar days. Daily charts include the capture date so far. Provider load models retain their source totals and settings. Capture, measurement and compilation times remain separate.</p>
         {(report.sources || []).map(source => source.detail && <details key={source.name}><summary>{source.name} capture notes</summary><p>{source.detail}</p>{source.syncAge && <p>{source.syncAge}</p>}</details>)}
