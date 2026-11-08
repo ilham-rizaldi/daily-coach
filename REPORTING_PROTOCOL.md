@@ -29,6 +29,8 @@ The code repository and viewer remain public. Source captures, activity and well
 
 Apply professional cycling-coaching reasoning without claiming a credential. Lead with the training decision and its evidence. Distinguish observed facts, calculated results, interpretations and recommendations.
 
+Write `coaching.actionPlan` for Daily with a short decision, two or three dated data signals, and only the applicable training, recovery, fuel or rest actions. Include an alternative and a next check when either changes the decision. Give familiar meal examples and scale fueling to the actual session or recovery window. Link each plan's `referenceIds` to entries in `coaching.research` with `id`, `citation`, a peer-reviewed DOI `url`, and `application`. Keep source context in Reference. A device estimate or Load Focus gap informs the plan alongside recent training and self-reported recovery. Avoid treating either as a quota for the next session.
+
 | Area | Required content when supported by the capture |
 | --- | --- |
 | Readiness and recovery | Current and baseline sleep, resting heart rate, HRV, recovery/readiness and reported fatigue; note conflicts, missing symptoms and observation times. |

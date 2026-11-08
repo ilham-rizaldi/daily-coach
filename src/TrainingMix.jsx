@@ -6,6 +6,7 @@ import "./training-mix.css";
 const zoneOrder = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"];
 const buckets = [["lowAerobic", "Low aerobic"], ["highAerobic", "High aerobic"], ["anaerobic", "Anaerobic"]];
 const sportLabel = { Ride: "Cycling", Run: "Running", Swim: "Swimming" };
+const focusStatusLabels = { below: "Below target", within: "Within target", above: "Above target" };
 
 function dateOnly(value) {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
@@ -104,8 +105,13 @@ function GarminFocus({ report }) {
   const items = Array.isArray(focus?.buckets) && start && end && start <= end && end <= report.date ? buckets.flatMap(([key, label]) => {
     const row = focus.buckets.find(item => item?.key === key);
     if (!Number.isFinite(row?.points) || row.points < 0) return [];
-    const target = Number.isFinite(row.targetLow) && Number.isFinite(row.targetHigh) && row.targetLow >= 0 && row.targetHigh > row.targetLow;
-    return [{ ...row, label, target }];
+    const target = Number.isFinite(row.targetLow) && Number.isFinite(row.targetHigh) && row.targetLow >= 0 && row.targetHigh >= row.targetLow;
+    const approximate = row.targetBasis === "charted" || row.targetApproximate === true;
+    const verifiedStatus = Object.hasOwn(focusStatusLabels, row.status) ? row.status : null;
+    const numericStatus = target && (row.points < row.targetLow ? "below" : row.points > row.targetHigh ? "above" : "within");
+    const status = (approximate && verifiedStatus) || numericStatus || verifiedStatus;
+    const delta = status !== numericStatus ? 0 : status === "below" ? row.targetLow - row.points : status === "above" ? row.points - row.targetHigh : 0;
+    return [{ ...row, label, target, approximate, status, delta }];
   }) : [];
   const max = Math.max(1, ...items.map(item => Math.max(item.points, item.target ? item.targetHigh : 0)));
   const url = sourceLink(focus?.sourceUrl);
@@ -113,12 +119,19 @@ function GarminFocus({ report }) {
     <div className="mix-card-heading"><div><h3>Load Focus</h3><small>{report.preview ? "Illustrative" : url && items.length ? <a href={url} target="_blank" rel="noopener noreferrer">Garmin</a> : "Garmin"}{items.length > 0 && ` · ${labelRange(start, end)}`}</small></div></div>
     {items.length ? <div className="mix-load-buckets">{items.map(item => <div key={item.key} className="mix-bucket">
       <div className="mix-row"><span>{item.label}</span><MetricValue as="strong" value={decimal(item.points, 0)} unit="pts" /></div>
-      <div className="mix-track" role="img" aria-label={`${item.label}: ${item.points} points${item.target ? `, Garmin target ${item.targetLow} to ${item.targetHigh}` : ""}`}>
+      <div className="mix-track mix-focus-track" aria-hidden="true">
         <span className="mix-fill" data-bucket={item.key} style={{ width: `${100 * item.points / max}%` }} />
-        {item.target && <span className="mix-target" style={{ left: `${100 * item.targetLow / max}%`, width: `${100 * (item.targetHigh - item.targetLow) / max}%` }} />}
+        {item.target && <span className="mix-target" data-approximate={item.approximate} style={{
+          left: `min(${100 * item.targetLow / max}%, calc(100% - 2px))`, width: `max(2px, ${100 * (item.targetHigh - item.targetLow) / max}%)`,
+        }} />}
       </div>
-      {item.target && <small className="mix-coverage">Target {decimal(item.targetLow, 0)}–{decimal(item.targetHigh, 0)} pts</small>}
-    </div>)}</div> : <p className="mix-empty">Load Focus totals not captured</p>}
+      <div className="mix-focus-meta">
+        <small>{item.target ? <>Target <span className="mix-focus-value">{item.targetLow === item.targetHigh ? decimal(item.targetLow) : `${decimal(item.targetLow)}–${decimal(item.targetHigh)}`} pts</span></> : "Target range unavailable"}</small>
+        {item.status && <small className="mix-focus-status" data-status={item.status}>{item.delta > 0
+          ? <><span className="mix-focus-value">{decimal(item.delta)} pts</span> {item.status === "below" ? "short" : "over"}</>
+          : focusStatusLabels[item.status]}</small>}
+      </div>
+    </div>)}{items.some(item => item.target && item.approximate) && <small className="mix-target-note">Dashed bands show chart-derived targets.</small>}</div> : <p className="mix-empty">Load Focus totals not captured</p>}
   </article>;
 }
 

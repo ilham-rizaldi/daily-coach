@@ -30,7 +30,16 @@
 .mix-card [data-zone="Z6"] { --mix-color: #b977a0; --mix-deep: #783f63; }
 .mix-card [data-zone="Z7"] { --mix-color: #ae6c85; --mix-deep: #643048; }
 .mix-coverage { display: block; margin-top: 5px; }
-.mix-target { position: absolute; inset-block: 0; border: 1px solid #d5dce5; border-radius: 2px; }
+.mix-focus-track { height: 9px; }
+.mix-target { position: absolute; inset-block: 0; border: 1px solid #d5dce5; border-radius: 2px; background: #d5dce526; }
+.mix-target[data-approximate="true"] { border-style: dashed; }
+.mix-focus-meta { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 3px 10px; margin-top: 5px; }
+.mix-focus-value { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mix-card .mix-focus-status { font-weight: 600; }
+.mix-card .mix-focus-status[data-status="below"] { color: var(--amber, #d59b5f); }
+.mix-card .mix-focus-status[data-status="within"] { color: var(--green, #72b392); }
+.mix-card .mix-focus-status[data-status="above"] { color: var(--red, #db7b7e); }
+.mix-card .mix-target-note { color: var(--quiet, #a0afbe); }
 .mix-zone-key { display: flex; flex-wrap: wrap; gap: 4px 11px; margin-top: 10px; color: var(--muted, #b1becb); font-size: 11px; }
 .mix-zone-key span { white-space: nowrap; }
 .mix-zone-key i { display: inline-block; width: 7px; height: 7px; margin-right: 4px; background: var(--mix-color); border-radius: 2px; }

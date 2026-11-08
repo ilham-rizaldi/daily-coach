@@ -41,6 +41,18 @@ export const demoReport = {
   sources: ["Garmin Connect", "Intervals.icu", "Strava"].map(name => ({ name, status: "Sample", observedAt: "09.24 WIB", detail: "Illustrative data." })),
   coaching: {
     headline: "Keep the next session easy", rationale: "Readiness is low after a moderate recent ride and short sleep, so an easy session will support recovery and keep you on track.", confidence: "Sample assessment",
+    actionPlan: {
+      title: "Easy spin and a regular meal",
+      why: ["Readiness 48/100", "Sleep 6h10m"],
+      sections: [
+        { kind: "training", title: "Training", items: ["Ride for 35min at conversational effort."] },
+        { kind: "fuel", title: "Food & fluids", items: ["Bring water. Have a regular meal with carbohydrates and protein afterward."] },
+      ],
+      alternative: "Rest if fatigue is still higher than usual.",
+      reassess: "Check how your legs feel before the next hard session.",
+      referenceIds: ["sport-nutrition"],
+    },
+    research: [{ id: "sport-nutrition", citation: "Thomas et al. · Journal of the Academy of Nutrition and Dietetics · 2016", url: "https://doi.org/10.1016/j.jand.2015.12.006", application: "Adjust food and fluid intake to the demands of the session." }],
     note: "Do an easy ride of about 35 minutes at a comfortable, conversational effort. Keep it relaxed and focus on feeling smooth. If you still feel low on energy, rest instead and reassess tomorrow.",
     nextSession: { date: shiftDate(date, 1), name: "Easy ride", minutes: 35, target: "Comfortable conversational effort", alternative: "Rest and reassess.", condition: "Illustrative prescription for design preview.", steps: [{ name: "Warm-up", minutes: 8, detail: "Start gently." }, { name: "Main set", minutes: 20, detail: "Keep the effort conversational." }, { name: "Cool-down", minutes: 7, detail: "Ease off gradually." }] },
     findings: [], adjustments: [], feedback: "How did the session feel?", references: [],

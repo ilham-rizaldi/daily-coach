@@ -29,7 +29,7 @@ const glossary = [
   ["Next sleep need", "Sleep", "h", "Garmin's upcoming-night recommendation. Historical sleep gap uses the need for the completed night."],
   ["Heat acclimation", "Adaptation", "%", "Garmin's estimated heat-adaptation level."],
   ["Training status", "Garmin", "Category", "Source classification of training-load and fitness context."],
-  ["Load Focus", "Garmin", "Load points", "Garmin's dated low-aerobic, high-aerobic and anaerobic point totals. Target bands appear when numerical bounds are captured."],
+  ["Load Focus", "Garmin", "Load points", "Garmin's dated low-aerobic, high-aerobic and anaerobic totals. The gap is the distance to the nearest target edge. Chart-derived bands come from the rendered scale and describe the training mix over that window."],
   ["Acute load", "Garmin", "Load points", "Weighted recent exercise load on Garmin's scale."],
   ["Chronic load", "Garmin", "Load points", "Longer-term load reference on Garmin's scale."],
   ["Load ratio", "Garmin", "Ratio", "Reported acute-to-chronic load ratio. The source display may round the underlying quotient."],
@@ -181,7 +181,23 @@ function MetricCoverage({ availability }) {
   </details>;
 }
 
-export function Reference({ report }) {
+function CoachingResearch({ coaching, open }) {
+  const ids = new Set(Array.isArray(coaching?.actionPlan?.referenceIds) ? coaching.actionPlan.referenceIds : []);
+  const references = Array.isArray(coaching?.research) ? coaching.research.filter(row => ids.has(row?.id)
+    && typeof row.citation === "string" && typeof row.application === "string" && /^https:\/\/doi\.org\/10\./.test(row.url)) : [];
+  if (!references.length) return null;
+  return <div className="reference-methods">
+    <details open={open}>
+      <summary>Coaching research</summary>
+      <dl className="coach-research">{references.map(row => <div key={row.id}>
+        <dt><a href={row.url} target="_blank" rel="noopener noreferrer">{row.citation}</a></dt>
+        <dd>{row.application}</dd>
+      </div>)}</dl>
+    </details>
+  </div>;
+}
+
+export function Reference({ report, researchOpen = false }) {
   const [query, setQuery] = useState("");
   const search = query.trim().toLowerCase();
   const terms = glossary.filter(row => row.some(cell => cell.toLowerCase().includes(search)));
@@ -229,6 +245,7 @@ export function Reference({ report }) {
 
   return <section className="reference-page" aria-labelledby="reference-title">
     <div className="page-title"><h1 id="reference-title">Reference</h1></div>
+    <CoachingResearch coaching={report.coaching} open={researchOpen} />
     <label className="reference-search">Search terms<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="CTL, RPE, HRV…" /></label>
     <div className="table-scroll"><table className="reference-table">
       <caption className="sr-only">Training terminology</caption>

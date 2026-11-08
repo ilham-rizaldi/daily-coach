@@ -5,6 +5,7 @@ import { demoReport } from "./demo.js";
 import { ActivityTable, ChartBoundary, Session, TrainingChart, Trends } from "./components.jsx";
 import { LoadForecast } from "./LoadForecast.jsx";
 import { ConditionOverview } from "./ConditionOverview.jsx";
+import CoachSuggestions, { hasCoachSuggestions } from "./CoachSuggestions.jsx";
 import { Reference } from "./Reference.jsx";
 import { SessionCheckIn } from "./SessionCheckIn.jsx";
 
@@ -35,6 +36,7 @@ export function App() {
   const [reportIndex, setReportIndex] = useState(0);
   const [section, setSection] = useState("Daily");
   const [detail, setDetail] = useState(false);
+  const [researchOpen, setResearchOpen] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [copyState, setCopyState] = useState("");
@@ -87,9 +89,10 @@ export function App() {
     }
   }
 
-  function changeSection(name) {
+  function changeSection(name, showResearch = false) {
     setSection(name);
     setDetail(false);
+    setResearchOpen(showResearch);
     requestAnimationFrame(() => { mainRef.current?.focus({ preventScroll: true }); window.scrollTo({ top: 0, behavior: "instant" }); });
   }
 
@@ -135,8 +138,16 @@ export function App() {
           {section === "Daily" && (
             <>
               <ConditionOverview report={report} />
-              <section className="decision"><h1>{report.coaching.headline.split(";")[0]}</h1></section>
-              <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
+              {hasCoachSuggestions(report) ? (
+                <CoachSuggestions key={report.date} report={report} onEvidence={() => changeSection("Reference", true)}>
+                  <Session report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
+                </CoachSuggestions>
+              ) : (
+                <>
+                  <section className="decision"><h1>{report.coaching.headline.split(";")[0]}</h1></section>
+                  <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
+                </>
+              )}
               <details className="check-in-panel"><summary>Session check-in</summary><SessionCheckIn key={`${report.date}:${accessKey}`} report={report} accessKey={accessKey} preview={preview} /></details>
             </>
           )}
@@ -172,7 +183,7 @@ export function App() {
               </details>
             </>
           )}
-          {section === "Reference" && <Reference report={report} />}
+          {section === "Reference" && <Reference report={report} researchOpen={researchOpen} />}
           {section === "Archive" && (
             <>
               <div className="page-title"><h1>Archive</h1></div>
