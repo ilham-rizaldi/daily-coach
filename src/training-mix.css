@@ -1,0 +1,43 @@
+.training-mix { padding: 16px 0; border-bottom: 1px solid var(--rule, #35414f); }
+.mix-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.mix-card {
+  min-width: 0;
+  padding: 14px;
+  background: var(--surface-gradient, linear-gradient(150deg, #1c2531, #151b23 82%));
+  border: 1px solid var(--panel-border, #2c3744);
+  border-radius: 8px;
+}
+.mix-card-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 13px; }
+.mix-card-heading h3 { margin: 0 0 3px; font-size: 14px; font-weight: 600; }
+.mix-card small, .mix-empty { color: var(--muted, #b1becb); font-size: 11px; }
+.mix-card select {
+  max-width: 50%; min-height: 32px; padding: 4px 6px; font: inherit; font-size: 12px; color: inherit;
+  background: var(--surface-raised, #1e2733); border: 1px solid var(--panel-border, #2c3744); border-radius: 4px;
+}
+.mix-sport { padding-top: 2px; }
+.mix-periods, .mix-load-buckets { display: grid; gap: 11px; }
+.mix-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 5px; font-size: 12px; }
+.mix-row strong { font-size: 15px; }
+.mix-track { position: relative; height: 8px; overflow: hidden; border-radius: 3px; background: #101821; }
+.mix-zone-track { display: flex; height: 12px; }
+.mix-fill { display: block; flex: 0 0 auto; height: 100%; background: linear-gradient(180deg, var(--mix-color), var(--mix-deep)); }
+.mix-zone-track .mix-fill + .mix-fill { border-left: 1px solid #141b22; }
+.mix-card [data-zone="Z1"] { --mix-color: #7190ad; --mix-deep: #445c76; }
+.mix-card [data-zone="Z2"], .mix-card [data-bucket="lowAerobic"] { --mix-color: #66a88b; --mix-deep: #35715d; }
+.mix-card [data-zone="Z3"], .mix-card [data-bucket="highAerobic"] { --mix-color: #cb975d; --mix-deep: #92602f; }
+.mix-card [data-zone="Z4"] { --mix-color: #c87979; --mix-deep: #954a4b; }
+.mix-card [data-zone="Z5"], .mix-card [data-bucket="anaerobic"] { --mix-color: #a38bc8; --mix-deep: #69548e; }
+.mix-card [data-zone="Z6"] { --mix-color: #b977a0; --mix-deep: #783f63; }
+.mix-card [data-zone="Z7"] { --mix-color: #ae6c85; --mix-deep: #643048; }
+.mix-coverage { display: block; margin-top: 5px; }
+.mix-target { position: absolute; inset-block: 0; border: 1px solid #d5dce5; border-radius: 2px; }
+.mix-zone-key { display: flex; flex-wrap: wrap; gap: 4px 11px; margin-top: 10px; color: var(--muted, #b1becb); font-size: 11px; }
+.mix-zone-key span { white-space: nowrap; }
+.mix-zone-key i { display: inline-block; width: 7px; height: 7px; margin-right: 4px; background: var(--mix-color); border-radius: 2px; }
+.mix-zone-key b { color: var(--text, #e8eef5); font-weight: 600; }
+.mix-empty { margin: 0; }
+.mix-data { margin-top: 6px; }
+.mix-data > a { display: inline-block; margin-top: 5px; font-size: 11px; }
+@media (max-width: 700px) {
+  .mix-grid { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+}

@@ -4,7 +4,7 @@ import { decimal, duration, formatDate } from "./report.js";
 import { palette } from "./MetricGraphics.jsx";
 import { cyclingProgression, recoverySeries, trainingPlacement } from "./performance.js";
 import "./performance.css";
-import PerformanceProgression from "./PerformanceProgression.jsx";
+import TrainingMix from "./TrainingMix.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
 
 const number = (value, places = 1) => Number.isFinite(value) ? decimal(value, places) : "—";
@@ -81,5 +81,5 @@ function Cycling({ report }) {
 }
 
 export default function PerformanceTrends({ report }) {
-  return <div className="performance-trends"><PerformanceProgression report={report} /><Recovery report={report} /><Cycling report={report} /></div>;
+  return <div className="performance-trends"><TrainingMix report={report} /><Recovery report={report} /><Cycling report={report} /></div>;
 }

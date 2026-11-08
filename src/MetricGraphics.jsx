@@ -1,6 +1,9 @@
 import { decimal, formatDate } from "./report.js";
 
-export const palette = { blue: "#36a8ff", green: "#6cc45b", orange: "#ff9c36", red: "#f35858", purple: "#b083ef", light: "#72bdff", deep: "#4771e8", rem: "#ba86ed", gray: "#8c969e" };
+export const palette = {
+  blue: "var(--blue)", green: "var(--green)", orange: "var(--amber)", red: "var(--red)", purple: "var(--purple)",
+  light: "var(--sleep-light)", deep: "var(--sleep-deep)", rem: "var(--sleep-rem)", gray: "var(--metric-gray)",
+};
 
 export function statusColor(status, metric = "") {
   const text = String(status || "").toLowerCase();

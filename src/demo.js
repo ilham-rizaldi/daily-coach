@@ -2,6 +2,10 @@ import { shiftDate } from "./report.js";
 
 const date = "2026-11-05";
 const minutes = [30, 50, 40, 30, 45, 50, 60, 100, 45, 40, 35, 50, 40, 60, 55, 70, 80, 160, 60, 50, 30, 60, 50, 55, 30, 45, 90, 42];
+const demoZones = [1, 2, 8, 10, 15, 17, 22, 24].flatMap((index) => [0.34, 0.49, 0.17].map((share, zone) => ({
+  date: shiftDate(date, index - 27), sport: index % 7 === 1 ? "Run" : "Ride", activityId: String(index),
+  zone: `Z${zone + 1}`, seconds: Math.round(minutes[index] * 60 * share), source: "Illustrative",
+})));
 
 export const demoReport = {
   schemaVersion: 1, date, capturedAt: "2026-11-05T09:24:00+07:00", athlete: "Riezaldd", preview: true,
@@ -23,6 +27,15 @@ export const demoReport = {
     },
   },
   intervals: { date, fitness: 35, fatigue: 42, form: -7, provenance: { observedAt: "2026-11-05T09:22:00+07:00" }, settings: { activityTypeWeights: { WeightTraining: { fitnessPercent: 0, fatiguePercent: 100 } } } },
+  trainingMix: { heartRateZones: demoZones, garminLoadFocus: { start: shiftDate(date, -27), end: date, buckets: [
+    { key: "lowAerobic", points: 438, targetLow: 350, targetHigh: 510 },
+    { key: "highAerobic", points: 282, targetLow: 250, targetHigh: 420 },
+    { key: "anaerobic", points: 76, targetLow: 80, targetHigh: 150 },
+  ] } },
+  benchmarks: {
+    segments: [1463, 1422, 1382].map((elapsedSeconds, index) => ({ segmentId: "sample-route", label: "Sample loop", date: shiftDate(date, -1 - 7 * (2 - index)), elapsedSeconds, averageHr: 152 + index, source: "Illustrative" })),
+    workouts: [{ activityId: "sample-run", date: shiftDate(date, -6), label: "Sample run", source: "Illustrative", intervals: [370, 364, 359, 368, 363].map((seconds, index) => ({ label: `Lap ${index + 1}`, seconds, distanceKm: 1, averagePaceSeconds: seconds, averageHr: 149 + index, classification: "lap" })) }],
+  },
   garminLoadHistory: { observedAt: "2026-11-05T09:24:00+07:00", sourceUrl: "https://connect.garmin.com/app/report", method: "Illustrative values only", rows: minutes.map((_, index) => ({ date: shiftDate(date, index - 27), acute: index === 27 ? 350 : [300, 330, 360, 350, 340, 320, 280][index % 7], chronic: 354 - index * 2 })) },
   wellnessHistory: { source: "Illustrative design data", observedAt: "2026-11-05T09:24:00+07:00", rows: Array.from({ length: 56 }, (_, index) => ({ date: shiftDate(date, index - 55), hrvMs: [44, 48, 53, 41, 46, null, 50][index % 7], hrv7dMs: [47, 48, 49, 48, 47, 48, 49][index % 7], hrvLowMs: 43, hrvHighMs: 61, rhrBpm: [55, 56, 54, 59, 57, 56, 55][index % 7], sleepMinutes: [410, 385, 440, 350, 390, null, 450][index % 7], sleepNeedMinutes: 450, bodyBatteryHigh: [78, 70, 85, 59, 73, 68, 88][index % 7], bodyBatteryLow: [21, 18, 30, 12, 19, 17, 32][index % 7], bodyBatteryCharge: [60, 54, 62, 42, 55, null, 65][index % 7] })) },
   sources: ["Garmin Connect", "Intervals.icu", "Strava"].map(name => ({ name, status: "Sample", observedAt: "09.24 WIB", detail: "Illustrative data." })),

@@ -9,14 +9,14 @@ main:not(.unlock) { max-width:1600px; padding-inline:32px; }
 .report-meta { padding-block:18px; }
 .body-overview { padding:22px; margin-bottom:24px; }
 .body-overview .condition-heading { margin-bottom:18px; }
-.body-primary { gap:16px; }
+.body-primary { gap:12px; }
 .body-tile { padding:18px 16px; border-radius:8px; }
 .body-tile dt { font-size:12px; line-height:1.4; }
 .body-tile dd { margin-top:12px; }
 .body-tile dd > strong { font-size:clamp(40px,3.2vw,48px); font-weight:650; line-height:1.08; letter-spacing:-.035em; }
 .body-tile-meta { margin-top:12px; font-size:11px; gap:5px 12px; }
-.body-secondary { gap:20px; padding-top:22px; }
-.body-secondary > section, .body-secondary > section + section, .body-secondary > section:nth-child(3) { padding:16px; border:1px solid #39434c; border-radius:8px; background:#20262b; }
+.body-secondary { gap:12px; padding-top:16px; }
+.body-secondary > section, .body-secondary > section + section, .body-secondary > section:nth-child(3) { padding:16px; border:1px solid var(--panel-border); border-radius:8px; background:var(--surface); }
 .body-secondary h3 { font-size:13px; margin-bottom:16px; }
 .body-stat-row { gap:12px; }
 .body-stat-row > div { min-width:0; }
@@ -28,7 +28,7 @@ main:not(.unlock) { max-width:1600px; padding-inline:32px; }
 .body-more .body-stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(126px,1fr)); gap:14px; }
 .body-more .body-stat-row dd { font-size:clamp(24px,3vw,32px); }
 .body-secondary section:has(#body-vitals) .body-stat-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 12px; }
-.body-tile-meta > span:last-child { white-space:nowrap; }
+.body-tile-meta > span { min-width:0; overflow-wrap:anywhere; }
 .rhr-context { margin-top:16px; font-size:11px; gap:7px; }
 .rhr-context .metric-value { font-size:18px; }
 .sleep-stage-key, .baseline-meter small, .load-history > div { font-size:11px; gap:5px 8px; }
@@ -79,7 +79,8 @@ td small { font-size:11px; }
 .performance-trends .performance-recovery, .performance-trends .performance-cycling { padding-block:24px; }
 .performance-trends .performance-heading { margin-bottom:20px; }
 .performance-trends .performance-chart-grid { gap:20px; }
-.performance-trends .performance-chart-grid > article { padding:18px 16px 12px; border-radius:8px; }
+.performance-trends .performance-chart-grid > article { padding:18px 16px 12px; border-color:var(--panel-border); border-radius:8px; background:var(--surface-gradient); }
+.performance-trends .performance-period button[aria-pressed="true"], .week-planner .week-metric-switch button[aria-pressed="true"] { background:#26394e; color:var(--lime); }
 .performance-trends .performance-chart-grid h3, .performance-trends .performance-chart-grid h3 small { font-size:12px; }
 .performance-trends .performance-chart-title { margin-bottom:16px; flex-wrap:wrap; gap:10px; }
 .performance-trends .performance-chart-title strong { font-size:36px; line-height:1.12; white-space:nowrap; }
@@ -99,13 +100,17 @@ td small { font-size:11px; }
 .performance-trends .performance-placement > div { padding-block:8px; }
 .performance-trends .performance-placement span { margin-top:5px; }
 .performance-trends .performance-data summary { font-size:12px; padding-block:10px; }
+.performance-trends .performance-data summary, .week-planner .week-plan-data summary, .week-planner .week-plan-settings summary { color:var(--lime); }
+.progression .progression-card { padding:12px 14px; border-color:var(--panel-border); border-radius:8px; background:var(--surface-gradient); }
+.progression .progression-card-meta select { border-color:var(--rule); background:var(--surface); }
+.progression .progression-readout { flex-wrap:wrap; }
 .week-planner .week-plan-heading { margin-bottom:24px; }
 .week-planner .week-plan-grid { gap:16px; }
-.week-planner .week-day { padding:16px; border-radius:8px; }
+.week-planner .week-day { padding:16px; border-color:var(--panel-border); border-radius:8px; background:var(--surface-gradient); }
 .week-planner .week-day legend { font-size:14px; }
 .week-planner .week-day legend time { font-size:12px; }
 .week-planner .week-day label { margin-top:12px; font-size:12px; }
-.week-planner .week-day input, .week-planner .week-day select, .week-planner .week-tau input, .week-planner .week-today-controls input, .week-planner .week-today-controls select { min-height:44px; font-size:16px; padding:9px; }
+.week-planner .week-day input, .week-planner .week-day select, .week-planner .week-tau input, .week-planner .week-today-controls input, .week-planner .week-today-controls select { min-height:44px; font-size:16px; padding:9px; border-color:var(--rule); background:var(--surface); }
 .week-planner .week-day-load { margin-top:18px; font-size:12px; }
 .week-planner .week-day-load output { font-size:42px; line-height:1.1; white-space:nowrap; }
 .week-planner .week-day > small { font-size:12px; margin-top:7px; white-space:nowrap; }
@@ -126,6 +131,7 @@ td small { font-size:11px; }
 .session-checkin .checkin-load { gap:10px; }
 .session-checkin .checkin-load output { display:inline-flex; flex-wrap:nowrap; align-items:baseline; white-space:nowrap; font-size:40px; gap:4px; line-height:1.15; }
 .session-checkin .checkin-load output small { font-size:16px; }
+.session-checkin .checkin-load output { color:var(--purple); }
 .session-checkin .checkin-actions { margin-top:20px; }
 .session-checkin .checkin-actions button { min-height:44px; font-size:14px; }
 
@@ -171,4 +177,11 @@ td small { font-size:11px; }
   .week-planner .week-day legend { flex-wrap:wrap; gap:5px; }
   .week-planner .week-plan-chart { height:250px; }
   .session-checkin .checkin-fields { gap:20px 14px; }
+}
+@media(max-width:380px) {
+  .body-tile dd > strong { font-size:clamp(30px,10vw,38px); }
+  .body-tile { padding-inline:10px; }
+  .body-stat-row dd { font-size:30px; }
+  .rhr-context { flex-wrap:wrap; }
+  .progression .progression-record { padding-inline:10px; }
 }

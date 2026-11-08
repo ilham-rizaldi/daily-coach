@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { palette } from "./MetricGraphics.jsx";
 import { decimal, formatDate } from "./report.js";
 import { contributionWeights, historicalLoadRate } from "./forecast.js";
 import { projectGarminRest } from "./garminForecast.js";
@@ -28,7 +29,7 @@ const glossary = [
   ["Next sleep need", "Sleep", "h", "Garmin's upcoming-night recommendation. Historical sleep gap uses the need for the completed night."],
   ["Heat acclimation", "Adaptation", "%", "Garmin's estimated heat-adaptation level."],
   ["Training status", "Garmin", "Category", "Source classification of training-load and fitness context."],
-  ["Load focus", "Garmin", "Category", "Distribution of low-aerobic, high-aerobic and anaerobic training effects."],
+  ["Load Focus", "Garmin", "Load points", "Garmin's dated low-aerobic, high-aerobic and anaerobic point totals. Target bands appear when numerical bounds are captured."],
   ["Acute load", "Garmin", "Load points", "Weighted recent exercise load on Garmin's scale."],
   ["Chronic load", "Garmin", "Load points", "Longer-term load reference on Garmin's scale."],
   ["Load ratio", "Garmin", "Ratio", "Reported acute-to-chronic load ratio. The source display may round the underlying quotient."],
@@ -46,6 +47,9 @@ const glossary = [
   ["τ", "Load model", "days", "Exponential time constant for CTL or ATL."],
   ["EOD", "Forecast", "Time", "End of the projected calendar day."],
   ["Training mix", "Volume", "%", "Each sport's share of recorded session duration in the selected window."],
+  ["HR time in zone", "Training mix", "min / %", "Intervals.icu minutes and shares of captured heart-rate time by sport. Session counts show coverage. Zone boundaries can differ by sport."],
+  ["Segment benchmark", "Performance", "Elapsed time", "Repeated efforts use the same provider segment ID. A single verified effort has no historical delta."],
+  ["Lap splits", "Performance", "min/km / bpm", "Full recorded laps from the source activity. Lap times and best-effort times use their own boundaries."],
   ["7d mean", "Volume", "min/day", "Recorded duration over the current date and preceding six dates, divided by seven."],
   ["P25 / P50 / P75", "Load estimate", "Load/h", "Lower quartile, median and upper quartile of same-sport historical load rates."],
   ["Scenario range", "Forecast", "Load / ratio", "Historical variation propagated through the model; displayed bounds are scenario extrema."],
@@ -252,12 +256,12 @@ export function Reference({ report }) {
       </details>
       <details><summary>Color key</summary>
         <div className="table-scroll"><table className="reference-table"><caption className="sr-only">Metric color key</caption><thead><tr><th scope="col">Metric</th><th scope="col">Colors</th></tr></thead><tbody>
-          <tr><th scope="row">Readiness</th><td><ColorKey items={[["Poor", "#f35858"], ["Low", "#ff9c36"], ["Moderate", "#6cc45b"], ["High", "#36a8ff"], ["Prime", "#b083ef"]]} /></td></tr>
-          <tr><th scope="row">Sleep</th><td><ColorKey items={[["Deep", "#4771e8"], ["Light", "#72bdff"], ["REM", "#ba86ed"]]} /></td></tr>
-          <tr><th scope="row">Garmin load</th><td><ColorKey items={[["Acute", "#36a8ff"], ["Chronic", "#ff9c36"]]} /></td></tr>
-          <tr><th scope="row">Recovery trends</th><td><ColorKey items={[["7d HRV", "#36a8ff"], ["Overnight HRV", "#8c969e"], ["HRV baseline", "#6cc45b"], ["RHR Δ", "#f35858"]]} /></td></tr>
-          <tr><th scope="row">Cycling / plan</th><td><ColorKey items={[["Hours / CTL", "#36a8ff"], ["TL / ATL", "#b083ef"], ["Longest ride / TSB", "#ff9c36"], ["Rest scenario", "#8c969e"]]} /></td></tr>
-          <tr><th scope="row">Source status</th><td><ColorKey items={[["Green", "#6cc45b"], ["Orange", "#ff9c36"], ["Red", "#f35858"]]} /><small>Recorded metric category. Garmin ratio categories use the source label.</small></td></tr>
+          <tr><th scope="row">Readiness</th><td><ColorKey items={[["Poor", palette.red], ["Low", palette.orange], ["Moderate", palette.green], ["High", palette.blue], ["Prime", palette.purple]]} /></td></tr>
+          <tr><th scope="row">Sleep</th><td><ColorKey items={[["Deep", palette.deep], ["Light", palette.light], ["REM", palette.rem]]} /></td></tr>
+          <tr><th scope="row">Garmin load</th><td><ColorKey items={[["Acute", palette.blue], ["Chronic", palette.orange]]} /></td></tr>
+          <tr><th scope="row">Recovery trends</th><td><ColorKey items={[["7d HRV", palette.blue], ["Overnight HRV", palette.gray], ["HRV baseline", palette.green], ["RHR Δ", palette.red]]} /></td></tr>
+          <tr><th scope="row">Cycling / plan</th><td><ColorKey items={[["Hours / CTL", palette.blue], ["TL / ATL", palette.purple], ["Longest ride / TSB", palette.orange], ["Rest scenario", palette.gray]]} /></td></tr>
+          <tr><th scope="row">Source status</th><td><ColorKey items={[["Green", palette.green], ["Orange", palette.orange], ["Red", palette.red]]} /><small>Recorded metric category. Garmin ratio categories use the source label.</small></td></tr>
         </tbody></table></div>
       </details>
       <details><summary>Load estimation & projection</summary>

@@ -116,7 +116,7 @@ export function personalRecords(report) {
     if (!sport || !source || !label || !notFuture(date, report) || !accepted.has(token(row?.status))) continue;
     if (!positive(value) && !/\d/.test(value)) continue;
     const key = JSON.stringify([sport, source, label, date, value, unit]);
-    records.set(key, { key, sport, source, label, date, value, unit, url: sourceUrl(row.url ?? row.sourceUrl) });
+    records.set(key, { key, sport, source, label, date, value, unit, kind: token(row.type), url: sourceUrl(row.url ?? row.sourceUrl) });
   }
   return [...records.values()].sort((a, b) => b.date.localeCompare(a.date));
 }
@@ -128,13 +128,13 @@ function sourceUrl(value) {
   } catch { return null; }
 }
 
-function clock(value) {
+export function effortClock(value) {
   const seconds = Math.round(value), hours = Math.floor(seconds / 3600);
   const minutes = Math.floor(seconds / 60) % 60, tail = String(seconds % 60).padStart(2, "0");
   return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${tail}` : `${minutes}:${tail}`;
 }
 
-const pace = speed => clock(3600 / speed);
+const pace = speed => effortClock(3600 / speed);
 
 function pointDate(point, year = false) {
   if (point.precision === "month") return formatDate(point.date, { day: undefined, year: "numeric" });
@@ -211,14 +211,17 @@ function RecordCard({ record }) {
   return <article className="progression-card progression-record">
     <div className="progression-record-sport" style={{ color: sportColor(sport) }}>{sport}</div>
     <h4>{label}</h4>
-    <MetricValue as="strong" value={timed ? clock(value) : typeof value === "number" ? decimal(value, 2) : value} unit={timed ? undefined : unit} />
+    <MetricValue as="strong" value={timed ? effortClock(value) : typeof value === "number" ? decimal(value, 2) : value} unit={timed ? undefined : unit} />
     <div className="progression-card-meta">{url ? <a href={url} target="_blank" rel="noopener noreferrer">{source}</a> : <span>{source}</span>}<time dateTime={date}>{formatDate(date, { year: "numeric" })}</time></div>
   </article>;
 }
 
-export default function PerformanceProgression({ report }) {
-  const vo2 = vo2Series(report), speed = activitySpeedSeries(report), records = personalRecords(report);
+export default function PerformanceProgression({ report, segmentRecordKeys, compactRecords = false }) {
+  const vo2 = vo2Series(report), speed = activitySpeedSeries(report), records = personalRecords(report).filter(record => !segmentRecordKeys?.has(record.key));
   const observed = dayOf(report.performance?.observedAt);
+  const recordGrid = records.length
+    ? <div className="progression-grid progression-records">{records.map(record => <RecordCard key={record.key} record={record} />)}</div>
+    : <p className="progression-empty">Provider PRs not captured</p>;
   return <section className="progression" aria-labelledby="progression-title">
     <div className="performance-heading"><h2 id="progression-title">Performance progression</h2>{notFuture(observed, report) && <span className="quiet">Captured {formatDate(observed)}</span>}</div>
     <div className="progression-block">
@@ -232,10 +235,12 @@ export default function PerformanceProgression({ report }) {
         return groups.length ? <SpeedCard key={sport} sport={sport} groups={groups} /> : null;
       })}</div> : <p className="progression-empty">Speed and pace not captured</p>}
     </div>
-    <div className="progression-block">
+    {compactRecords ? <details className="progression-block benchmark-records">
+      <summary>Personal records {records.length > 0 && <span>{records.length}</span>}</summary>
+      {recordGrid}
+    </details> : <div className="progression-block">
       <h3>Personal records</h3>
-      {records.length ? <div className="progression-grid progression-records">{records.map(record => <RecordCard key={record.key} record={record} />)}</div>
-        : <p className="progression-empty">Provider PRs not captured</p>}
-    </div>
+      {recordGrid}
+    </div>}
   </section>;
 }

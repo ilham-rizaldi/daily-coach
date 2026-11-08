@@ -9,8 +9,9 @@ import { Reference } from "./Reference.jsx";
 import { SessionCheckIn } from "./SessionCheckIn.jsx";
 
 const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
+const BenchmarkView = lazy(() => import("./BenchmarkView.jsx"));
 const WeekPlanner = lazy(() => import("./WeekPlanner.jsx"));
-const sections = ["Daily", "Trends", "Plan", "Archive", "Reference"];
+const sections = ["Daily", "Trends", "Benchmarks", "Plan", "Archive", "Reference"];
 
 function Locked({ onUnlock, error, loading }) {
   const [key, setKey] = useState("");
@@ -137,11 +138,27 @@ export function App() {
               <section className="decision"><h1>{report.coaching.headline.split(";")[0]}</h1></section>
               <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
               <details className="check-in-panel"><summary>Session check-in</summary><SessionCheckIn key={`${report.date}:${accessKey}`} report={report} accessKey={accessKey} preview={preview} /></details>
-              <section className="evidence-grid compact-evidence"><TrainingChart report={report} /></section>
-              {!preview && <ActivityTable key={report.date} report={report} />}
             </>
           )}
-          {section === "Trends" && <><h1 className="sr-only">Trends</h1><ChartBoundary key={`insights:${report.date}:${report.capturedAt}`}><Suspense fallback={<p className="quiet" role="status">Loading…</p>}><PerformanceTrends report={report} /></Suspense></ChartBoundary><details className="volume-detail"><summary>Volume & activity history</summary><Trends key={report.date} report={report} /></details></>}
+          {section === "Trends" && (
+            <>
+              <h1 className="sr-only">Trends</h1>
+              <ChartBoundary key={`insights:${report.date}:${report.capturedAt}`}>
+                <Suspense fallback={<p className="quiet" role="status">Loading…</p>}><PerformanceTrends report={report} /></Suspense>
+              </ChartBoundary>
+              <details className="volume-detail">
+                <summary>Volume & activity history</summary>
+                <TrainingChart report={report} />
+                <Trends key={report.date} report={report} />
+                {!preview && <ActivityTable key={report.date} report={report} />}
+              </details>
+            </>
+          )}
+          {section === "Benchmarks" && (
+            <ChartBoundary key={`benchmarks:${report.date}:${report.capturedAt}`}>
+              <Suspense fallback={<p className="quiet" role="status">Loading…</p>}><BenchmarkView report={report} /></Suspense>
+            </ChartBoundary>
+          )}
           {section === "Plan" && (
             <>
               <ChartBoundary key={`plan:${report.date}:${report.capturedAt}`}>
