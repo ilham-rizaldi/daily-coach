@@ -137,13 +137,24 @@ export function App() {
               <section className="decision"><h1>{report.coaching.headline.split(";")[0]}</h1></section>
               <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
               <details className="check-in-panel"><summary>Session check-in</summary><SessionCheckIn key={`${report.date}:${accessKey}`} report={report} accessKey={accessKey} preview={preview} /></details>
-              <LoadForecast key={`${report.date}:${report.capturedAt}`} report={report} />
               <section className="evidence-grid compact-evidence"><TrainingChart report={report} /></section>
               {!preview && <ActivityTable key={report.date} report={report} />}
             </>
           )}
           {section === "Trends" && <><h1 className="sr-only">Trends</h1><ChartBoundary key={`insights:${report.date}:${report.capturedAt}`}><Suspense fallback={<p className="quiet" role="status">Loading…</p>}><PerformanceTrends report={report} /></Suspense></ChartBoundary><details className="volume-detail"><summary>Volume & activity history</summary><Trends key={report.date} report={report} /></details></>}
-          {section === "Plan" && <ChartBoundary key={`plan:${report.date}:${report.capturedAt}`}><Suspense fallback={<p className="quiet" role="status">Loading…</p>}><WeekPlanner report={report} /></Suspense></ChartBoundary>}
+          {section === "Plan" && (
+            <>
+              <ChartBoundary key={`plan:${report.date}:${report.capturedAt}`}>
+                <Suspense fallback={<p className="quiet" role="status">Loading…</p>}>
+                  <WeekPlanner report={report} />
+                </Suspense>
+              </ChartBoundary>
+              <details className="check-in-panel">
+                <summary>Next-day load simulator</summary>
+                <LoadForecast key={`${report.date}:${report.capturedAt}`} report={report} />
+              </details>
+            </>
+          )}
           {section === "Reference" && <Reference report={report} />}
           {section === "Archive" && (
             <>
