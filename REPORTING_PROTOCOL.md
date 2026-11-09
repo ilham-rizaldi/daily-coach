@@ -14,7 +14,13 @@ The code repository and viewer remain public. Source captures, activity and well
 2. Inspect the owner's authorized Chrome sessions for Garmin Connect, Strava and Intervals.icu. For any additional browser or extraction tool requested by the owner, verify that tool's actual session separately. An installed tool or successful page load does not prove access to private data. Use only authorized browser controls, connectors, provider APIs or native export actions. Do not extract cookies, reuse session credentials in another service, or use shell requests to bypass browser access controls.
 3. For each source, record whether access worked, the latest visible activity, the date range retrieved, pagination/export completeness and any missing fields. Use native exports where available to retain exact values and units. Retain captures and their file hashes privately so another run can audit the extraction.
 4. Keep browser observations and each extraction service's output distinguishable. Accept an extracted value only when its source, athlete identity, date, label and unit are supported. Quarantine sign-in pages, incomplete results and unverified tool output rather than merging them into the report.
-5. Preserve historical captures as historical evidence. If current access fails, label the last verified capture and the missing refresh. Do not silently reuse it as a current reading. Report partial coverage and continue only within what the evidence supports.
+5. Preserve historical captures as historical evidence. If current access fails, label the last verified capture and the missing refresh. Do not silently reuse it as a current reading. Keep partial captures as private diagnostics. Do not use them as current report data.
+
+## Completeness gate
+
+Run `captureReadinessIssues(report)` before preparing coaching. The gate checks dated Garmin recovery and load, Intervals.icu actual load and settings, three-provider activity coverage, and current verification of performance history. Recheck the native detail, settings, sync or export when a required metric is unavailable. Preserve optional sensor gaps and verified nonmeasurements separately from access or retrieval failures.
+
+If a required metric remains unavailable or unverified, report `BLOCKED` with the source, missing evidence and exact next step. The report command enforces the gate before writing the private archive, dashboard link or email payload.
 
 ## 2. Reconcile activities and metrics
 

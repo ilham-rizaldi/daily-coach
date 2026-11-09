@@ -27,6 +27,15 @@ test("condition readings use their own capture times, never compilation time", (
   assert.equal(conditionStamp(null, "2026-04-05T01:30:00Z"), "Reading date unrecorded · captured 5 Apr, 08:30 WIB");
 });
 
+test("condition readings retain capture windows when exact times are unavailable", () => {
+  const observationWindow = { start: "2026-04-05T09:34:00Z", end: "2026-04-05T09:45:00Z" };
+  const report = { date: "2026-04-05", wellness: { date: "2026-04-05",
+    provenance: { datedRecovery: { readiness: { observationWindow } } } } };
+  assert.equal(conditionOverview(report).primary[0].stamp, "5 Apr · captured 16:34–16:45 WIB");
+  assert.equal(conditionStamp("2026-04-05", "2026-04-05T09:39:00Z", observationWindow), "5 Apr · captured 16:39 WIB");
+  assert.match(conditionStamp("2026-04-05", null, { start: observationWindow.end, end: observationWindow.start }), /capture time unrecorded/);
+});
+
 test("Garmin and Intervals retain their own reported values and definitions", () => {
   const result = conditionOverview({ wellness: { garminLoadRatio: 1.1, garminAcuteLoad: 310, garminChronicLoad: 280 }, intervals: { fitness: 33, fatigue: 45, form: -12 } });
   assert.deepEqual(result.garminLoad.map(row => row.value), ["1.1", "310", "280"]);

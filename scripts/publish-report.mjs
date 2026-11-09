@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { validateReport } from "../src/report.js";
+import { assertReportReady } from "../src/report-readiness.js";
 import { renderEmail } from "./email.mjs";
 
 export function encryptArchive(archive, key) {
@@ -35,10 +36,11 @@ async function atomicWrite(path, content, mode = 0o600) {
 async function main() {
   const input = process.argv[2];
   if (!input) throw new Error("Run node scripts/publish-report.mjs .local/report.private.json");
+  const report = validateReport(JSON.parse(await readFile(resolve(input), "utf8")));
+  assertReportReady(report);
   const configPath = resolve(process.env.COACH_CONFIG || ".local/config.private.json");
   const config = JSON.parse(await readFile(configPath, "utf8"));
   if (!/^[A-Za-z0-9_-]{43}$/.test(config.archiveKey || "")) throw new Error("A 32-byte base64url archive key is required in the private config.");
-  const report = validateReport(JSON.parse(await readFile(resolve(input), "utf8")));
   const output = resolve(".local/archive.enc.json");
   let archive = { version: 1, reports: [] };
   try {

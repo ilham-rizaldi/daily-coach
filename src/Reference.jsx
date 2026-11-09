@@ -210,7 +210,7 @@ export function Reference({ report, researchOpen = false }) {
   const pair = loadRows.length === 1 ? loadRows[0] : null;
   const chronicDated = load.chronic?.date || load.chronic?.metricDate;
   const readingDates = [
-    ["Readiness / recovery", w.date || r.date, r.readiness?.observedAt, w.readinessUpdatedAtLocal ? `${w.readinessUpdatedAtLocal} WIB` : "—"],
+    ["Readiness / recovery", w.date || r.date, captured(r.readiness), w.readinessUpdatedAtLocal ? `${w.readinessUpdatedAtLocal} WIB` : "—"],
     ["Body Battery", w.date || r.date, captured(evidence.bodyBattery ?? evidence.bodyBatteryDailyHigh ?? r.bodyBattery), "—"],
     ["Sleep / overnight vitals", w.date || r.date, captured(r.sleep), "—"],
     ["HRV", w.date || r.date, captured(evidence.rawHrvMs ?? r.hrv), "—"],
@@ -221,7 +221,7 @@ export function Reference({ report, researchOpen = false }) {
     ["Training status", w.trainingStatusSince, captured(evidence.trainingStatus) ?? load.trainingStatusObservedAt, "—"],
     ["VO₂ max", evidence.vo2Max?.measurementDate, captured(evidence.vo2Max), "—"],
     ["Heat acclimation", evidence.heatAcclimationPercent?.measurementDate, captured(evidence.heatAcclimationPercent), "—"],
-    ["Intervals CTL / ATL / Form", report.intervals?.date, report.intervals?.provenance?.observedAt, "—"],
+    ["Intervals CTL / ATL / Form", report.intervals?.date, captured(report.intervals?.provenance), "—"],
   ];
   const rates = ["Ride", "Run", "Weight Training"].map(sport => ({ sport, history: historicalLoadRate(report, sport), weights: contributionWeights(report, sport) }));
   const rest = projectGarminRest(report);

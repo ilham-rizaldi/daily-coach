@@ -9,14 +9,14 @@ import { DurationValue, MetricValue } from "./Readout.jsx";
 
 const number = (value, places = 1) => Number.isFinite(value) ? decimal(value, places) : "—";
 const signed = value => Number.isFinite(value) ? `${value > 0 ? "+" : ""}${decimal(value, 0)}` : "—";
-const tooltipStyle = { background: "#242930", border: "1px solid #52606c", borderRadius: 5, color: "#f0f4f8", fontSize: 11 };
-const ticks = { fill: "#aeb9c4", fontSize: 12 };
+const tooltipStyle = { background: "var(--surface-raised)", border: "1px solid var(--control-border)", borderRadius: 5, color: "var(--text)", fontSize: 11 };
+const ticks = { fill: "var(--muted)", fontSize: 12 };
 
 function Plot({ data, label, children, domain = ["auto", "auto"], formatter }) {
   return <div className="performance-plot" role="group" aria-label={label}>
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={data} margin={{ top: 7, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
-        <CartesianGrid vertical={false} stroke="#37414b" />
+        <CartesianGrid vertical={false} stroke="var(--rule)" />
         <XAxis dataKey="label" tick={ticks} axisLine={false} tickLine={false} minTickGap={28} interval="preserveStartEnd" />
         <YAxis width={35} domain={domain} tick={ticks} axisLine={false} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} formatter={formatter} />
@@ -37,19 +37,19 @@ function Recovery({ report }) {
         <article><div className="performance-chart-title"><h3>HRV <small>ms</small></h3><div className="recovery-readout"><MetricValue as="strong" value={number(last.hrvMs, 0)} unit="ms" style={{ color: palette.blue }} /><small className="metric-context">7d {number(last.hrv7dMs, 0)}ms</small></div></div>
           <Plot data={data} label="Overnight and seven-day HRV against captured personal baseline" formatter={(value, name) => [Array.isArray(value) ? value.map(v => number(v, 0)).join("–") : number(value, 0), name]}>
             <Area dataKey="hrvBand" name="Baseline · ms" fill={palette.green} fillOpacity={0.16} stroke="none" connectNulls={false} isAnimationActive={false} />
-            <Line dataKey="hrvMs" name="Overnight · ms" stroke="#8499a9" strokeWidth={1.3} dot={false} connectNulls={false} isAnimationActive={false} />
+            <Line dataKey="hrvMs" name="Overnight · ms" stroke={palette.gray} strokeWidth={1.3} dot={false} connectNulls={false} isAnimationActive={false} />
             <Line dataKey="hrv7dMs" name="7d · ms" stroke={palette.blue} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </Plot><div className="performance-key"><span style={{ color: palette.blue }}>7d</span><span>Overnight</span><span style={{ color: palette.green }}>Baseline</span></div>
         </article>
         <article><div className="performance-chart-title"><h3>RHR Δ <small>bpm</small></h3><MetricValue as="strong" value={signed(last.rhrDelta)} unit="bpm" style={{ color: palette.red }} /></div>
           <Plot data={data} label="Resting HR deviation from preceding 28-day median, requiring seven prior readings" formatter={(value) => [`${number(value)} bpm`, "RHR Δ"]}>
-            <ReferenceLine y={0} stroke="#7d8892" strokeDasharray="3 3" />
+            <ReferenceLine y={0} stroke="var(--control-border)" strokeDasharray="3 3" />
             <Line dataKey="rhrDelta" name="RHR Δ" stroke={palette.red} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </Plot><div className="performance-key">28d personal median</div>
         </article>
         <article><div className="performance-chart-title"><h3>Sleep − need <small>min</small></h3><MetricValue as="strong" value={signed(last.sleepGap)} unit="min" style={{ color: Number.isFinite(last.sleepGap) && last.sleepGap >= 0 ? palette.green : palette.orange }} /></div>
           <Plot data={data} label="Sleep duration minus captured sleep need in minutes" formatter={(value) => [`${signed(value)} min`, "Sleep − need"]}>
-            <ReferenceLine y={0} stroke="#7d8892" />
+            <ReferenceLine y={0} stroke="var(--control-border)" />
             <Bar dataKey="sleepGap" name="Sleep − need" maxBarSize={12} isAnimationActive={false}>{data.map(row => <Cell key={row.date} fill={row.sleepGap >= 0 ? palette.green : palette.orange} />)}</Bar>
           </Plot>
         </article>

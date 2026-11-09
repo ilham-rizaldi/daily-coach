@@ -1,7 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { compareWeeks, dailySeries, deduplicateActivities, filterActivities, jakartaDate, shiftDate, summarize, validateReport } from "../src/report.js";
+import { captureReadinessIssues, reportReadinessIssues } from "../src/report-readiness.js";
 import { demoReport } from "../src/demo.js";
 import { openArchive, parseAccessInput, payloadFromFragment, unlockReports } from "../src/archive.js";
 import { decryptArchive, encryptArchive } from "../scripts/publish-report.mjs";
@@ -158,4 +164,70 @@ test("history filters combine date, sport and search and exclude non-training by
 
 test("report date boundaries follow Jakarta rather than UTC", () => {
   assert.equal(jakartaDate(new Date("2026-11-05T18:00:00Z")), "2026-11-06");
+});
+
+function readyReportFixture() {
+  const report = structuredClone(demoReport);
+  const { date, capturedAt } = report;
+  const evidence = { date, observedAt: capturedAt };
+  report.preview = false;
+  report.frontierCheck = evidence;
+  report.sources = report.sources.map(({ name }) => ({ name, status: "Captured", observedAt: capturedAt, frontierCheckedAt: capturedAt,
+    activityCoverage: { complete: true, start: shiftDate(date, -1), through: capturedAt } }));
+  // This fixture has no workouts on the report day. Verified empty coverage is valid.
+  report.activities = report.activities.filter(row => row.date < date).map(row => ({ ...row, averageSpeedKph: 10 }));
+  report.wellness.trainingStatusSince = shiftDate(date, -5);
+  for (const group of ["sleep", "heartRate", "hrv", "readiness", "bodyBattery", "fitness"]) {
+    report.wellness.provenance.datedRecovery[group] = evidence;
+  }
+  Object.assign(report.wellnessHistory.rows.at(-1), { hrvMs: 47, sleepMinutes: 370, provenance: { sleepNeedMinutes: { capturedAt } } });
+  Object.assign(report.garminLoadHistory.rows.at(-1), { acute: report.wellness.garminAcuteLoad, chronic: report.wellness.garminChronicLoad });
+  Object.assign(report.trainingMix.garminLoadFocus, { observedAt: capturedAt, sourceUrl: "https://example.com/load-focus" });
+  report.trainingMix.heartRateZones.push({ date: shiftDate(date, -1), sport: "Run", zone: "Z2", activityId: "test-run", source: "Intervals.icu", seconds: 60 });
+  report.intervals.provenance = { ...evidence, state: "actual" };
+  const full = { fitnessPercent: 100, fatiguePercent: 100 };
+  Object.assign(report.intervals.settings, { observedAt: capturedAt, timeConstants: { fitnessDays: 42, fatigueDays: 7 } });
+  Object.assign(report.intervals.settings.activityTypeWeights, { Ride: full, Run: full });
+  report.performance = { captureCutoffAt: capturedAt,
+    records: [{ sport: "Run", date: shiftDate(date, -14), label: "5 km", value: 1700, unit: "s", status: "verified", source: "Garmin Connect" }],
+    vo2History: [-1, -14].map(days => ({ sport: "Run", date: shiftDate(date, days), value: 46, source: "Garmin Connect" })),
+  };
+  return report;
+}
+
+test("a complete captured report accepts verified zero activity and older confirmed performance measurements", () => {
+  const report = readyReportFixture();
+  assert.deepEqual(reportReadinessIssues(report), []);
+  delete report.coaching.actionPlan;
+  assert.deepEqual(captureReadinessIssues(report), []);
+  assert.deepEqual(reportReadinessIssues(report).map(issue => issue.source), ["Coaching"]);
+  report.wellness.readiness = 1100;
+  assert.ok(captureReadinessIssues(report)[0].fields.includes("Training readiness score and recovery time"));
+});
+
+test("report command blocks missing data before replacing any private delivery files", async t => {
+  const directory = await mkdtemp(join(tmpdir(), "daily-coach-gate-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const privateDir = join(directory, ".local");
+  await mkdir(privateDir);
+  const previousFiles = ["archive.enc.json", "email.private.json", "report-link.private.json"];
+  await Promise.all(previousFiles.map(name => writeFile(join(privateDir, name), "previous")));
+  const report = readyReportFixture();
+  report.wellness.readiness = null;
+  report.wellness.bodyBattery = null;
+  report.wellness.garminChronicLoad = null;
+  report.trainingMix.garminLoadFocus.buckets[0].targetHigh = null;
+  report.intervals.provenance.state = "projected";
+  report.intervals.settings.timeConstants.fatigueDays = null;
+  report.sources[2].activityCoverage.complete = false;
+  report.activities.push({ date: report.date, sport: "Run", movingSeconds: 600, source: "Strava" });
+  await writeFile(join(directory, "incomplete.json"), JSON.stringify(report));
+  const script = fileURLToPath(new URL("../scripts/publish-report.mjs", import.meta.url));
+  const execution = spawnSync(process.execPath, [script, "incomplete.json"], { cwd: directory, encoding: "utf8" });
+  assert.equal(execution.status, 1);
+  for (const label of ["Report blocked", "readiness score", "Body Battery", "Dated chronic load", "Low aerobic Load Focus", "Dated actual CTL", "time constants", "Strava: Verified activity coverage", "Current-day provider IDs", "Current run distance"]) {
+    assert.ok(execution.stderr.includes(label), label);
+  }
+  assert.deepEqual((await readdir(privateDir)).sort(), previousFiles);
+  assert.deepEqual(await Promise.all(previousFiles.map(name => readFile(join(privateDir, name), "utf8"))), ["previous", "previous", "previous"]);
 });

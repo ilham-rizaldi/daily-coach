@@ -18,15 +18,15 @@
 .mix-periods, .mix-load-buckets { display: grid; gap: 11px; }
 .mix-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 5px; font-size: 12px; }
 .mix-row strong { font-size: 15px; }
-.mix-track { position: relative; height: 8px; overflow: hidden; border-radius: 3px; background: #101821; }
+.mix-track { position: relative; height: 8px; overflow: hidden; border-radius: 3px; background: var(--canvas); }
 .mix-zone-track { display: flex; height: 12px; }
 .mix-fill { display: block; flex: 0 0 auto; height: 100%; background: linear-gradient(180deg, var(--mix-color), var(--mix-deep)); }
-.mix-zone-track .mix-fill + .mix-fill { border-left: 1px solid #141b22; }
+.mix-zone-track .mix-fill + .mix-fill { border-left: 1px solid var(--canvas); }
 .mix-card [data-zone="Z1"] { --mix-color: #7190ad; --mix-deep: #445c76; }
-.mix-card [data-zone="Z2"], .mix-card [data-bucket="lowAerobic"] { --mix-color: #66a88b; --mix-deep: #35715d; }
-.mix-card [data-zone="Z3"], .mix-card [data-bucket="highAerobic"] { --mix-color: #cb975d; --mix-deep: #92602f; }
-.mix-card [data-zone="Z4"] { --mix-color: #c87979; --mix-deep: #954a4b; }
-.mix-card [data-zone="Z5"], .mix-card [data-bucket="anaerobic"] { --mix-color: #a38bc8; --mix-deep: #69548e; }
+.mix-card [data-zone="Z2"], .mix-card [data-bucket="lowAerobic"] { --mix-color: var(--green); --mix-deep: #416e5e; }
+.mix-card [data-zone="Z3"], .mix-card [data-bucket="highAerobic"] { --mix-color: var(--amber); --mix-deep: #825a35; }
+.mix-card [data-zone="Z4"] { --mix-color: var(--red); --mix-deep: #884d55; }
+.mix-card [data-zone="Z5"], .mix-card [data-bucket="anaerobic"] { --mix-color: var(--purple); --mix-deep: #695381; }
 .mix-card [data-zone="Z6"] { --mix-color: #b977a0; --mix-deep: #783f63; }
 .mix-card [data-zone="Z7"] { --mix-color: #ae6c85; --mix-deep: #643048; }
 .mix-coverage { display: block; margin-top: 5px; }

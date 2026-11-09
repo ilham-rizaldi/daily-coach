@@ -1,4 +1,4 @@
-import { decimal, duration, formatDate } from "./report.js";
+import { decimal, duration, formatDate, jakartaDate } from "./report.js";
 
 const present = value => Number.isFinite(value) || (typeof value === "string" && value.trim() !== "");
 const join = values => values.filter(Boolean).join(" · ");
@@ -6,11 +6,20 @@ const number = (value, unit = "", signed = false) => Number.isFinite(value)
   ? `${signed && value > 0 ? "+" : ""}${decimal(value)}${unit ? ` ${unit}` : ""}` : null;
 const minutes = value => Number.isFinite(value) ? duration(value * 60) : null;
 
-export function conditionStamp(date, observedAt) {
+export function conditionStamp(date, observedAt, observationWindow) {
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date || "") && Number.isFinite(Date.parse(`${date}T12:00:00Z`));
   const validCapture = observedAt && Number.isFinite(Date.parse(observedAt));
   const dateLabel = validDate ? formatDate(date) : "Reading date unrecorded";
-  if (!validCapture) return `${dateLabel} · capture time unrecorded`;
+  if (!validCapture) {
+    const start = Date.parse(observationWindow?.start), end = Date.parse(observationWindow?.end);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) return `${dateLabel} · capture time unrecorded`;
+    const showDate = !validDate || jakartaDate(new Date(start)) !== date || jakartaDate(new Date(end)) !== date;
+    const clock = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jakarta", ...(showDate ? { day: "numeric", month: "short" } : {}),
+      hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+    });
+    return `${dateLabel} · captured ${clock.format(start)}–${clock.format(end)} WIB`;
+  }
   const capture = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Jakarta", ...(validDate ? {} : { day: "numeric", month: "short" }),
     hour: "2-digit", minute: "2-digit", hourCycle: "h23",
@@ -31,7 +40,7 @@ export function conditionOverview(report) {
   const chronicDate = load.chronic?.date || load.chronic?.metricDate || datedLoadPair?.date;
   const chronicCapturedAt = (load.chronic?.date || load.chronic?.metricDate) ? load.chronic?.observedAt
     : datedLoadPair ? report.garminLoadHistory.observedAt : load.chronic?.observedAt;
-  const stamp = type => conditionStamp(date, recovery[type]?.observedAt);
+  const stamp = type => conditionStamp(date, recovery[type]?.observedAt, recovery[type]?.observationWindow);
   const status = value => present(value) ? value : null;
   const card = (id, label, value, unit, context, captured, sourceStatus) => ({
     id, label, value: present(value) ? String(value) : "Unavailable", unit: present(value) ? unit : "",
@@ -71,14 +80,14 @@ export function conditionOverview(report) {
     ],
     // A matching dated history pair can date these two load values only. It does
     // not refresh other wellness readings or date the separately observed ratio.
-    garminLoadStamp: conditionStamp(load.acute?.date, load.acute?.observedAt),
-    garminLoadContext: `Chronic: ${conditionStamp(chronicDate, chronicCapturedAt)}. Ratio: ${conditionStamp(load.ratio?.date || load.ratio?.metricDate, load.ratio?.observedAt)}.`,
+    garminLoadStamp: conditionStamp(load.acute?.date || load.acute?.metricDate, load.acute?.observedAt, load.acute?.observationWindow),
+    garminLoadContext: `Chronic: ${conditionStamp(chronicDate, chronicCapturedAt, load.chronic?.observationWindow)}. Ratio: ${conditionStamp(load.ratio?.date || load.ratio?.metricDate, load.ratio?.observedAt, load.ratio?.observationWindow)}.`,
     intervals: [
       card("fitness", "Fitness", i.fitness, "", "", null),
       card("fatigue", "Fatigue", i.fatigue, "", "", null),
       card("form", "Form", number(i.form, "", true), "", "", null),
     ],
-    intervalsStamp: conditionStamp(i.date, i.provenance?.observedAt),
+    intervalsStamp: conditionStamp(i.date, i.provenance?.observedAt, i.provenance?.observationWindow),
     fitness: [
       row("Training status", status(w.trainingStatus)),
       row("Load focus", status(w.loadFocus)),

@@ -3,47 +3,47 @@
 .week-plan-heading h1 { font-size: 26px; letter-spacing: -.6px; }
 .week-plan-heading > div > span { display: block; margin-top: 5px; font-size: 11px; color: #aab6c2; }
 .week-plan-actions { display: flex; gap: 15px; align-items: center; font-size: 12px; }
-.week-plan-actions button { border: 1px solid #506174; border-radius: 4px; padding: 8px 12px; color: #81c5fb; }
+.week-plan-actions button { border: 1px solid var(--control-border); border-radius: 4px; padding: 8px 12px; color: #81c5fb; }
 .week-plan-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 9px; }
-.week-day { margin: 0; min-width: 0; border: 1px solid #435569; border-radius: 6px; padding: 10px; background: #202933; }
-.week-day-rest { border-color: #39424c; background: #20252b; }
+.week-day { margin: 0; min-width: 0; border: 1px solid var(--panel-border); border-radius: 6px; padding: 10px; background: var(--surface-gradient); }
+.week-day-rest { border-color: var(--panel-border); background: var(--surface); }
 .week-day legend { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 0; color: #e3ebf2; font-size: 12px; }
 .week-day legend time { color: #aebbc8; font-size: 10px; }
 .week-day label { display: flex; align-items: center; gap: 7px; margin-top: 9px; font-size: 11px; color: #aab8c6; }
 .week-day label > input { min-width: 0; }
 .week-day label > span:not(.sr-only) { width: 22px; }
-.week-day input, .week-day select, .week-tau input, .week-today-controls input, .week-today-controls select { min-height: 35px; border: 1px solid #4b5866; border-radius: 4px; padding: 6px 7px; width: 100%; font-size: 12px; background: #242d37; color: #f0f5f9; }
+.week-day input, .week-day select, .week-tau input, .week-today-controls input, .week-today-controls select { min-height: 35px; border: 1px solid var(--control-border); border-radius: 4px; padding: 6px 7px; width: 100%; font-size: 12px; background: var(--surface); color: var(--text); }
 .week-day :disabled { opacity: .4; }
 .week-day-load { display: flex; align-items: baseline; justify-content: space-between; margin-top: 12px; color: #aebcca; font-size: 11px; }
-.week-day-load output { color: #70c0ff; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.week-day-load output { color: var(--lime); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .week-day > small { display: block; text-align: right; font-size: 10px; margin-top: 2px; min-height: 13px; color: #aab8c6; }
 .week-plan-status { color: #ffb465; font-size: 12px; margin: 14px 0; }
 .week-scenario-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 12px; color: #adbcc9; font-size: 11px; }
-.week-scenario-status small { font-size: 10px; color: #aebbc8; padding: 3px 6px; border: 1px solid #465463; border-radius: 3px; }
+.week-scenario-status small { font-size: 10px; color: #aebbc8; padding: 3px 6px; border: 1px solid var(--panel-border); border-radius: 3px; }
 .week-scenario-caution > span { color: #ffad50; }
-.week-plan-summary { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); margin: 20px 0; padding: 15px 0; border-block: 1px solid #3d4854; }
-.week-plan-summary > div { padding-left: 20px; border-left: 1px solid #3d4854; }
+.week-plan-summary { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); margin: 20px 0; padding: 15px 0; border-block: 1px solid var(--rule); }
+.week-plan-summary > div { padding-left: 20px; border-left: 1px solid var(--rule); }
 .week-plan-summary > div:first-child { border-left: 0; padding-left: 0; }
 .week-plan-summary dt { font-size: 11px; color: #aab8c6; }
 .week-plan-summary dd { margin: 5px 0 4px; font-size: 27px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .week-plan-summary small { color: #aab8c6; font-size: 10px; }
 .week-chart-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 10px; }
 .week-metric-switch { display: flex; gap: 3px; }
-.week-metric-switch button { border: 1px solid #4d5b69; padding: 7px 12px; border-radius: 4px; font-size: 12px; color: #b7c5d3; }
-.week-metric-switch button[aria-pressed="true"] { color: #8bcaff; border-color: #66b8f6; background: #22384a; }
+.week-metric-switch button { border: 1px solid var(--control-border); padding: 7px 12px; border-radius: 4px; font-size: 12px; color: #b7c5d3; }
+.week-metric-switch button[aria-pressed="true"] { color: var(--lime); border-color: var(--action-border); background: var(--accent-surface); }
 .week-chart-key { display: flex; align-items: center; gap: 13px; font-size: 11px; color: #aebac6; }
 .week-plan-chart { height: 240px; margin: 12px 0; width: 100%; }
-.week-chart-tooltip { display: grid; gap: 5px; padding: 11px 13px; background: #1c242d; color: #e6eef5; border: 1px solid #56697b; border-radius: 4px; font-size: 12px; }
+.week-chart-tooltip { display: grid; gap: 5px; padding: 11px 13px; background: var(--surface-raised); color: var(--text); border: 1px solid var(--control-border); border-radius: 4px; font-size: 12px; }
 .week-chart-tooltip small { color: #b4c1ce; font-size: 10px; }
-.week-plan-data, .week-plan-settings { border-top: 1px solid #3d4854; padding: 10px 0; }
+.week-plan-data, .week-plan-settings { border-top: 1px solid var(--rule); padding: 10px 0; }
 .week-plan-data summary, .week-plan-settings summary { color: #75c0fa; font-size: 12px; padding: 5px 0; }
 .week-tau { display: flex; gap: 15px; margin: 15px 0; max-width: 300px; }
 .week-tau label, .week-today-controls label { display: grid; gap: 6px; color: #aab8c6; font-size: 11px; min-width: 0; }
 .week-today-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; margin: 12px 0; color: #cad4de; }
-.week-today-toggle input { width: 17px; height: 17px; accent-color: #36a8ff; }
+.week-today-toggle input { width: 17px; height: 17px; accent-color: var(--blue); }
 .week-today-controls { display: grid; grid-template-columns: 1fr 1fr 1fr .7fr; gap: 12px; max-width: 650px; margin: 15px 0; }
 .week-today-controls > div { display: grid; gap: 5px; align-items: center; font-size: 11px; color: #aab8c6; }
-.week-today-controls output { display: block; font-size: 24px; color: #78c5ff; }
+.week-today-controls output { display: block; font-size: 24px; color: var(--lime); }
 .week-settings-meta { display: block; color: #9eacb9; font-size: 10px; margin-top: 12px; }
 @media (max-width: 1100px) { .week-plan-grid { grid-template-columns: repeat(4,minmax(0,1fr)); } }
 @media (max-width: 700px) {

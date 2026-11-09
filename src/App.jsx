@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { formatDate, jakartaDate } from "./report.js";
 import { parseAccessInput, unlockReports } from "./archive.js";
 import { demoReport } from "./demo.js";
@@ -13,6 +13,46 @@ const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
 const BenchmarkView = lazy(() => import("./BenchmarkView.jsx"));
 const WeekPlanner = lazy(() => import("./WeekPlanner.jsx"));
 const sections = ["Daily", "Trends", "Benchmarks", "Plan", "Archive", "Reference"];
+const reportRequest = "Generate my current Performance Desk report using the existing reporting framework. In signed-in Google Chrome, freshly verify Garmin Connect, Strava, and Intervals.icu. If any required data is unavailable or unverified, stop and tell me exactly what is missing. If all checks pass, verify that the private report opens and email it to my configured address.";
+const reportRequestUrl = `https://chatgpt.com/?q=${encodeURIComponent(reportRequest)}`;
+
+function RequestReport() {
+  const dialog = useRef(null);
+  const titleId = useId();
+  const [copyStatus, setCopyStatus] = useState("");
+
+  function openRequest() {
+    setCopyStatus("");
+    dialog.current.showModal();
+  }
+
+  async function copyRequest() {
+    try {
+      await navigator.clipboard.writeText(reportRequest);
+      setCopyStatus("Request copied.");
+    } catch {
+      setCopyStatus("Open the prepared request to copy it from ChatGPT.");
+    }
+  }
+
+  return (
+    <>
+      <button type="button" className="report-action request-report-button" aria-haspopup="dialog" onClick={openRequest}>Request report</button>
+      <dialog ref={dialog} className="report-request-dialog" aria-labelledby={titleId}>
+        <div className="report-request-heading">
+          <h2 id={titleId}>Request report</h2>
+          <button type="button" className="report-action" onClick={() => dialog.current.close()}>Close</button>
+        </div>
+        <p>Choose Work, then send the draft.</p>
+        <div className="report-access-actions">
+          <a className="report-action report-action-primary" href={reportRequestUrl} target="_blank" rel="noreferrer">Open prepared request</a>
+          <button type="button" className="report-action" onClick={copyRequest}>Copy request</button>
+        </div>
+        {copyStatus && <p className="report-request-status" role="status">{copyStatus}</p>}
+      </dialog>
+    </>
+  );
+}
 
 function Locked({ onUnlock, error, loading }) {
   const [key, setKey] = useState("");
@@ -26,6 +66,10 @@ function Locked({ onUnlock, error, loading }) {
         <button className="primary" disabled={loading}>{loading ? "Opening report…" : "Open my report"}</button>
       </form>
       {error && <p className="error" id="access-error" role="alert">{error}</p>}
+      <div className="report-access-actions">
+        <a className="report-action" href="https://chatgpt.com/library" target="_blank" rel="noreferrer">Open ChatGPT Library</a>
+        <RequestReport />
+      </div>
     </main>
   );
 }
@@ -134,6 +178,7 @@ export function App() {
             <time dateTime={report.date}>{formatDate(report.date, { weekday: "short", year: "numeric" })}</time>
             <span>{preview ? "Demo" : `${report.date === today ? "Snapshot" : "Historical"} · ${new Date(report.capturedAt).toLocaleString("en-GB", { timeZone: "Asia/Jakarta", timeStyle: "short" })} WIB`}</span>
             {reports.length > 1 && <nav className="report-switcher" aria-label="Report dates"><button disabled={reportIndex >= reports.length - 1} onClick={() => selectReport(reportIndex + 1)} aria-label="Older report">←</button><span>{reportIndex + 1} of {reports.length}</span><button disabled={reportIndex === 0} onClick={() => selectReport(reportIndex - 1)} aria-label="Newer report">→</button></nav>}
+            <RequestReport />
           </div>
           {section === "Daily" && (
             <>

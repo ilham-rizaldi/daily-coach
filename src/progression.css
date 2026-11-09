@@ -1,16 +1,16 @@
-.progression { padding: 16px 0; border-bottom: 1px solid #414b55; }
+.progression { padding: 16px 0; border-bottom: 1px solid var(--rule); }
 .progression-block + .progression-block { margin-top: 13px; }
 .progression-block > h3 { margin: 0 0 6px; font-size: 13px; font-weight: 550; }
 .progression-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
 .progression-records { grid-template-columns: repeat(auto-fit,minmax(min(100%,155px),1fr)); }
-.progression-card { min-width: 0; padding: 8px 10px; background: #20262c; border: 1px solid #39444f; border-radius: 5px; }
+.progression-card { min-width: 0; padding: 8px 10px; background: var(--surface); border: 1px solid var(--panel-border); border-radius: 5px; }
 .progression-readout, .progression-card-meta, .progression-axis { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .progression-card h4 { margin: 0; color: #edf4f8; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
 .progression-card strong { font-size: 23px; line-height: 1.12; font-weight: 620; font-variant-numeric: tabular-nums; }
 .progression-readout > div { min-width: 0; }
 .progression-readout > div > small, .progression-card-meta, .progression-axis { color: #a6b3be; font-size: 10px; }
 .progression-card-meta { margin-top: 5px; flex-wrap: wrap; row-gap: 2px; }
-.progression-card-meta select { min-height: 26px; max-width: 100%; padding: 2px 4px; color: #ccdce8; background: #272f37; border: 1px solid #52606c; border-radius: 3px; font: inherit; }
+.progression-card-meta select { min-height: 26px; max-width: 100%; padding: 2px 4px; color: #ccdce8; background: var(--surface); border: 1px solid var(--control-border); border-radius: 3px; font: inherit; }
 .progression-spark { margin-top: 5px; }
 .progression-plot { display: grid; grid-template-columns: minmax(26px,auto) minmax(0,1fr); gap: 0 5px; }
 .progression-spark svg { width: 100%; display: block; }

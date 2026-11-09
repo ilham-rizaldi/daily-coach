@@ -17,11 +17,11 @@ export default function TrainingChart({ report, days = 28, sport = "All" }) {
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 12, right: 12, bottom: 2, left: 0 }} accessibilityLayer>
             <CartesianGrid vertical={false} stroke="var(--rule)" />
-            <XAxis dataKey="label" tick={{ fill: "#d9dadd", fontSize: 13 }} axisLine={{ stroke: "#8a8d91" }} tickLine={false} interval={days === 7 ? 0 : "preserveStartEnd"} minTickGap={20} />
-            <YAxis tick={{ fill: "#d9dadd", fontSize: 13 }} axisLine={false} tickLine={false} width={42} />
-            <Tooltip contentStyle={{ background: "#24272a", border: "1px solid #65696f", borderRadius: 6, color: "#f5f5f5" }} formatter={(value, name) => [`${decimal(value)} min`, name === "minutes" ? "Training" : "7-day mean"]} />
+            <XAxis dataKey="label" tick={{ fill: "var(--muted)", fontSize: 13 }} axisLine={{ stroke: "var(--control-border)" }} tickLine={false} interval={days === 7 ? 0 : "preserveStartEnd"} minTickGap={20} />
+            <YAxis tick={{ fill: "var(--muted)", fontSize: 13 }} axisLine={false} tickLine={false} width={42} />
+            <Tooltip contentStyle={{ background: "var(--surface-raised)", border: "1px solid var(--control-border)", borderRadius: 6, color: "var(--text)" }} formatter={(value, name) => [`${decimal(value)} min`, name === "minutes" ? "Training" : "7-day mean"]} />
             <Bar dataKey="minutes" fill={palette.blue} maxBarSize={24} isAnimationActive={false} />
-            <Line dataKey="mean" stroke="#c4cbd1" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
+            <Line dataKey="mean" stroke="var(--muted)" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

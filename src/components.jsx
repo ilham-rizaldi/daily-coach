@@ -132,7 +132,7 @@ const detailLayout = {
   display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,112px),1fr))",
   gap: "9px 14px", margin: 0, padding: "10px 12px",
   boxSizing: "border-box", width: "min(100%, calc(100vw - 48px))",
-  whiteSpace: "normal", background: "#20262c", border: "1px solid #39444f", borderRadius: 5,
+  whiteSpace: "normal", background: "var(--surface-raised)", border: "1px solid var(--panel-border)", borderRadius: 5,
   position: "sticky", left: 0,
 };
 

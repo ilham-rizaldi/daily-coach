@@ -53,5 +53,5 @@ export function LoadHistory({ rows = [] }) {
   const x = date => 5 + (Date.parse(date) - start)/(end-start)*290;
   const y = value => 48 - value/max*43;
   const path = key => data.map((row,index)=>`${!index || Date.parse(row.date)-Date.parse(data[index-1].date)>86400000 ? "M":"L"}${x(row.date).toFixed(1)},${y(row[key]).toFixed(1)}`).join(" ");
-  return <div className="load-history"><svg viewBox="0 0 300 53" role="img" aria-label={`Garmin acute and chronic load, ${formatDate(data[0].date)} to ${formatDate(data.at(-1).date)}`}><line x1="5" x2="295" y1="48" y2="48" stroke="#41474d" /><path d={path("acute")} fill="none" stroke={palette.blue} strokeWidth="2" /><path d={path("chronic")} fill="none" stroke={palette.orange} strokeWidth="2" /></svg><div><span>{formatDate(data[0].date)}</span><span>{formatDate(data.at(-1).date)}</span></div></div>;
+  return <div className="load-history"><svg viewBox="0 0 300 53" role="img" aria-label={`Garmin acute and chronic load, ${formatDate(data[0].date)} to ${formatDate(data.at(-1).date)}`}><line x1="5" x2="295" y1="48" y2="48" stroke="var(--rule)" /><path d={path("acute")} fill="none" stroke={palette.blue} strokeWidth="2" /><path d={path("chronic")} fill="none" stroke={palette.orange} strokeWidth="2" /></svg><div><span>{formatDate(data[0].date)}</span><span>{formatDate(data.at(-1).date)}</span></div></div>;
 }
