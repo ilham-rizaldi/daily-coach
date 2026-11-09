@@ -54,26 +54,6 @@ function RequestReport() {
   );
 }
 
-function Locked({ onUnlock, error, loading }) {
-  const [key, setKey] = useState("");
-  return (
-    <main className="unlock">
-      <p className="eyebrow">Performance Desk</p><h1>Your training.<br />Your private report.</h1>
-      <p id="access-help">Open the private link in your coaching email, or paste it below.</p>
-      <form onSubmit={event => { event.preventDefault(); onUnlock(key.trim()); }}>
-        <label htmlFor="access-key">Private link or access key</label>
-        <input id="access-key" type="password" value={key} onChange={event => setKey(event.target.value)} aria-describedby={error ? "access-help access-error" : "access-help"} aria-invalid={Boolean(error)} autoComplete="off" autoCapitalize="none" spellCheck="false" required disabled={loading} />
-        <button className="primary" disabled={loading}>{loading ? "Opening report…" : "Open my report"}</button>
-      </form>
-      {error && <p className="error" id="access-error" role="alert">{error}</p>}
-      <div className="report-access-actions">
-        <a className="report-action" href="https://chatgpt.com/library" target="_blank" rel="noreferrer">Open ChatGPT Library</a>
-        <RequestReport />
-      </div>
-    </main>
-  );
-}
-
 export function App() {
   const preview = new URLSearchParams(location.search).get("preview") === "1";
   const [reports, setReports] = useState(preview ? [demoReport] : []);
@@ -89,12 +69,13 @@ export function App() {
   const mainRef = useRef(null);
   const unlockVersion = useRef(0);
 
-  async function unlock(input) {
+  async function unlock(input, fragment = "") {
     const version = ++unlockVersion.current;
     setLoading(true);
     setError("");
+    setCopyState("");
     try {
-      const { key, incoming } = parseAccessInput(input, location.hash);
+      const { key, incoming } = parseAccessInput(input, fragment);
       let stored = [];
       try { stored = JSON.parse(localStorage.getItem("daily-coach-encrypted-reports") || "[]"); } catch { stored = []; }
       const opened = await unlockReports(key, incoming, stored);
@@ -105,8 +86,11 @@ export function App() {
       setReportPayloads(opened.reportPayloads);
       setReportIndex(opened.reportIndex);
       setAccessKey(key);
+      setSection("Daily");
+      setDetail(false);
+      setResearchOpen(false);
       try { sessionStorage.setItem("daily-coach-access", key); } catch { /* A private link still opens without browser storage. */ }
-      history.replaceState(null, "", `${location.pathname}${location.search}`);
+      if (fragment && location.hash === fragment) history.replaceState(null, "", `${location.pathname}${location.search}`);
     } catch (failure) {
       if (version === unlockVersion.current) setError(failure.message);
     } finally {
@@ -116,11 +100,20 @@ export function App() {
 
   useEffect(() => {
     if (preview) return;
-    const params = new URLSearchParams(location.hash.slice(1));
-    if (["key", "iv", "data"].some(name => params.has(name))) { unlock(""); return; }
-    let key;
-    try { key = sessionStorage.getItem("daily-coach-access"); } catch { /* Storage may be blocked in private browsing. */ }
-    if (key) unlock(key);
+    function openPrivateLink() {
+      const fragment = location.hash;
+      const params = new URLSearchParams(fragment.slice(1));
+      if (!["key", "iv", "data"].some(name => params.has(name))) return false;
+      unlock("", fragment);
+      return true;
+    }
+    if (!openPrivateLink()) {
+      let key;
+      try { key = sessionStorage.getItem("daily-coach-access"); } catch { /* Storage may be blocked in private browsing. */ }
+      if (key) unlock(key);
+    }
+    window.addEventListener("hashchange", openPrivateLink);
+    return () => window.removeEventListener("hashchange", openPrivateLink);
   }, []);
 
   async function copyLink() {
@@ -156,30 +149,40 @@ export function App() {
     setLoading(false);
     setSection("Daily");
     setDetail(false);
+    if (location.hash) history.replaceState(null, "", `${location.pathname}${location.search}`);
   }
 
   const report = reports[reportIndex];
   const today = jakartaDate();
 
-  if (!report) return <Locked onUnlock={unlock} loading={loading} error={error} />;
-
   return (
     <>
-      <a className="skip-link" href="#main">Skip to report</a>
+      <a className="skip-link" href="#main">Skip to main content</a>
       <header className="app-header">
         <a className="wordmark" href={location.pathname} onClick={event => { event.preventDefault(); selectReport(0); }}>Performance Desk</a>
         {report && <nav aria-label="Report sections">{sections.map(name => <button key={name} onClick={() => changeSection(name)} aria-current={section === name ? "page" : undefined}>{name}</button>)}</nav>}
-        {!preview && <button className="header-lock" onClick={lockArchive}>Lock</button>}
+        {report && !preview && <button className="header-lock" onClick={lockArchive}>Lock</button>}
       </header>
-      {!report ? <Locked onUnlock={unlock} loading={loading} error={error} /> : (
-        <main id="main" ref={mainRef} tabIndex={-1}>
-          {copyState && <p className="notice" role="status">{copyState}</p>}
-          <div className="report-meta">
+      <main id="main" ref={mainRef} tabIndex={-1}>
+        {copyState && <p className="notice" role="status">{copyState}</p>}
+        <div className="report-meta">
+          {report && <>
             <time dateTime={report.date}>{formatDate(report.date, { weekday: "short", year: "numeric" })}</time>
             <span>{preview ? "Demo" : `${report.date === today ? "Snapshot" : "Historical"} · ${new Date(report.capturedAt).toLocaleString("en-GB", { timeZone: "Asia/Jakarta", timeStyle: "short" })} WIB`}</span>
-            {reports.length > 1 && <nav className="report-switcher" aria-label="Report dates"><button disabled={reportIndex >= reports.length - 1} onClick={() => selectReport(reportIndex + 1)} aria-label="Older report">←</button><span>{reportIndex + 1} of {reports.length}</span><button disabled={reportIndex === 0} onClick={() => selectReport(reportIndex - 1)} aria-label="Newer report">→</button></nav>}
-            <RequestReport />
-          </div>
+          </>}
+          {reports.length > 1 && <nav className="report-switcher" aria-label="Report dates"><button disabled={reportIndex >= reports.length - 1} onClick={() => selectReport(reportIndex + 1)} aria-label="Older report">←</button><span>{reportIndex + 1} of {reports.length}</span><button disabled={reportIndex === 0} onClick={() => selectReport(reportIndex - 1)} aria-label="Newer report">→</button></nav>}
+          <RequestReport />
+        </div>
+        {error && <p className="error" role="alert">{error}</p>}
+        {loading && <p className="notice" role="status">Opening report…</p>}
+        {!report && !loading && (
+          <section className="decision empty-report" aria-labelledby="empty-report-title">
+            <h1 id="empty-report-title">No report open</h1>
+            <p>Open a report from your coaching email or ChatGPT Library.</p>
+            <a className="report-action" href="https://chatgpt.com/library" target="_blank" rel="noreferrer">Open ChatGPT Library</a>
+          </section>
+        )}
+        {report && <>
           {section === "Daily" && (
             <>
               <ConditionOverview report={report} />
@@ -236,8 +239,8 @@ export function App() {
               {!preview && <div className="archive-actions"><button onClick={copyLink}>Copy link</button><button onClick={lockArchive}>Lock</button></div>}
             </>
           )}
-        </main>
-      )}
+        </>}
+      </main>
     </>
   );
 }

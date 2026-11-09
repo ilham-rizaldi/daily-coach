@@ -25,7 +25,7 @@ export function payloadFromFragment(fragment) {
   const ciphertext = params.get("data");
   const iv = params.get("iv");
   if (!ciphertext && !iv) return null;
-  if (!ciphertext || !iv) throw new Error("This private report link is incomplete. Copy the full link from your coaching email.");
+  if (!ciphertext || !iv) throw new Error("This private report link is incomplete. Open the full link from your coaching email.");
   if (ciphertext.length > 2000000 || !/^[A-Za-z0-9_-]+$/.test(ciphertext) || !/^[A-Za-z0-9_-]{16}$/.test(iv)) {
     throw new Error("This private report link is incomplete or invalid.");
   }
@@ -40,12 +40,12 @@ export function parseAccessInput(value, currentFragment = "") {
     fragment = input;
     key = "";
   } else if (/^https?:\/\//i.test(input)) {
-    try { fragment = new URL(input).hash; } catch { throw new Error("Copy the complete private link from your coaching email."); }
+    try { fragment = new URL(input).hash; } catch { throw new Error("Open the complete private link from your coaching email."); }
     key = "";
   }
   const params = new URLSearchParams(fragment.replace(/^#/, ""));
   key ||= params.get("key") || "";
-  if (!/^[A-Za-z0-9_-]{43}$/.test(key)) throw new Error("Paste the complete private link from your email, or enter its 43-character access key.");
+  if (!/^[A-Za-z0-9_-]{43}$/.test(key)) throw new Error("Open the complete private link from your coaching email.");
   return { key, incoming: payloadFromFragment(fragment) };
 }
 
@@ -72,7 +72,7 @@ export async function unlockReports(key, incoming, stored = []) {
     reports = reports.slice(0, 180);
     if (selected && !reports.includes(selected)) reports = [...reports.slice(0, 179), selected].sort((a, b) => b.date.localeCompare(a.date));
   }
-  if (!reports.length) throw new Error("No saved report is available on this device. Paste the complete private link from your coaching email.");
+  if (!reports.length) throw new Error("No saved report is available on this device. Open the complete private link from your coaching email.");
   const reportPayloads = Object.fromEntries(reports.map(report => [report.date, byDate[report.date].payload]));
   const payloads = [...new Set(Object.values(reportPayloads))];
   return { reports, reportPayloads, payloads, reportIndex: Math.max(0, reports.findIndex(report => report.date === selectedDate)) };

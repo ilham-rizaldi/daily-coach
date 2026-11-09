@@ -17,9 +17,9 @@ npm install
 npm run dev
 ```
 
-Open `?preview=1` for clearly labelled illustrative content. The default view opens reports from the private links in coaching emails, or reports previously opened on the same device.
+Open `?preview=1` for clearly labelled illustrative content. The default URL opens Performance Desk directly, with Request report available even when no report is open.
 
-The minimal login form also accepts the complete private email link, which loads its report on a new device. An access key alone unlocks reports already stored in that browser. Opening an older email selects that report rather than the newest saved date. New revisions replace the same date in browser history.
+A complete private link opens its report automatically on a new device. The current browser tab can resume its unlocked session. Opening an older link selects its exact report date. New revisions replace the same date in browser history.
 
 Daily reports begin with a compact body dashboard: readiness/Body Battery score meters, an HRV baseline band, sleep-stage composition, RHR, recovery, vitals, Garmin load history, separate Intervals CTL/ATL/Form, VO₂ max and heat acclimation. Only captured series produce history plots. The HRV baseline marker uses the seven-day mean, while overnight HRV remains a separate readout. Awake time stays separate from the sleep-stage total. Missing data uses a dash.
 
@@ -27,7 +27,7 @@ The interface uses concise English training terms and Garmin-inspired metric/sta
 
 The session plan uses a proportional phase timeline with optional detail. Forecasts show current/rest/session comparisons and range whiskers, retaining provider labels and estimate states. The header keeps Lock available and adds older/newer report controls. Activity history defaults to all captured sessions and supports date windows, sport, search, pagination and excluded recordings. Trends include matched-period bars, duration charts and sport composition. Weekly changes require complete coverage; missing coverage is not a zero-training day.
 
-Chart code loads separately after opening a report, so the locked login does not download the chart library on its initial load.
+Chart code loads separately after opening a report.
 
 ## Next-day training forecast
 

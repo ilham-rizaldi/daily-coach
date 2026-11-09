@@ -5,7 +5,7 @@
 .metric-value .metric-unit-tight { margin-left:0; }
 .metric-duration { gap:.14em; }
 .metric-duration .metric-part { display:inline-flex; align-items:baseline; font:inherit; color:inherit; white-space:nowrap; }
-main:not(.unlock) { max-width:1600px; padding-inline:32px; }
+main { max-width:1600px; padding-inline:32px; }
 .report-meta { padding-block:18px; }
 .body-overview { padding:22px; margin-bottom:24px; }
 .body-overview .condition-heading { margin-bottom:18px; }
@@ -142,7 +142,7 @@ td small { font-size:11px; }
 }
 @media(min-width:1401px) and (max-width:1600px) { .body-secondary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:700px) {
-  main:not(.unlock) { padding-inline:16px; }
+  main { padding-inline:16px; }
   .body-overview { padding:14px; }
   .body-primary { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
   .body-tile { padding:16px 12px; }
@@ -187,6 +187,7 @@ td small { font-size:11px; }
 }
 
 /* Private report access and request handoff. */
+.empty-report p { margin: 8px 0 16px; color: var(--muted); font-size: 14px; }
 .report-access-actions, .report-request-heading {
   display: flex;
   align-items: center;

@@ -672,37 +672,6 @@ footer button {
   text-align: right;
   min-height: 24px;
 }
-.unlock {
-  max-width: 800px;
-  padding: 80px 30px;
-}
-.unlock h1 {
-  font-size: clamp(42px,6vw,70px);
-  letter-spacing: -2px;
-  line-height: 1.08;
-  margin-bottom: 25px;
-}
-.unlock > p {
-  max-width: 580px;
-}
-.unlock form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-width: 540px;
-  margin: 35px 0;
-}
-.unlock input {
-  padding: 14px;
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--control-border);
-  border-radius: 5px;
-}
-.unlock form button {
-  align-self: flex-start;
-  margin-top: 5px;
-}
 .error {
   color: var(--amber);
 }
@@ -1088,12 +1057,6 @@ footer button {
   }
   footer p {
     width: 100%;
-  }
-  .unlock {
-    padding-top: 55px;
-  }
-  .unlock h1 {
-    font-size: 47px;
   }
   .session-section h2 > .quiet {
     display: block;
@@ -1605,7 +1568,7 @@ footer button { font-size: 11px; }
 .period-bars > div { padding-left: 0; }
 .period-bars span { font-size: 10px; }
 .page-title { padding: 16px 0; }
-main:not(.unlock) { padding-bottom: 24px; }
+main { padding-bottom: 24px; }
 @media (max-width: 900px) {
   .app-header { min-height: 86px; padding-top: 10px; gap: 5px 14px; }
   .app-header nav { height: 41px; margin-left: 0; justify-content: space-between; gap: 10px; }
