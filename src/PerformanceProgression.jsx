@@ -1,3 +1,5 @@
+import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
+import { smoothLinePath } from "./chart-lines.js";
 import { useState } from "react";
 import { palette } from "./MetricGraphics.jsx";
 import { MetricValue } from "./Readout.jsx";
@@ -161,7 +163,7 @@ function Sparkline({ label, points, color, display = decimal, connect = true }) 
         {min === max
           ? <line x1="5" x2="295" y1="31" y2="31" className="progression-guide" />
           : <><line x1="5" x2="295" y1="11" y2="11" className="progression-guide" /><line x1="5" x2="295" y1="51" y2="51" className="progression-guide" /></>}
-        {connect && <polyline points={coords.map(point => point.join(",")).join(" ")} fill="none" stroke={color} strokeWidth="1.7" vectorEffect="non-scaling-stroke" />}
+        {connect && <path d={smoothLinePath(coords)} fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
         {points.map((point, i) => <circle key={i} cx={coords[i][0]} cy={coords[i][1]} r={i === points.length - 1 ? 3 : 2} fill={point.precision === "month" ? "#20262c" : color} stroke={color} strokeWidth={point.precision === "month" ? 1 : 0}><title>{[pointDate(point, true), display(point.value), point.distance ? `${decimal(point.distance)} km` : null].filter(Boolean).join(" · ")}</title></circle>)}
       </svg>
       <div className="progression-axis"><time dateTime={pointDateTime(start)}>{pointDate(start, acrossYears)}</time><time dateTime={pointDateTime(end)}>{pointDate(end, acrossYears)}</time></div>
@@ -172,11 +174,15 @@ function Sparkline({ label, points, color, display = decimal, connect = true }) 
 function Vo2Card({ series }) {
   const { sport, source, points } = series, latest = points.at(-1), color = sportColor(sport);
   const hasMonthly = points.some(point => point.precision === "month"), hasDaily = points.some(point => point.precision === "day");
-  return <article className="progression-card">
+  return <DataCard className="progression-card" title={`${sport} VO₂ max`} detail={<>
+    <DetailFacts rows={[["Source", source]]} />
+    <DetailTable columns={["Date", "VO₂ max · mL/kg/min", "Date precision"]} rows={[...points].reverse().map(point =>
+      [pointDate(point, true), decimal(point.value), point.precision === "month" ? "Monthly" : "Daily"])} />
+  </>}>
     <div className="progression-readout"><div><h4>{sport}</h4><small>{source} · {pointDate(latest)}</small></div><MetricValue as="strong" value={decimal(latest.value)} unit="mL/kg/min" style={{ color }} /></div>
     <Sparkline label={`${sport} VO₂ max · ${source}`} points={points} color={color} />
     {hasMonthly && points.length > 1 && <div className="progression-card-meta"><span>○ Monthly{hasDaily ? " · ● Daily" : ""}</span></div>}
-  </article>;
+  </DataCard>;
 }
 
 function speedOption(group, groups) {
@@ -191,29 +197,37 @@ function SpeedCard({ sport, groups }) {
   const { scope, source, basis, points } = group, latest = points.at(-1), color = sportColor(sport);
   const running = sport === "Running", display = running ? pace : decimal;
   const label = running ? "Run pace" : "Ride speed", unit = running ? "min/km" : "km/h";
-  const recordedGroup = groups.filter(row => row.basis === "recorded")
+  const recordedGroup = groups.filter(row => row.basis === "recorded" || row.basis === "displayed")
     .sort((a, b) => b.points.at(-1).at - a.points.at(-1).at)[0];
   const recorded = recordedGroup?.points.at(-1);
-  return <article className="progression-card">
+  return <DataCard className="progression-card" title={label} detail={<>
+    <DetailFacts rows={[["Source", source], ["Scope", scope], ["Timing basis", speedMethods[basis]]]} />
+    <DetailTable columns={["Date", `${label} · ${unit}`, "Distance · km"]} rows={[...points].reverse().map(point =>
+      [pointDate(point, true), display(point.value), Number.isFinite(point.distance) ? decimal(point.distance) : null])} />
+  </>}>
     <div className="progression-readout"><div><h4>{label}</h4><small>{speedMethods[basis]} · {source}</small></div><MetricValue as="strong" value={display(latest.value)} unit={unit} style={{ color }} /></div>
     <div className="progression-card-meta">{groups.length > 1
       ? <select aria-label={`${label} comparison scope`} value={group.key} onChange={event => setSelection(event.target.value)}>{groups.map(row => <option key={row.key} value={row.key}>{speedOption(row, groups)}</option>)}</select>
       : <span>{scope ?? "Scope unknown"}</span>}
     <span>{latest.distance ? `${decimal(latest.distance)} km · ` : ""}{formatDate(latest.date)}</span></div>
-    {basis !== "recorded" && recorded && <div className="progression-card-meta"><span>Recorded avg · {recordedGroup.scope ?? "Scope unknown"} · {formatDate(recorded.date)}</span><MetricValue as="strong" value={display(recorded.value)} unit={unit} /></div>}
+    {recorded && recordedGroup !== group && (basis !== "recorded" || recordedGroup.basis === "displayed") && <div className="progression-card-meta"><span>{speedMethods[recordedGroup.basis]} · {recordedGroup.scope ?? "Scope unknown"} · {formatDate(recorded.date)}</span><MetricValue as="strong" value={display(recorded.value)} unit={unit} /></div>}
     <Sparkline label={`${label} · ${scope} · ${speedMethods[basis]} · ${unit}`} points={points} color={color} display={display} connect={false} />
-  </article>;
+  </DataCard>;
 }
 
 function RecordCard({ record }) {
   const { sport, source, label, value, unit, date, url } = record;
   const timed = Number.isFinite(value) && unit === "s";
-  return <article className="progression-card progression-record">
+  const result = timed ? effortClock(value) : typeof value === "number" ? decimal(value, 2) : value;
+  return <DataCard className="progression-card progression-record" title={label} detail={<DetailFacts rows={[
+    ["Sport", sport], ["Result", <MetricValue value={result} unit={timed ? undefined : unit} />], ["Date", formatDate(date, { year: "numeric" })],
+    ["Source", url ? <a href={url} target="_blank" rel="noopener noreferrer">{source}</a> : source],
+  ]} />}>
     <div className="progression-record-sport" style={{ color: sportColor(sport) }}>{sport}</div>
     <h4>{label}</h4>
     <MetricValue as="strong" value={timed ? effortClock(value) : typeof value === "number" ? decimal(value, 2) : value} unit={timed ? undefined : unit} />
     <div className="progression-card-meta">{url ? <a href={url} target="_blank" rel="noopener noreferrer">{source}</a> : <span>{source}</span>}<time dateTime={date}>{formatDate(date, { year: "numeric" })}</time></div>
-  </article>;
+  </DataCard>;
 }
 
 export default function PerformanceProgression({ report, segmentRecordKeys, compactRecords = false }) {

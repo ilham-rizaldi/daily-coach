@@ -4,6 +4,7 @@ import { App } from "./App.jsx";
 import "./styles.css";
 import "./readability.css";
 import "./console.css";
+import "./card-details.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>

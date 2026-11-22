@@ -1,6 +1,7 @@
 import { decimal, formatDate, jakartaDate, shiftDate } from "./report.js";
 import { projectGarminRest } from "./garminForecast.js";
 import { ForecastBars, forecastColors } from "./ForecastGraphics.jsx";
+import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 
 export function GarminRestForecast({ report }) {
   const result = projectGarminRest(report);
@@ -9,7 +10,15 @@ export function GarminRestForecast({ report }) {
   const ratio = result.baseline?.displayRatio ?? report.wellness.garminLoadRatio;
   const acute = result.baseline?.acute ?? report.wellness.garminAcuteLoad;
   const chronic = result.baseline?.chronic ?? report.wellness.garminChronicLoad;
-  return <section className="garmin-rest garmin-rest-compact" aria-labelledby="garmin-rest-heading">
+  return <DataCard as="section" className="garmin-rest garmin-rest-compact" aria-labelledby="garmin-rest-heading" title="Garmin rest projection" detail={<>
+    <DetailFacts rows={[["Projection date", formatDate(date)], ["Model", "Paired historical Garmin load changes on days with no recorded activity"],
+      ["Calibration days", result.n], ["Confidence", result.available ? "Low" : null], ["Status", result.error],
+      ["Applicability", result.extrapolation ? "Extrapolated beyond the captured baseline range" : null]]} />
+    <DetailTable columns={["Metric", "Current", "Rest estimate", "Historical range"]} rows={result.available
+      ? [["Acute load", acute, result.estimate.acute, result.range.acute], ["Chronic load", chronic, result.estimate.chronic, result.range.chronic], ["Ratio", ratio, result.estimate.ratio, result.range.ratio]]
+        .map(([label, current, estimate, range]) => [label, decimal(current, 2), decimal(estimate, 2), range ? `${decimal(range.low, 2)}–${decimal(range.high, 2)}` : null])
+      : []} empty="A dated Garmin load history is required for this estimate." />
+  </>}>
     <div className="forecast-heading">
       <div><p className="eyebrow">Garmin · no new load</p><h2 id="garmin-rest-heading">Rest projection <span className="quiet">{formatDate(date)}</span></h2></div>
       <div className="forecast-calibration"><span title="Estimated · low confidence; calibration in Reference">Est.</span>{historical && <span>Snapshot {formatDate(report.date)}</span>}{result.extrapolation && <span>Extrapolated</span>}</div>
@@ -22,5 +31,5 @@ export function GarminRestForecast({ report }) {
       <div className="garmin-ratio-shift"><span className="forecast-stat-label">Acute / chronic</span><strong>{decimal(ratio, 1)}</strong><small>Acute {decimal(acute, 0)} · chronic {decimal(chronic, 0)}</small></div>
       <p className="forecast-compact-status" role="status">Projection unavailable · dated load history required</p>
     </div>}
-  </section>;
+  </DataCard>;
 }

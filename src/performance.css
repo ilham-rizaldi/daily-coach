@@ -52,3 +52,56 @@
   .performance-period button { padding-inline: 9px; }
   .performance-placement-heading { align-items: flex-start; flex-wrap: wrap; gap: 7px; }
 }
+
+/* Trends uses the same outer panels and inner metric cards as Daily. */
+.performance-trends { display: grid; gap: 20px; }
+.performance-trends > :is(.training-mix, .performance-recovery, .performance-cycling) {
+  min-width: 0;
+  padding: var(--panel-inset);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
+  background: var(--surface-gradient);
+}
+.performance-trends .performance-heading { margin: 0 0 16px; }
+.performance-trends .performance-heading h2 {
+  margin: 0; font-size: var(--panel-heading); font-weight: 680; letter-spacing: -.03em;
+}
+.performance-trends :is(.performance-chart-grid, .mix-grid, .performance-cycling-stats) { gap: 12px; }
+.performance-trends :is(.performance-chart-grid > article, .mix-card, .performance-cycling-stats > div, .placement-card) {
+  min-width: 0;
+  padding: clamp(12px, 1.5vw, 18px);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--metric-radius);
+  background: var(--surface);
+}
+.performance-trends .detail-card:hover { border-color: color-mix(in srgb, var(--blue) 34%, var(--panel-border)); }
+.performance-trends :is(.performance-chart-grid h3, .mix-card-heading h3, .performance-placement-heading h3) {
+  font-size: 14px; font-weight: 660; letter-spacing: -.01em; color: var(--text);
+}
+.performance-trends .performance-chart-title { flex-direction: column; align-items: flex-start; gap: 7px; margin-bottom: 13px; }
+.performance-trends :is(.performance-chart-title strong, .performance-cycling-stats strong) {
+  font-size: clamp(28px, 3.2vw, 40px); font-weight: 670; letter-spacing: -.045em; color: var(--signal, var(--text));
+}
+.performance-trends .performance-cycling-stats > div > span { color: var(--muted); }
+.performance-trends .performance-cycling-stats strong { margin-top: 6px; }
+.performance-trends .performance-plot { height: clamp(153px, 18vw, 200px); }
+.performance-trends .performance-key { min-height: 17px; margin-left: 35px; color: var(--muted); }
+.performance-trends .performance-period button { min-height: 36px; border: 1px solid var(--panel-border); border-radius: 7px; color: var(--muted); }
+.performance-trends .performance-period button[aria-pressed="true"] { color: var(--lime); border-color: var(--action-border); }
+.performance-trends .mix-card-heading { margin-bottom: 15px; }
+.performance-trends .mix-card select { min-height: 36px; border-color: var(--control-border); border-radius: 7px; }
+.performance-trends .mix-row strong { font-size: clamp(19px, 2vw, 25px); letter-spacing: -.035em; color: var(--blue); }
+.performance-trends .mix-bucket .mix-row strong { color: var(--mix-color, var(--text)); }
+.performance-trends .mix-bucket:has([data-bucket="lowAerobic"]) { --mix-color: var(--green); }
+.performance-trends .mix-bucket:has([data-bucket="highAerobic"]) { --mix-color: var(--amber); }
+.performance-trends .mix-bucket:has([data-bucket="anaerobic"]) { --mix-color: var(--purple); }
+.performance-trends .mix-track { height: 10px; border-radius: 5px; background: var(--surface-raised); }
+.performance-trends .mix-zone-track { height: 12px; }
+.performance-trends .placement-card { margin-top: 12px; }
+.performance-trends .placement-card .performance-placement-heading { margin-block: 0 12px; }
+.performance-trends .performance-data summary { color: var(--blue); }
+@media (max-width: 560px) {
+  .performance-trends { gap: 14px; }
+  .performance-trends .performance-heading { gap: 8px; flex-wrap: wrap; }
+  .performance-trends .performance-cycling-stats { margin-block: 14px; }
+}

@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { Area, Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { decimal, duration, formatDate } from "./report.js";
-import { palette } from "./MetricGraphics.jsx";
+import { BatteryRangeChart, palette } from "./MetricGraphics.jsx";
 import { cyclingProgression, recoverySeries, trainingPlacement } from "./performance.js";
 import "./performance.css";
 import TrainingMix from "./TrainingMix.jsx";
@@ -9,7 +10,7 @@ import { DurationValue, MetricValue } from "./Readout.jsx";
 
 const number = (value, places = 1) => Number.isFinite(value) ? decimal(value, places) : "—";
 const signed = value => Number.isFinite(value) ? `${value > 0 ? "+" : ""}${decimal(value, 0)}` : "—";
-const tooltipStyle = { background: "var(--surface-raised)", border: "1px solid var(--control-border)", borderRadius: 5, color: "var(--text)", fontSize: 11 };
+const tooltipStyle = { background: "var(--surface-raised)", border: "1px solid var(--control-border)", borderRadius: 9, color: "var(--text)", fontSize: 12 };
 const ticks = { fill: "var(--muted)", fontSize: 12 };
 
 function Plot({ data, label, children, domain = ["auto", "auto"], formatter }) {
@@ -30,34 +31,41 @@ function Recovery({ report }) {
   const [days, setDays] = useState(28), data = recoverySeries(report, days);
   const available = data.some(row => [row.hrvMs, row.rhrBpm, row.sleepMinutes, row.bodyBatteryHigh].some(Number.isFinite));
   const last = data.at(-1) || {};
+  const lastBattery = data.findLast(row => row.bodyBatteryRange);
+  const dated = (columns, values, caption) => <>
+    <DetailFacts rows={[["Source", report.wellnessHistory?.source || "Garmin wellness history"], ["Capture", report.wellnessHistory?.observedAt]]} />
+    <DetailTable columns={["Date", ...columns]} rows={[...data].reverse().map(row => [formatDate(row.date), ...values(row)])} caption={caption} />
+  </>;
   return <section className="performance-recovery" aria-labelledby="recovery-trend-title">
     <div className="performance-heading"><h2 id="recovery-trend-title" title={`Garmin wellness · captured ${report.wellnessHistory?.observedAt || "unrecorded"}`}>Recovery trends</h2><div className="performance-period" aria-label="Recovery period">{[7, 28, 56].map(value => <button key={value} aria-pressed={value === days} onClick={() => setDays(value)}>{value}d</button>)}</div></div>
     {available ? <>
       <div className="performance-chart-grid">
-        <article><div className="performance-chart-title"><h3>HRV <small>ms</small></h3><div className="recovery-readout"><MetricValue as="strong" value={number(last.hrvMs, 0)} unit="ms" style={{ color: palette.blue }} /><small className="metric-context">7d {number(last.hrv7dMs, 0)}ms</small></div></div>
+        <DataCard title="Heart rate variability" detail={dated(["Overnight · ms", "7d · ms", "Baseline · ms"], row => [number(row.hrvMs, 0), number(row.hrv7dMs, 0), row.hrvBand?.join("–")], "Daily HRV readings")}><div className="performance-chart-title"><h3>HRV <small>ms</small></h3><div className="recovery-readout"><MetricValue as="strong" value={number(last.hrvMs, 0)} unit="ms" style={{ color: palette.blue }} /><small className="metric-context">7d {number(last.hrv7dMs, 0)}ms</small></div></div>
           <Plot data={data} label="Overnight and seven-day HRV against captured personal baseline" formatter={(value, name) => [Array.isArray(value) ? value.map(v => number(v, 0)).join("–") : number(value, 0), name]}>
-            <Area dataKey="hrvBand" name="Baseline · ms" fill={palette.green} fillOpacity={0.16} stroke="none" connectNulls={false} isAnimationActive={false} />
-            <Line dataKey="hrvMs" name="Overnight · ms" stroke={palette.gray} strokeWidth={1.3} dot={false} connectNulls={false} isAnimationActive={false} />
-            <Line dataKey="hrv7dMs" name="7d · ms" stroke={palette.blue} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
+            <Area type="monotoneX" dataKey="hrvBand" name="Baseline · ms" fill={palette.green} fillOpacity={0.16} stroke="none" connectNulls={false} isAnimationActive={false} />
+            <Line type="monotoneX" dataKey="hrvMs" name="Overnight · ms" stroke={palette.gray} strokeWidth={1.3} dot={false} connectNulls={false} isAnimationActive={false} />
+            <Line type="monotoneX" dataKey="hrv7dMs" name="7d · ms" stroke={palette.blue} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </Plot><div className="performance-key"><span style={{ color: palette.blue }}>7d</span><span>Overnight</span><span style={{ color: palette.green }}>Baseline</span></div>
-        </article>
-        <article><div className="performance-chart-title"><h3>RHR Δ <small>bpm</small></h3><MetricValue as="strong" value={signed(last.rhrDelta)} unit="bpm" style={{ color: palette.red }} /></div>
+        </DataCard>
+        <DataCard title="Resting heart rate trend" detail={dated(["RHR · bpm", "Change · bpm"], row => [number(row.rhrBpm, 0), signed(row.rhrDelta)], "Change against the preceding 28-day median, with at least seven prior readings")}><div className="performance-chart-title"><h3>RHR Δ <small>bpm</small></h3><MetricValue as="strong" value={signed(last.rhrDelta)} unit="bpm" style={{ color: palette.red }} /></div>
           <Plot data={data} label="Resting HR deviation from preceding 28-day median, requiring seven prior readings" formatter={(value) => [`${number(value)} bpm`, "RHR Δ"]}>
             <ReferenceLine y={0} stroke="var(--control-border)" strokeDasharray="3 3" />
-            <Line dataKey="rhrDelta" name="RHR Δ" stroke={palette.red} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
+            <Line type="monotoneX" dataKey="rhrDelta" name="RHR Δ" stroke={palette.red} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </Plot><div className="performance-key">28d personal median</div>
-        </article>
-        <article><div className="performance-chart-title"><h3>Sleep − need <small>min</small></h3><MetricValue as="strong" value={signed(last.sleepGap)} unit="min" style={{ color: Number.isFinite(last.sleepGap) && last.sleepGap >= 0 ? palette.green : palette.orange }} /></div>
+        </DataCard>
+        <DataCard title="Sleep and sleep need" detail={dated(["Sleep · min", "Need · min", "Gap · min"], row => [number(row.sleepMinutes, 0), number(row.sleepNeedMinutes, 0), signed(row.sleepGap)], "Sleep duration minus the recorded need for that night")}><div className="performance-chart-title"><h3>Sleep − need <small>min</small></h3><MetricValue as="strong" value={signed(last.sleepGap)} unit="min" style={{ color: Number.isFinite(last.sleepGap) && last.sleepGap >= 0 ? palette.green : palette.orange }} /></div>
           <Plot data={data} label="Sleep duration minus captured sleep need in minutes" formatter={(value) => [`${signed(value)} min`, "Sleep − need"]}>
             <ReferenceLine y={0} stroke="var(--control-border)" />
             <Bar dataKey="sleepGap" name="Sleep − need" maxBarSize={12} isAnimationActive={false}>{data.map(row => <Cell key={row.date} fill={row.sleepGap >= 0 ? palette.green : palette.orange} />)}</Bar>
           </Plot>
-        </article>
-        <article><div className="performance-chart-title"><h3>Body Battery <small>low–high</small></h3><MetricValue as="strong" value={`${number(last.bodyBatteryLow, 0)}–${number(last.bodyBatteryHigh, 0)}`} style={{ color: palette.blue }} /></div>
-          <Plot data={data} label="Recorded Body Battery daily low and high" domain={[0, 100]} formatter={(value, name) => [Array.isArray(value) ? value.map(v => number(v, 0)).join("–") : number(value, 0), name]}>
-            <Area dataKey="bodyBatteryRange" name="Daily low–high" stroke={palette.blue} strokeWidth={1} fill={palette.blue} fillOpacity={0.2} connectNulls={false} isAnimationActive={false} />
-          </Plot>
-        </article>
+        </DataCard>
+        <DataCard className="battery-trend-card" title="Body Battery history" detail={dated(["Low", "High", "Charge"], row => [number(row.bodyBatteryLow, 0), number(row.bodyBatteryHigh, 0), number(row.bodyBatteryCharge, 0)], "Recorded daily Body Battery readings")}>
+          <div className="performance-chart-title"><h3>Body Battery <small>daily low–high</small></h3><div className="battery-range-head">
+            <MetricValue as="strong" value={lastBattery ? lastBattery.bodyBatteryRange.join("–") : "—"} style={{ color: palette.blue }} />
+            <span className="battery-range-period">{lastBattery ? formatDate(lastBattery.date) : `${days}d`}</span>
+          </div></div>
+          <BatteryRangeChart rows={data} days={days} />
+        </DataCard>
       </div>
       <details className="performance-data"><summary>Recovery data</summary><div className="table-scroll"><table><caption className="sr-only">Garmin recovery history</caption><thead><tr><th>Date</th><th>HRV · ms</th><th>7d · ms</th><th>RHR · bpm</th><th>RHR Δ</th><th>Sleep − need · min</th><th>BB low–high</th></tr></thead><tbody>{data.map(row => <tr key={row.date}><td>{formatDate(row.date)}</td><td>{number(row.hrvMs, 0)}</td><td>{number(row.hrv7dMs, 0)}</td><td>{number(row.rhrBpm, 0)}</td><td>{signed(row.rhrDelta)}</td><td>{signed(row.sleepGap)}</td><td>{row.bodyBatteryRange ? row.bodyBatteryRange.join("–") : "—"}</td></tr>)}</tbody></table></div></details>
     </> : <p className="performance-empty">Recovery history unavailable</p>}
@@ -66,17 +74,38 @@ function Recovery({ report }) {
 
 function Cycling({ report }) {
   const data = cyclingProgression(report), placement = trainingPlacement(report), latest = data.at(-1) || {};
+  const weekly = (label, value, source) => <>
+    <DetailFacts rows={[["Source", source], ["Window", "Completed seven-day blocks before the report date"]]} />
+    <DetailTable columns={["Period", label, "Coverage"]} rows={[...data].reverse().map(row =>
+      [`${formatDate(row.start)}–${formatDate(row.end)}`, value(row), row.partial ? "Partial" : "Complete"])} />
+  </>;
+  const stats = [
+    { label: "Ride time", tone: "power", source: "Captured activity timers",
+      readout: <DurationValue as="strong" seconds={Number.isFinite(latest.hours) ? latest.hours * 3600 : NaN} />,
+      value: row => Number.isFinite(row.hours) ? duration(row.hours * 3600) : null },
+    { label: "Frequency", tone: "pace", source: "Captured activity sessions",
+      readout: <MetricValue as="strong" value={number(latest.sessions, 0)} unit="/7d" />, value: row => number(row.sessions, 0) },
+    { label: "Longest ride", tone: "alert", source: "Captured activity timers",
+      readout: <DurationValue as="strong" seconds={Number.isFinite(latest.longestMinutes) ? latest.longestMinutes * 60 : NaN} />,
+      value: row => Number.isFinite(row.longestMinutes) ? duration(row.longestMinutes * 60) : null },
+    { label: "TL · Intervals", tone: "model", source: "Intervals.icu activity load",
+      readout: <strong>{number(latest.load, 0)}{latest.missingLoad > 0 && <small> Partial</small>}</strong>,
+      value: row => row.missingLoad ? `${number(row.knownLoad, 0)} known · ${row.missingLoad} missing` : number(row.load, 0) },
+  ];
   return <section className="performance-cycling" aria-labelledby="cycling-progression-title">
     <div className="performance-heading"><h2 id="cycling-progression-title" title="Garmin canonical timers · Intervals activity load · completed calendar days">Cycling progression</h2><span className="quiet">6 × 7d{data.some(row => row.partial) ? " · Partial" : " · completed"}</span></div>
-    <div className="performance-cycling-stats"><div><span>Ride time</span><DurationValue as="strong" seconds={Number.isFinite(latest.hours) ? latest.hours * 3600 : NaN} /></div><div><span>Frequency</span><MetricValue as="strong" value={number(latest.sessions, 0)} unit="/7d" /></div><div><span>Longest ride</span><DurationValue as="strong" seconds={Number.isFinite(latest.longestMinutes) ? latest.longestMinutes * 60 : NaN} /></div><div><span>TL · Intervals</span><strong>{number(latest.load, 0)}{latest.missingLoad > 0 && <small> Partial</small>}</strong></div></div>
+    <div className="performance-cycling-stats">{stats.map(item =>
+      <DataCard as="div" key={item.label} title={item.label} data-signal={item.tone} detail={weekly(item.label, item.value, item.source)}>
+        <span>{item.label}</span>{item.readout}
+      </DataCard>)}</div>
     <div className="performance-chart-grid cycling-charts">
-      <article><h3>Ride time <small>h</small></h3><Plot data={data} label="Cycling hours per completed seven-day block" domain={[0, "auto"]} formatter={(value) => [`${number(value, 2)} h`, "Ride time"]}><Bar dataKey="hours" fill={palette.blue} maxBarSize={25} isAnimationActive={false}>{data.map(row => <Cell key={row.end} fill={palette.blue} fillOpacity={row.partial ? 0.45 : 1} />)}</Bar></Plot></article>
-      <article><h3>TL <small>Intervals</small></h3><Plot data={data} label="Cycling Intervals load per seven-day block; missing session load produces gaps" domain={[0, "auto"]} formatter={(value) => [number(value, 0), "TL · Intervals"]}><Bar dataKey="load" fill={palette.purple} maxBarSize={25} isAnimationActive={false}>{data.map(row => <Cell key={row.end} fill={palette.purple} fillOpacity={row.partial ? 0.45 : 1} />)}</Bar></Plot></article>
-      <article className="cycling-longest"><h3>Longest ride <small>min</small></h3><Plot data={data} label="Longest recorded ride duration per seven-day block" domain={[0, "auto"]} formatter={(value) => [`${number(value, 0)} min`, "Longest ride"]}><Line dataKey="longestMinutes" stroke={palette.orange} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} /></Plot></article>
+      <DataCard title="Cycling ride time" detail={weekly("Ride time", row => Number.isFinite(row.hours) ? duration(row.hours * 3600) : "—", "Captured activity timers")}><h3>Ride time <small>h</small></h3><Plot data={data} label="Cycling hours per completed seven-day block" domain={[0, "auto"]} formatter={(value) => [`${number(value, 2)} h`, "Ride time"]}><Bar dataKey="hours" fill={palette.blue} maxBarSize={25} isAnimationActive={false}>{data.map(row => <Cell key={row.end} fill={palette.blue} fillOpacity={row.partial ? 0.45 : 1} />)}</Bar></Plot></DataCard>
+      <DataCard title="Cycling training load" detail={weekly("Intervals load", row => row.missingLoad ? `${number(row.knownLoad, 0)} known · ${row.missingLoad} missing` : number(row.load, 0), "Intervals.icu activity load")}><h3>TL <small>Intervals</small></h3><Plot data={data} label="Cycling Intervals load per seven-day block; missing session load produces gaps" domain={[0, "auto"]} formatter={(value) => [number(value, 0), "TL · Intervals"]}><Bar dataKey="load" fill={palette.purple} maxBarSize={25} isAnimationActive={false}>{data.map(row => <Cell key={row.end} fill={palette.purple} fillOpacity={row.partial ? 0.45 : 1} />)}</Bar></Plot></DataCard>
+      <DataCard className="cycling-longest" title="Longest ride" detail={weekly("Longest ride · min", row => number(row.longestMinutes, 0), "Captured activity timers")}><h3>Longest ride <small>min</small></h3><Plot data={data} label="Longest recorded ride duration per seven-day block" domain={[0, "auto"]} formatter={(value) => [`${number(value, 0)} min`, "Longest ride"]}><Line type="monotoneX" dataKey="longestMinutes" stroke={palette.orange} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} /></Plot></DataCard>
     </div>
-    <div className="performance-placement-heading"><h3>Session placement <small>28d</small></h3><span><i style={{ background: palette.blue }} />Ride <i style={{ background: palette.purple }} />Strength <i style={{ background: palette.gray }} />Other</span></div>
+    <DataCard as="div" className="placement-card" title="Session placement" detail={<DetailTable caption="Captured sessions by completed day" columns={["Date", "Rides", "Strength", "Other", "Coverage"]} rows={placement.map(row => [formatDate(row.date), row.rides, row.strength, row.other, row.complete ? "Complete" : "Partial"])} />}><div className="performance-placement-heading"><h3>Session placement <small>28d</small></h3><span><i style={{ background: palette.blue }} />Ride <i style={{ background: palette.purple }} />Strength <i style={{ background: palette.gray }} />Other</span></div>
     <div className="performance-placement" role="list" aria-label="Completed training placement by day">{placement.map(row => <div key={row.date} role="listitem" className={!row.complete ? "placement-partial" : undefined} title={`${formatDate(row.date)} · Ride ${row.rides} · Strength ${row.strength} · Other ${row.other}${row.complete ? "" : " · Partial coverage"}`} aria-label={`${formatDate(row.date)}: ${row.rides} rides, ${row.strength} strength, ${row.other} other${row.complete ? "" : ", partial coverage"}`}><time dateTime={row.date}>{Number(row.date.slice(-2))}</time><span>{row.rides > 0 && <i style={{ background: palette.blue }} />}{row.strength > 0 && <i style={{ background: palette.purple }} />}{row.other > 0 && <i style={{ background: palette.gray }} />}</span></div>)}</div>
-    <details className="performance-data"><summary>Progression data</summary><div className="table-scroll"><table><caption className="sr-only">Cycling seven-day blocks ending before the report date</caption><thead><tr><th>Period</th><th>Ride time</th><th>Rides</th><th>Longest · min</th><th>TL · Intervals</th><th>Strength</th></tr></thead><tbody>{data.map(row => <tr key={row.end}><td>{formatDate(row.start)}–{formatDate(row.end)}{!row.complete && <small>Partial coverage</small>}</td><td>{Number.isFinite(row.hours) ? duration(row.hours * 3600) : "—"}</td><td>{number(row.sessions, 0)}</td><td>{number(row.longestMinutes, 0)}</td><td>{number(row.load, 0)}{row.missingLoad > 0 && <small>{number(row.knownLoad, 0)} known · {row.missingLoad} missing</small>}</td><td>{number(row.strengthSessions, 0)}</td></tr>)}</tbody></table></div></details>
+    </DataCard><details className="performance-data"><summary>Progression data</summary><div className="table-scroll"><table><caption className="sr-only">Cycling seven-day blocks ending before the report date</caption><thead><tr><th>Period</th><th>Ride time</th><th>Rides</th><th>Longest · min</th><th>TL · Intervals</th><th>Strength</th></tr></thead><tbody>{data.map(row => <tr key={row.end}><td>{formatDate(row.start)}–{formatDate(row.end)}{!row.complete && <small>Partial coverage</small>}</td><td>{Number.isFinite(row.hours) ? duration(row.hours * 3600) : "—"}</td><td>{number(row.sessions, 0)}</td><td>{number(row.longestMinutes, 0)}</td><td>{number(row.load, 0)}{row.missingLoad > 0 && <small>{number(row.knownLoad, 0)} known · {row.missingLoad} missing</small>}</td><td>{number(row.strengthSessions, 0)}</td></tr>)}</tbody></table></div></details>
   </section>;
 }
 

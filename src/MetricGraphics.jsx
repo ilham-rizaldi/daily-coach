@@ -1,4 +1,6 @@
+import { useId } from "react";
 import { decimal, formatDate } from "./report.js";
+import { smoothLinePath } from "./chart-lines.js";
 
 export const palette = {
   blue: "var(--blue)", green: "var(--green)", orange: "var(--amber)", red: "var(--red)", purple: "var(--purple)",
@@ -45,13 +47,63 @@ export function SleepStages({ wellness: w }) {
 }
 
 export function LoadHistory({ rows = [] }) {
-  const data = rows.filter(row=>row && /^\d{4}-\d{2}-\d{2}$/.test(row.date) && Number.isFinite(row.acute) && Number.isFinite(row.chronic)).sort((a,b)=>a.date.localeCompare(b.date));
+  const fillId = useId();
+  const data = rows.filter(row => row && /^\d{4}-\d{2}-\d{2}$/.test(row.date) && Number.isFinite(Date.parse(row.date))
+    && Number.isFinite(row.acute) && Number.isFinite(row.chronic)).sort((a, b) => a.date.localeCompare(b.date));
   if (data.length < 2) return null;
   const start = Date.parse(data[0].date), end = Date.parse(data.at(-1).date);
   if (end <= start) return null;
-  const max = Math.max(1,...data.flatMap(row=>[row.acute,row.chronic])) * 1.1;
-  const x = date => 5 + (Date.parse(date) - start)/(end-start)*290;
-  const y = value => 48 - value/max*43;
-  const path = key => data.map((row,index)=>`${!index || Date.parse(row.date)-Date.parse(data[index-1].date)>86400000 ? "M":"L"}${x(row.date).toFixed(1)},${y(row[key]).toFixed(1)}`).join(" ");
-  return <div className="load-history"><svg viewBox="0 0 300 53" role="img" aria-label={`Garmin acute and chronic load, ${formatDate(data[0].date)} to ${formatDate(data.at(-1).date)}`}><line x1="5" x2="295" y1="48" y2="48" stroke="var(--rule)" /><path d={path("acute")} fill="none" stroke={palette.blue} strokeWidth="2" /><path d={path("chronic")} fill="none" stroke={palette.orange} strokeWidth="2" /></svg><div><span>{formatDate(data[0].date)}</span><span>{formatDate(data.at(-1).date)}</span></div></div>;
+  const baseline = 66;
+  const max = Math.max(1, ...data.flatMap(row => [row.acute, row.chronic])) * 1.12;
+  const x = date => 5 + (Date.parse(date) - start) / (end - start) * 290;
+  const y = value => baseline - value / max * 60;
+  const runs = [];
+  data.forEach(row => {
+    const run = runs.at(-1);
+    const gap = run ? Date.parse(row.date) - Date.parse(run.at(-1).date) : 0;
+    if (!run || gap !== 86400000) runs.push([row]);
+    else run.push(row);
+  });
+  const paths = key => runs.map(run => smoothLinePath(run.map(row => [x(row.date), y(row[key])])));
+  const latest = data.at(-1);
+  return <div className="load-history">
+    <svg viewBox="0 0 300 72" role="img" aria-label={`Garmin acute and chronic load, ${formatDate(data[0].date)} to ${formatDate(latest.date)}`}>
+      <defs><linearGradient id={fillId} x2="0" y2="1">
+        <stop stopColor={palette.blue} stopOpacity=".35" /><stop offset="1" stopColor={palette.blue} stopOpacity="0" />
+      </linearGradient></defs>
+      <line x1="5" x2="295" y1={baseline} y2={baseline} stroke="var(--rule)" />
+      {paths("acute").map((path, index) => {
+        const run = runs[index];
+        return run.length > 1 && <path key={index} fill={`url(#${fillId})`} d={`${path}L${x(run.at(-1).date)},${baseline}L${x(run[0].date)},${baseline}Z`} />;
+      })}
+      {[["acute", palette.blue], ["chronic", palette.orange]].map(([key, color]) => <g key={key}>
+        <path d={paths(key).join(" ")} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        {runs.filter(run => run.length === 1 || run.at(-1) === latest).map(run => {
+          const point = run.at(-1);
+          return <circle key={point.date} cx={x(point.date)} cy={y(point[key])} r="2.4" fill={color}><title>{`${formatDate(point.date)} · ${key} ${decimal(point[key])}`}</title></circle>;
+        })}
+      </g>)}
+    </svg>
+    <div><span>{formatDate(data[0].date)}</span><span>{formatDate(latest.date)}</span></div>
+  </div>;
+}
+
+export function BatteryRangeChart({ rows = [], days }) {
+  const captured = rows.filter(row => row.bodyBatteryRange);
+  if (!captured.length) return <p className="battery-range-empty">No daily range recorded in this period.</p>;
+  const [first, last] = [rows[0], rows.at(-1)];
+  return <figure className="battery-range-chart">
+    <div className="battery-range-track" role="img"
+      aria-label={`Daily Body Battery low and high, ${captured.length} of ${days} days recorded`}>
+      {rows.map(({ date, bodyBatteryRange }) => {
+        const [low, high] = bodyBatteryRange || [];
+        return <span key={date} className="battery-range-day" aria-hidden="true"
+          title={bodyBatteryRange ? `${formatDate(date)} · low ${low} · high ${high}` : undefined}>
+          {bodyBatteryRange && <i style={{ "--range-low": low, "--range-high": high }} />}
+        </span>;
+      })}
+    </div>
+    <figcaption><time dateTime={first.date}>{formatDate(first.date)}</time>
+      <span>{captured.length}/{days} days</span><time dateTime={last.date}>{formatDate(last.date)}</time></figcaption>
+  </figure>;
 }

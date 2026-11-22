@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { decimal, duration, formatDate } from "./report.js";
 import { compareWorkBlock, paceClock, pacingMetrics, pacingSports, rangeFor, reviewMetrics, targetEvidence } from "./pacing.js";
+import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
+import { activityMetrics } from "./components.jsx";
 
 const shownDate = date => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date))
   ? formatDate(date, { year: "numeric" }) : "Date unavailable";
@@ -25,35 +27,51 @@ function Evidence({ evidence }) {
 function PacingCard({ definition, plan }) {
   const phases = plan?.stepsMinutes;
   const hasTimeline = Array.isArray(phases) && phases.length === 3 && phases.every(value => Number.isFinite(value) && value > 0);
-  return <article className="pacing-card" data-signal={definition.key === "cycling" ? "power" : "pace"}>
+  const phaseNames = ["Warm-up", "Steady work", "Cool-down"];
+  const targets = pacingMetrics.filter(metric => metric.key !== "paceSecondsPerKm" || definition.key === "running")
+    .map(metric => ({ ...metric, range: rangeFor(plan?.[metric.key]), evidence: targetEvidence(plan?.evidence?.[metric.key]) }));
+  return <DataCard className="pacing-card" title={`${definition.label} pacing`} data-signal={definition.key === "cycling" ? "power" : "pace"} detail={plan && <>
+    <DetailFacts rows={[
+      ...hasTimeline ? phaseNames.map((name, index) => [name, `${phases[index]} min`]) : [],
+      ["HR ceiling", Number.isFinite(plan.hrCeiling) ? `${plan.hrCeiling} bpm` : null],
+      ["RPE", rangeFor(plan.rpe) ? `${rangeLabel(plan.rpe)} / 10` : null], ["Adjustment", plan.adjustment],
+    ]} />
+    <DetailTable columns={["Target", "Range", "Source", "Date", "Confidence"]} rows={targets.map(metric =>
+      [metric.label, metric.range ? `${rangeLabel(metric.range, metric.unit)} ${metric.unit}` : null,
+        metric.evidence?.source, metric.evidence ? shownDate(metric.evidence.date) : null, metric.evidence?.confidence])} />
+  </>}>
     <header className="training-card-heading">
       <div><h3>{definition.label}</h3>{plan && <p>{plan.format === "run-walk" ? "Easy run–walk" : "Easy endurance"}</p>}</div>
       {Number.isFinite(plan?.minutes) && <Readout value={plan.minutes} unit="min" />}
     </header>
     {hasTimeline && <div className="pacing-timeline">
-      {["Warm-up", "Steady work", "Cool-down"].map((phase, index) =>
+      {phaseNames.map((phase, index) =>
         <div key={phase} style={{ flexGrow: phases[index] }}>
           <b>{phases[index]} min</b><span>{phase}</span>
         </div>)}
     </div>}
     <dl className="pacing-metrics">
-      {pacingMetrics.filter(metric => metric.key !== "paceSecondsPerKm" || definition.key === "running").map(metric => {
-        const range = rangeFor(plan?.[metric.key]);
-        return <div key={metric.key} className="pacing-target" data-signal={metric.tone}>
+      {targets.map(({ range, evidence, ...metric }) =>
+        <DataCard as="div" definition key={metric.key} className="pacing-target" data-signal={metric.tone} title={`${definition.label} ${metric.label.toLowerCase()}`}
+          detail={<DetailFacts rows={[
+            ["Steady-work range", range ? `${rangeLabel(range, metric.unit)} ${metric.unit}` : "Target unavailable"],
+            ["Source", evidence?.source], [evidence?.dateLabel || "Evidence date", evidence ? shownDate(evidence.date) : null],
+            ["Confidence", evidence?.confidence], ["Evidence", evidence?.reason],
+            ["HR ceiling", metric.key === "hrBpm" && Number.isFinite(plan?.hrCeiling) ? `${plan.hrCeiling} bpm` : null],
+          ]} />}>
           <dt>{metric.label}</dt>
           <dd>{range ? <>
             <Readout value={rangeLabel(range, metric.unit)} unit={metric.unit} />
-            <Evidence evidence={targetEvidence(plan?.evidence?.[metric.key])} />
+            <Evidence evidence={evidence} />
           </> : <p className="target-evidence">Target unavailable</p>}</dd>
-        </div>;
-      })}
+        </DataCard>)}
     </dl>
     {plan && <div className="pacing-controls">
       {Number.isFinite(plan.hrCeiling) && <span>HR ceiling <b>{plan.hrCeiling} bpm</b></span>}
       {rangeFor(plan.rpe) && <span>RPE <b>{rangeLabel(plan.rpe)} / 10</b></span>}
       {plan.adjustment && <p>{plan.adjustment}</p>}
     </div>}
-  </article>;
+  </DataCard>;
 }
 
 export function TrainingPacing({ report, onThresholds }) {
@@ -79,15 +97,20 @@ export function ThresholdChecks({ report }) {
         <p>{checks ? `Checked ${shownDate(checks.date)} · ${checks.decision}` : "Threshold review unavailable for this snapshot."}</p></div>
     </div>
     {checks && <div className="threshold-grid">
-      {checks.rows.map(row => <article key={row.title} className="training-panel" data-signal={row.tone}>
+      {checks.rows.map(row => <DataCard key={row.title} className="training-panel" data-signal={row.tone} title={row.title}
+        detail={<><DetailFacts rows={[["Value", `${row.value} ${row.unit || ""}`], ["Status", row.status], ["Account settings", row.detail], ["Decision", checks.decision]]} />
+          <Evidence evidence={targetEvidence(row.evidence)} /></>}>
         <h3>{row.title}</h3>
         <Readout value={row.value} unit={row.unit} />
         <p className="threshold-status">{row.status}</p>
         <p>{row.detail}</p>
         <Evidence evidence={targetEvidence(row.evidence)} />
-      </article>)}
+      </DataCard>)}
     </div>}
-    {comparisons.length > 0 && <article className="training-panel power-check" data-signal="power">
+    {comparisons.length > 0 && <DataCard className="training-panel power-check" data-signal="power" title="Power by provider"
+      detail={<><p>{shownDate(checks.powerComparison.date)} · {checks.powerComparison.note}</p><DetailTable columns={["Provider", "Average power", "Provider effort metric"]}
+        rows={comparisons.map(row => [row.provider, Number.isFinite(row.averageWatts) ? `${row.averageWatts} W` : null,
+          Number.isFinite(row.normalizedWatts) ? `${row.normalizedWatts} W NP` : row.effort])} /></>}>
       <h3>Same ride, different power summaries</h3>
       <p>{shownDate(checks.powerComparison.date)} · {checks.powerComparison.note}</p>
       <div className="table-scroll"><table className="reference-table">
@@ -97,7 +120,7 @@ export function ThresholdChecks({ report }) {
           <td>{Number.isFinite(row.normalizedWatts) ? <PowerMark watts={row.normalizedWatts} max={maxWatts} label="NP" /> : row.effort || "—"}</td>
         </tr>)}</tbody>
       </table></div>
-    </article>}
+    </DataCard>}
   </section>;
 }
 
@@ -116,6 +139,7 @@ export function WorkoutReview({ report }) {
   const selected = activities[pick] || activities[0];
   const review = selected && compareWorkBlock(selected, report.coaching?.workoutReviews);
   const rows = selected ? reviewMetrics(selected) : [];
+  const comparisons = review?.rows.map(row => [row.label, `${rangeLabel(row.target, row.unit)} ${row.unit}`, `${numericValue(row.value, row.unit)} ${row.unit}`, row.status]) || [];
   return <section className="training-section" aria-labelledby="workout-review-heading">
     <div className="training-heading">
       <div><h2 id="workout-review-heading">Workout review</h2><p>Recorded session and matched work-block targets</p></div>
@@ -128,7 +152,19 @@ export function WorkoutReview({ report }) {
         </select></label>}
       </div>
     </div>
-    {selected ? <article className="training-panel workout-review">
+    {selected ? <DataCard className="training-panel workout-review" title={selected.name || sport} detail={<>
+      <DetailFacts rows={[
+        ["Date", shownDate(selected.date)], ["Source", selected.source], ["Average HR", Number.isFinite(selected.averageHr) ? `${selected.averageHr} bpm` : null],
+        ["Distance", Number.isFinite(selected.distanceKm) ? `${decimal(selected.distanceKm, 2)} km` : null],
+        ["Average pace", sport === "Run" && Number.isFinite(selected.averagePaceSeconds) ? `${paceClock(selected.averagePaceSeconds)} /km` : null],
+        ...activityMetrics(selected).map(metric => [metric.label, metric.value]),
+        ["Intervals.icu VI", Number.isFinite(selected.intervalsVariabilityIndex) ? decimal(selected.intervalsVariabilityIndex, 2) : null],
+        ["Coasting", Number.isFinite(selected.coastingPercent) ? `${decimal(selected.coastingPercent)}%` : null],
+        ["Power processing", selected.powerProcessing],
+      ]} />
+      <DetailTable caption="Planned vs actual" columns={["Metric", "Target", "Recorded", "Result"]} rows={comparisons}
+        empty="No comparable work block is linked to a dated plan for this workout." />
+    </>}>
       <header className="training-card-heading">
         <div><h3>{selected.name || sport}</h3><p>{shownDate(selected.date)} · {selected.source || "Source unavailable"} · {duration(selected.timerSeconds ?? selected.movingSeconds)}</p></div>
       </header>
@@ -150,24 +186,30 @@ export function WorkoutReview({ report }) {
           </tr>)}</tbody></table></div>
         </> : <p>No comparable work block is linked to a dated plan for this workout.</p>}
       </div>
-    </article> : <p className="quiet">No recorded workouts for this sport.</p>}
+    </DataCard> : <p className="quiet">No recorded workouts for this sport.</p>}
   </section>;
 }
 
 export function RecoveryProgression({ report }) {
   const plan = report.coaching?.progression;
   const w = report.wellness;
+  const readings = [
+    ["Training readiness", w?.readiness, "/100", "hr"],
+    ["Sleep", Number.isFinite(w?.sleepMinutes) ? duration(w.sleepMinutes * 60) : null, "", "pace"],
+    ["Recovery time", Number.isFinite(w?.recoveryTimeMinutes) ? duration(w.recoveryTimeMinutes * 60) : null, "", "alert"],
+  ];
   return <section className="training-section" aria-labelledby="progression-heading">
     <div className="training-heading">
       <div><h2 id="progression-heading">Recovery & progression</h2><p>{report.coaching?.actionPlan?.reassess}</p></div>
     </div>
-    <div className="training-panel progression-check">
+    <DataCard as="div" className="training-panel progression-check" title="Recovery & progression" detail={<>
+      <DetailFacts rows={[["Source", report.preview ? "Illustrative Garmin data" : "Garmin Connect"], ["Snapshot", w?.date ? shownDate(w.date) : null],
+        ...readings.map(([label, value, unit]) => [label, value == null ? null : `${value}${unit}`]), ["Readiness status", w?.readinessStatus],
+        ["Recovery status", w?.recoveryTimeStatus], ["Reassess", report.coaching?.actionPlan?.reassess]]} />
+      {plan && <><h3>{plan.decision}</h3><ol>{plan.steps.map(step => <li key={step}>{step}</li>)}</ol></>}
+    </>}>
       <div className="review-metrics">
-        {[
-          ["Training readiness", w?.readiness, "/100", "hr"],
-          ["Sleep", Number.isFinite(w?.sleepMinutes) ? duration(w.sleepMinutes * 60) : null, "", "pace"],
-          ["Recovery time", Number.isFinite(w?.recoveryTimeMinutes) ? duration(w.recoveryTimeMinutes * 60) : null, "", "alert"],
-        ].map(([label, value, unit, tone]) => <div key={label}>
+        {readings.map(([label, value, unit, tone]) => <div key={label}>
           <span>{label}</span><Readout value={value ?? "—"} unit={value == null ? "" : unit} tone={tone} />
         </div>)}
       </div>
@@ -176,6 +218,6 @@ export function RecoveryProgression({ report }) {
         <h3>{plan.decision}</h3>
         <ol>{plan.steps.map(step => <li key={step}>{step}</li>)}</ol>
       </div> : <p>Progression criteria unavailable for this snapshot.</p>}
-    </div>
+    </DataCard>
   </section>;
 }

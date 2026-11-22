@@ -23,20 +23,56 @@
   --action-hover: #2a3823;
   --action-border: #607b45;
   --action-text: #eaf7d3;
+  --panel-radius: 18px;
+  --metric-radius: 13px;
+  --panel-inset: clamp(14px, 2.2vw, 23px);
+  --panel-heading: clamp(19px, 2.2vw, 23px);
 }
 
 body { background: var(--canvas); }
 .app-header { background: #0b0c0e; }
 .wordmark { font-weight: 740; }
 .body-overview, .coach-suggestions, .benchmark-card, .week-plan,
-.performance-chart-grid > section, .forecast-results-compact { border-radius: 18px; }
+.forecast-results-compact { border-radius: var(--panel-radius); }
 .body-tile, .body-secondary > section, .body-secondary > section + section,
-.body-secondary > section:nth-child(3) { border-radius: 13px; }
+.body-secondary > section:nth-child(3) { border-radius: var(--metric-radius); }
 .score-meter .score-marker, .baseline-meter .baseline-marker {
   box-shadow: 0 0 12px color-mix(in srgb, currentColor 33%, transparent);
 }
-.load-history .load-history-bar { border-radius: 3px 3px 0 0; }
+.load-history svg { height: auto; }
 .report-action { border-radius: 9px; }
+.body-overview .condition-heading h2, .performance-trends .performance-heading h2 {
+  font-size: var(--panel-heading);
+  font-weight: 680;
+  letter-spacing: -.03em;
+}
+.body-tile[data-metric="battery"] dt, .battery-range-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.battery-range-head { width: 100%; }
+.battery-range-period { flex: none; color: var(--muted); font-size: 11px; font-weight: 550; }
+.battery-range-chart { margin: 10px 0 0; }
+.battery-range-track {
+  display: flex; min-width: 0; height: 64px; padding: 4px 3px; border-radius: 10px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--blue) 5%, var(--canvas)), var(--canvas));
+}
+.battery-range-day { position: relative; flex: 1; min-width: 0; }
+.battery-range-day > i {
+  --range-dot: 5px;
+  position: absolute; display: block; width: 2px; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--range-low) * 1%); height: max(1px, calc((var(--range-high) - var(--range-low)) * 1%));
+  border-radius: 2px; background: linear-gradient(0deg, #56e8f460, #56e8f4bb);
+}
+.battery-range-day > i::before, .battery-range-day > i::after {
+  content: ""; position: absolute; left: 50%; transform: translate(-50%, 50%);
+  width: var(--range-dot); height: var(--range-dot); border-radius: 50%; background: var(--blue);
+}
+.battery-range-day > i::before { bottom: 0; opacity: .65; }
+.battery-range-day > i::after { bottom: 100%; box-shadow: 0 0 6px #56e8f460; }
+.battery-range-chart figcaption { display: flex; justify-content: space-between; gap: 4px; margin-top: 5px; color: var(--muted); font-size: 10px; }
+.battery-range-empty { margin: 7px 0 0; font-size: 11px; color: var(--muted); }
+.body-tile[data-metric="battery"], .performance-trends .performance-chart-grid > .battery-trend-card { border-radius: calc(var(--metric-radius) + 4px); }
+.battery-trend-card .battery-range-track { height: clamp(95px, 13vw, 150px); padding: 8px; }
+.battery-trend-card .battery-range-day > i { width: 3px; --range-dot: 6px; }
+.battery-trend-card .battery-range-chart figcaption { font-size: 11px; }
 
 .training-section { margin: 0 0 26px; padding-top: 12px; }
 .training-heading, .training-card-heading {
@@ -63,9 +99,9 @@ body { background: var(--canvas); }
 [data-signal=model] { --signal: var(--purple); }
 .pacing-card, .training-panel {
   min-width: 0;
-  padding: clamp(14px, 2.2vw, 23px);
+  padding: var(--panel-inset);
   border: 1px solid var(--panel-border);
-  border-radius: 18px;
+  border-radius: var(--panel-radius);
   background: var(--surface-gradient);
 }
 .pacing-card { display: flex; flex-direction: column; }

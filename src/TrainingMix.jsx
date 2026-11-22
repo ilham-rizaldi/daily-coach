@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
 import { DAY, decimal, formatDate, shiftDate } from "./report.js";
 import "./training-mix.css";
@@ -74,7 +75,12 @@ function HeartRateMix({ report }) {
   const groups = zoneGroups(report), group = groups.find(item => item.key === selection) || groups[0];
   const periods = group ? zonePeriods(report, group) : [], latest = periods[0];
   const zones = zoneOrder.filter(zone => periods.some(period => period.zones[zone] != null));
-  return <article className="mix-card">
+  return <DataCard className="mix-card" title="Heart rate time in zone" detail={<>
+    <DetailFacts rows={[["Source", group?.source], ["Sport", group && (sportLabel[group.sport] || group.sport)], ["Latest activity", latest?.sourceUrl && <a href={latest.sourceUrl} target="_blank" rel="noopener noreferrer">Open source</a>]]} />
+    <DetailTable columns={["Period", "Captured sessions", ...zones.map(zone => `${zone} · min`)]}
+      rows={periods.map(period => [`${period.label}${period.today ? " · Partial day" : ""}`, period.listed == null ? period.tracked : `${period.tracked} / ${period.listed}`,
+        ...zones.map(zone => period.zones[zone] == null ? null : decimal(period.zones[zone] / 60))])} />
+  </>}>
     <div className="mix-card-heading"><div><h3>HR time in zone</h3><small>{group?.source || "Intervals.icu"}</small></div>
       {groups.length > 1 ? <select aria-label="HR zone sport" value={group.key} onChange={event => setSelection(event.target.value)}>
         {groups.map(item => <option value={item.key} key={item.key}>{sportLabel[item.sport] || item.sport}{groups.some(other => other.sport === item.sport && other.key !== item.key) ? ` · ${item.source}` : ""}</option>)}
@@ -96,7 +102,7 @@ function HeartRateMix({ report }) {
         <tbody>{periods.map(period => <tr key={period.end}><th scope="row">{period.label}</th>{zones.map(zone => <td key={zone}>{period.zones[zone] != null ? decimal(period.zones[zone] / 60) : "—"}</td>)}</tr>)}</tbody>
       </table></div>{latest.sourceUrl && <a href={latest.sourceUrl} target="_blank" rel="noopener noreferrer">Open activity source</a>}</details>
     </> : <p className="mix-empty">HR zones not captured</p>}
-  </article>;
+  </DataCard>;
 }
 
 function GarminFocus({ report }) {
@@ -115,7 +121,13 @@ function GarminFocus({ report }) {
   }) : [];
   const max = Math.max(1, ...items.map(item => Math.max(item.points, item.target ? item.targetHigh : 0)));
   const url = sourceLink(focus?.sourceUrl);
-  return <article className="mix-card">
+  return <DataCard className="mix-card" title="Garmin Load Focus" detail={<>
+    <DetailFacts rows={[["Source", report.preview ? "Illustrative data" : url ? <a href={url} target="_blank" rel="noopener noreferrer">Garmin Connect</a> : "Garmin Connect"],
+      ["Period", items.length ? labelRange(start, end) : null]]} />
+    <DetailTable columns={["Bucket", "Points", "Target", "Status"]} rows={items.map(item => [
+      item.label, decimal(item.points), item.target ? `${item.approximate ? "≈ " : ""}${decimal(item.targetLow)}–${decimal(item.targetHigh)}` : null, focusStatusLabels[item.status],
+    ])} />
+  </>}>
     <div className="mix-card-heading"><div><h3>Load Focus</h3><small>{report.preview ? "Illustrative" : url && items.length ? <a href={url} target="_blank" rel="noopener noreferrer">Garmin</a> : "Garmin"}{items.length > 0 && ` · ${labelRange(start, end)}`}</small></div></div>
     {items.length ? <div className="mix-load-buckets">{items.map(item => <div key={item.key} className="mix-bucket">
       <div className="mix-row"><span>{item.label}</span><MetricValue as="strong" value={decimal(item.points, 0)} unit="pts" /></div>
@@ -132,7 +144,7 @@ function GarminFocus({ report }) {
           : focusStatusLabels[item.status]}</small>}
       </div>
     </div>)}{items.some(item => item.target && item.approximate) && <small className="mix-target-note">Dashed bands show chart-derived targets.</small>}</div> : <p className="mix-empty">Load Focus totals not captured</p>}
-  </article>;
+  </DataCard>;
 }
 
 export default function TrainingMix({ report }) {

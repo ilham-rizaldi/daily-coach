@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { decimal, formatDate, jakartaDate, shiftDate } from "./report.js";
 import { contributionWeights, estimateSessionLoad, projectTomorrow } from "./forecast.js";
 import { GarminRestForecast } from "./GarminRestForecast.jsx";
@@ -37,6 +38,15 @@ export function LoadForecast({ report }) {
   const available = forecast.available && estimate.available && todayEstimate.available && !invalidDuration && !invalidToday;
   const invalidConstants = ![number(fitnessDays), number(fatigueDays)].every(value => Number.isFinite(value) && value >= 1 && value <= 365);
   const unavailable = invalidDuration || invalidToday ? "Duration: 1–600 min" : invalidConstants ? "Time constants: 1–365 d" : !estimate.available || !todayEstimate.available ? "Sport load history unavailable" : "Dated Intervals baseline required";
+  const projectionDetails = metrics => <>
+    <DetailFacts rows={[["Projection date", formatDate(date)], ["Baseline", forecast.baseline?.date && formatDate(forecast.baseline.date)],
+      ["Source", "Intervals.icu-style model estimate"], ["Sport", plan.sport], ["Calibration sessions", estimate.history?.n]]} />
+    <DetailTable columns={["Metric", "Baseline", "Rest", "Planned", "Scenario range"]} rows={metrics.map(([key, label]) => {
+      const range = forecast.range[key];
+      return [label, decimal(forecast.baseline[key], 2), decimal(forecast.rest[key], 2),
+        decimal(forecast.mid[key], 2), `${decimal(range.low, 2)}–${decimal(range.high, 2)}`];
+    })} />
+  </>;
   function changePlan(sport, minutes = plan.minutes) {
     setPlan(initialPlan(sport, sport === "Rest" ? "0" : number(minutes) > 0 ? minutes : "30", plan.effort));
   }
@@ -61,8 +71,8 @@ export function LoadForecast({ report }) {
       </div>
       {!available ? <p className="forecast-compact-status" role="status">{unavailable}</p> : <div className="forecast-output" aria-live="polite" aria-atomic="true">
         <div className="forecast-results forecast-results-compact">
-          <div className="forecast-stat"><span>ATL / CTL</span><strong>{decimal(forecast.mid.ratio, 2)}</strong><small>{decimal(forecast.range.ratio.low, 2)}–{decimal(forecast.range.ratio.high, 2)}</small><ForecastBars title="Intervals ATL to CTL projection" rows={[{ label: "Current", value: forecast.baseline.ratio, color: forecastColors.current }, { label: "Rest", value: forecast.rest.ratio, color: forecastColors.rest }, { label: "Session", value: forecast.mid.ratio, low: forecast.range.ratio.low, high: forecast.range.ratio.high, color: forecastColors.session }]} /></div>
-          <div className="forecast-stat"><div className="forecast-state-values"><div><span>CTL</span><strong style={{ color: forecastColors.fitness }}>{decimal(forecast.mid.fitness, 1)}</strong></div><div><span>ATL</span><strong style={{ color: forecastColors.fatigue }}>{decimal(forecast.mid.fatigue, 1)}</strong></div><div><span>TSB</span><strong>{signed(forecast.mid.form)}</strong></div></div><ForecastBars title="Projected Intervals CTL and ATL" places={1} rows={[{ label: "CTL", value: forecast.mid.fitness, low: forecast.range.fitness.low, high: forecast.range.fitness.high, color: forecastColors.fitness }, { label: "ATL", value: forecast.mid.fatigue, low: forecast.range.fatigue.low, high: forecast.range.fatigue.high, color: forecastColors.fatigue }]} /><small>Current {decimal(forecast.baseline.fitness, 1)} / {decimal(forecast.baseline.fatigue, 1)} · rest TSB {signed(forecast.rest.form)}</small></div>
+          <DataCard as="div" className="forecast-stat" title="ATL / CTL projection" detail={projectionDetails([["ratio", "ATL / CTL"]])}><span>ATL / CTL</span><strong>{decimal(forecast.mid.ratio, 2)}</strong><small>{decimal(forecast.range.ratio.low, 2)}–{decimal(forecast.range.ratio.high, 2)}</small><ForecastBars title="Intervals ATL to CTL projection" rows={[{ label: "Current", value: forecast.baseline.ratio, color: forecastColors.current }, { label: "Rest", value: forecast.rest.ratio, color: forecastColors.rest }, { label: "Session", value: forecast.mid.ratio, low: forecast.range.ratio.low, high: forecast.range.ratio.high, color: forecastColors.session }]} /></DataCard>
+          <DataCard as="div" className="forecast-stat" title="Projected fitness, fatigue and form" detail={projectionDetails([["fitness", "CTL"], ["fatigue", "ATL"], ["form", "TSB"]])}><div className="forecast-state-values"><div><span>CTL</span><strong style={{ color: forecastColors.fitness }}>{decimal(forecast.mid.fitness, 1)}</strong></div><div><span>ATL</span><strong style={{ color: forecastColors.fatigue }}>{decimal(forecast.mid.fatigue, 1)}</strong></div><div><span>TSB</span><strong>{signed(forecast.mid.form)}</strong></div></div><ForecastBars title="Projected Intervals CTL and ATL" places={1} rows={[{ label: "CTL", value: forecast.mid.fitness, low: forecast.range.fitness.low, high: forecast.range.fitness.high, color: forecastColors.fitness }, { label: "ATL", value: forecast.mid.fatigue, low: forecast.range.fatigue.low, high: forecast.range.fatigue.high, color: forecastColors.fatigue }]} /><small>Current {decimal(forecast.baseline.fitness, 1)} / {decimal(forecast.baseline.fatigue, 1)} · rest TSB {signed(forecast.rest.form)}</small></DataCard>
         </div>
         <div className="forecast-compact-status"><span>{statusLabel(report, plan, weights)}</span>{Number.isFinite(report.wellness.readiness) && <span>Readiness {report.wellness.readiness}</span>}</div>
       </div>}

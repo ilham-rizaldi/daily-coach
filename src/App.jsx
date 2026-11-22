@@ -179,7 +179,8 @@ export function App() {
         {!report && !loading && (
           <section className="decision empty-report" aria-labelledby="empty-report-title">
             <h1 id="empty-report-title">No report open</h1>
-            <p>Open a report from your coaching email or ChatGPT Library.</p>
+            <p>Use your access code or open a private report link.</p>
+            <a className="report-action report-action-primary" href="./open.html">Enter access code</a>
             <a className="report-action" href="https://chatgpt.com/library" target="_blank" rel="noreferrer">Open ChatGPT Library</a>
           </section>
         )}

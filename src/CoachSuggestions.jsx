@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { formatDate } from "./report.js";
+import { DataCard, DetailFacts } from "./CardDetails.jsx";
 import "./coach-suggestions.css";
 
 const kinds = new Set(["training", "recovery", "fuel", "rest"]);
@@ -73,10 +74,14 @@ export default function CoachSuggestions({ report, onEvidence, children }) {
       )}
       <div className="coach-suggestions-grid">
         {plan.sections.map(({ kind, title, items }, index) => (
-          <section key={`${kind}-${index}`} className="coach-suggestion" data-kind={kind}>
+          <DataCard as="section" key={`${kind}-${index}`} className="coach-suggestion" data-kind={kind} title={title}
+            detail={<><ul>{items.map(item => <li key={item}>{item}</li>)}</ul>
+              <DetailFacts rows={[["Report", formatDate(report.date, { year: "numeric" })],
+                ["Signals", plan.why.join(" · ")], ["Alternative", plan.alternative], ["Reassess", plan.reassess]]} />
+            </>}>
             <h2>{title}</h2>
             <ul>{items.map(item => <li key={item}>{item}</li>)}</ul>
-          </section>
+          </DataCard>
         ))}
       </div>
       {(plan.alternative || plan.reassess) && (

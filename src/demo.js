@@ -2,6 +2,13 @@ import { shiftDate } from "./report.js";
 
 const date = "2026-11-05";
 const sampleEvidence = (confidence, reason = null) => ({ source: "Illustrative activity data", date, dateLabel: "Sample", confidence, reason });
+let exampleTime = Date.parse(`${date}T00:25:00+07:00`);
+const sampleStages = [["light", 58], ["deep", 42], ["light", 47], ["awake", 7], ["rem", 28],
+  ["light", 47], ["deep", 38], ["light", 42], ["rem", 32], ["awake", 12], ["light", 36]].map(([stage, duration]) => {
+  const startAt = new Date(exampleTime).toISOString();
+  exampleTime += duration * 60_000;
+  return { stage, startAt, endAt: new Date(exampleTime).toISOString() };
+});
 const minutes = [30, 50, 40, 30, 45, 50, 60, 100, 45, 40, 35, 50, 40, 60, 55, 70, 80, 160, 60, 50, 30, 60, 50, 55, 30, 45, 90, 42];
 const demoZones = [1, 2, 8, 10, 15, 17, 22, 24].flatMap((index) => [0.34, 0.49, 0.17].map((share, zone) => ({
   date: shiftDate(date, index - 27), sport: index % 7 === 1 ? "Run" : "Ride", activityId: String(index),
@@ -19,6 +26,7 @@ export const demoReport = {
     restingHr: 56, restingHr7d: 57, recoveryTimeMinutes: 540, recoveryTimeStatus: "Low Need",
     deepSleepMinutes: 80, lightSleepMinutes: 230, remSleepMinutes: 60, awakeMinutes: 19, restlessMoments: 18,
     bedTimeLocal: "00:25", wakeTimeLocal: "06:54", averageOvernightHr: 60, averageSpo2: 96, lowestSpo2: 91,
+    sleepStageTimeline: { date, source: "Illustrative Garmin data", segments: sampleStages },
     averageRespiration: 15, minimumRespiration: 12, highHr: 118,
     garminAcuteLoad: 350, garminChronicLoad: 300, garminLoadRatio: 1.2, garminAcuteLoadStatus: "Optimal", garminLoadRatioStatus: "Optimal",
     trainingStatus: "Maintaining", loadFocus: "Balanced", vo2Max: 46, vo2MaxCategory: "Good", heatAcclimationPercent: 35, heatAcclimationTrend: "Increasing", recentStressStatus: "Low", recentSleepScoresStatus: "Fair",

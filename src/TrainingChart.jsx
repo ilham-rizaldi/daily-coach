@@ -1,11 +1,15 @@
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { dailySeries, decimal, formatDate } from "./report.js";
 import { palette } from "./MetricGraphics.jsx";
+import { DataCard, DetailTable } from "./CardDetails.jsx";
 
 export default function TrainingChart({ report, days = 28, sport = "All" }) {
   const data = dailySeries(report, days, sport);
   return (
-    <div className="training-chart">
+    <DataCard as="div" className="training-chart" title="Daily training duration" detail={<DetailTable
+      caption={`${sport} · ${days} days ending ${formatDate(report.date)}`} columns={["Date", "Duration · min", "7-day mean · min"]}
+      rows={[...data].reverse().map(row => [formatDate(row.date), Number.isFinite(row.minutes) ? decimal(row.minutes) : null,
+        Number.isFinite(row.mean) ? decimal(row.mean) : null])} />}>
       <div className="chart-heading">
         <div>
           <h2>Duration · min · {days}d</h2>
@@ -21,7 +25,7 @@ export default function TrainingChart({ report, days = 28, sport = "All" }) {
             <YAxis tick={{ fill: "var(--muted)", fontSize: 13 }} axisLine={false} tickLine={false} width={42} />
             <Tooltip contentStyle={{ background: "var(--surface-raised)", border: "1px solid var(--control-border)", borderRadius: 6, color: "var(--text)" }} formatter={(value, name) => [`${decimal(value)} min`, name === "minutes" ? "Training" : "7-day mean"]} />
             <Bar dataKey="minutes" fill={palette.blue} maxBarSize={24} isAnimationActive={false} />
-            <Line dataKey="mean" stroke="var(--muted)" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
+            <Line type="monotoneX" dataKey="mean" stroke="var(--muted)" strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
@@ -33,7 +37,7 @@ export default function TrainingChart({ report, days = 28, sport = "All" }) {
           <tbody>{data.map(row => <tr key={row.date}><td>{formatDate(row.date)}</td><td>{decimal(row.minutes)} min</td><td>{decimal(row.mean)} min</td></tr>)}</tbody>
         </table></div>
       </details>
-    </div>
+    </DataCard>
   );
 }
 

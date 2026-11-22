@@ -3,6 +3,8 @@ import PerformanceProgression, { effortClock as clock, personalRecords } from ".
 import { MetricValue } from "./Readout.jsx";
 import { decimal, formatDate } from "./report.js";
 import { WorkoutReview } from "./TrainingTargets.jsx";
+import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
+import { smoothLinePath } from "./chart-lines.js";
 import "./benchmark.css";
 
 const rows = value => Array.isArray(value) ? value : [];
@@ -103,7 +105,7 @@ function SegmentPlot({ efforts, label }) {
     <svg viewBox="0 0 300 60" role="img" aria-label={`${label} elapsed time from ${formatDate(efforts[0].date)} to ${formatDate(efforts.at(-1).date)}`}>
       <line className="benchmark-guide" x1="5" y1="48" x2="295" y2="48" />
       <line className="benchmark-guide" x1="5" y1="12" x2="295" y2="12" />
-      <polyline className="benchmark-line" points={points.map(point => point.join(",")).join(" ")} />
+      <path className="benchmark-line" d={smoothLinePath(points)} strokeLinecap="round" />
       {points.map(([cx, cy], i) => <circle key={efforts[i].key} cx={cx} cy={cy} r={i === points.length - 1 ? 3 : 2}><title>{`${formatDate(efforts[i].date)} · ${clock(efforts[i].seconds)}`}</title></circle>)}
     </svg>
     <figcaption><span>{formatDate(efforts[0].date)}</span><span>{formatDate(efforts.at(-1).date)}</span></figcaption>
@@ -117,7 +119,12 @@ function SegmentPanel({ data }) {
   const previous = group?.efforts.findLast(effort => effort.date < latest.date);
   const delta = previous && group.efforts.at(-2).date !== latest.date ? latest.seconds - previous.seconds : null;
   const deltaLabel = delta == null ? null : delta === 0 ? "Same as prior" : `${clock(Math.abs(delta))} ${delta < 0 ? "faster" : "slower"}`;
-  return <section className="benchmark-card" aria-labelledby="benchmark-segments-title">
+  return <DataCard as="section" className="benchmark-card" aria-labelledby="benchmark-segments-title" title={group?.label || "Segment benchmarks"}
+    detail={group ? <>
+      <DetailFacts rows={[["Source", group.source], ["Change vs prior dated effort", deltaLabel]]} />
+      <DetailTable caption="Recorded segment efforts" columns={["Date", "Elapsed", "Average HR", "Record"]} rows={[...group.efforts].reverse().map(effort =>
+        [<Source href={effort.url} date={effort.date} />, clock(effort.seconds), positive(effort.hr) ? `${decimal(effort.hr, 0)} bpm` : null, effort.verifiedRecord ? "Verified PR" : null])} />
+    </> : <p>Segment efforts were not recorded in this report.</p>}>
     <div className="benchmark-card-heading">
       <h2 id="benchmark-segments-title">Segment benchmarks</h2>
       {group && <Selector label="Select segment benchmark" data={data} active={group.key} change={setSelection} />}
@@ -139,7 +146,7 @@ function SegmentPanel({ data }) {
         </table>
       </div></details>}
     </> : <p className="benchmark-empty">Segment efforts not captured</p>}
-  </section>;
+  </DataCard>;
 }
 
 const subdued = new Set(["warmup", "warm-up", "cooldown", "cool-down", "recovery", "rest"]);
@@ -149,7 +156,19 @@ function WorkoutPanel({ data }) {
   const workout = data.find(row => row.key === selection) ?? data[0];
   const lapPace = workout?.intervals.every(interval => interval.classification === "lap" && positive(interval.averagePaceSeconds));
   const maxPace = lapPace ? Math.max(...workout.intervals.map(interval => interval.averagePaceSeconds)) : 0;
-  return <section className="benchmark-card" aria-labelledby="benchmark-workouts-title">
+  return <DataCard as="section" className="benchmark-card" aria-labelledby="benchmark-workouts-title" title={workout?.label || "Workout execution"}
+    detail={workout ? <>
+      <DetailFacts rows={[["Source", <Source name={workout.source} href={workout.url} date={workout.date} />]]} />
+      <DetailTable caption={lapPace ? "Recorded lap splits" : "Recorded intervals"} columns={["Block", "Time", "Avg HR", "Max HR", "Distance", "Pace", "Speed"]}
+        rows={workout.intervals.map((interval, index) => [
+          text(interval.label) || `Block ${index + 1}`, clock(interval.seconds),
+          positive(interval.averageHr) ? `${decimal(interval.averageHr, 0)} bpm` : null,
+          positive(interval.maxHr) ? `${decimal(interval.maxHr, 0)} bpm` : null,
+          positive(interval.distanceKm) ? `${decimal(interval.distanceKm, 2)} km` : null,
+          positive(interval.averagePaceSeconds) ? `${clock(interval.averagePaceSeconds)} /km` : null,
+          positive(interval.averageSpeedKph) ? `${decimal(interval.averageSpeedKph)} km/h` : null,
+        ])} />
+    </> : <p>Workout intervals were not recorded in this report.</p>}>
     <div className="benchmark-card-heading">
       <h2 id="benchmark-workouts-title">{lapPace ? "Lap splits" : "Workout execution"}</h2>
       {workout && <Selector label="Select recorded workout" data={data} active={workout.key} change={setSelection} />}
@@ -182,7 +201,7 @@ function WorkoutPanel({ data }) {
         </table>
       </div></details>
     </> : <p className="benchmark-empty">Workout intervals not captured</p>}
-  </section>;
+  </DataCard>;
 }
 
 export default function BenchmarkView({ report }) {

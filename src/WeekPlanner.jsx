@@ -6,11 +6,13 @@ import { palette } from "./MetricGraphics.jsx";
 import { projectWeek, restWeek } from "./planner.js";
 import "./planner.css";
 import { DurationValue } from "./Readout.jsx";
+import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 
 const sports = [["Rest", "Rest"], ["Ride", "Cycling"], ["Run", "Running"], ["Weight Training", "Strength"]];
 const metrics = { fitness: { label: "CTL", color: palette.blue }, fatigue: { label: "ATL", color: palette.purple }, form: { label: "TSB", color: palette.orange } };
 const numeric = value => String(value).trim() === "" ? NaN : Number(value);
 const display = value => Number.isFinite(value) ? decimal(value, 1) : "—";
+const estimateRange = range => range && `${display(range.low)}–${display(range.high)}`;
 
 function ChartTooltip({ active, payload, label, metric }) {
   if (!active || !payload?.length) return null;
@@ -55,14 +57,24 @@ export default function WeekPlanner({ report }) {
     <div className="week-plan-grid">{plans.map((plan, index) => {
       const estimate = estimateSessionLoad(report, { sport: plan.sport, minutes: numeric(plan.minutes), effort: plan.effort });
       const valid = plan.sport === "Rest" || (numeric(plan.minutes) > 0 && numeric(plan.minutes) <= 600);
-      return <fieldset className={`week-day ${plan.sport === "Rest" ? "week-day-rest" : ""}`} key={plan.date}>
+      const output = result.available ? result.rows[index] : null;
+      return <DataCard as="fieldset" className={`week-day ${plan.sport === "Rest" ? "week-day-rest" : ""}`} key={plan.date} title={`Plan · ${formatDate(plan.date)}`}
+        detail={<>
+          <DetailFacts rows={[["Date", formatDate(plan.date, { year: "numeric" })], ["Session", sports.find(([value]) => value === plan.sport)?.[1]],
+            ["Duration", plan.sport !== "Rest" && valid ? `${plan.minutes} min` : null], ["Effort", plan.sport !== "Rest" ? plan.effort : null],
+            ["Estimated training load", estimate.available && valid ? display(estimate.mid) : null, estimate.available && valid ? estimateRange(estimate) : null],
+            ["Model", "Intervals.icu-style end-of-day estimate"], ["Calibration sessions", estimate.history?.n]]} />
+          <DetailTable columns={["Metric", "Planned", "Scenario range", "Rest"]} rows={output
+            ? Object.entries(metrics).map(([key, { label }]) => [label, display(output.mid[key]), estimateRange(output.range[key]), display(output.rest[key])]) : []}
+            empty="Daily model output is unavailable for this scenario." />
+        </>}>
         <legend><span>{formatDate(plan.date, { weekday: "short" }).split(",")[0]}</span><time dateTime={plan.date}>{formatDate(plan.date)}</time></legend>
         <label><span className="sr-only">{plan.date} sport</span><select value={plan.sport} onChange={event => sportChange(index, event.target.value)}>{sports.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>
         <label><span>min</span><input type="number" min="1" max="600" step="1" inputMode="numeric" aria-label={`${plan.date} duration in minutes`} value={plan.minutes} disabled={plan.sport === "Rest"} onChange={event => update(index, { minutes: event.target.value })} /></label>
         <label><span className="sr-only">{plan.date} effort</span><select value={plan.effort} disabled={plan.sport === "Rest"} onChange={event => update(index, { effort: event.target.value })}><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="hard">Hard</option></select></label>
         <div className="week-day-load"><span>TL</span><output aria-label={`${plan.date} estimated load`}>{valid && estimate.available ? display(estimate.mid) : "—"}</output></div>
         <small>{valid && estimate.available ? `${display(estimate.low)}–${display(estimate.high)}` : valid ? "History unavailable" : "1–600 min"}</small>
-      </fieldset>;
+      </DataCard>;
     })}</div>
     {(Number.isFinite(readiness) || hardSessions > 0 || scenarioFlags.length > 0) && <div className={`week-scenario-status${recoveryReview ? " week-scenario-caution" : ""}`} aria-live="polite">
       {Number.isFinite(readiness) && <span>Baseline readiness {display(readiness)}</span>}
@@ -73,6 +85,9 @@ export default function WeekPlanner({ report }) {
     {result.available && <>
       <dl className="week-plan-summary"><div><dt>Volume</dt><dd><DurationValue seconds={result.totals.minutes * 60} /></dd><small>{result.totals.sessions} sessions</small></div><div><dt>TL · Est.</dt><dd>{display(result.totals.load)}</dd><small>{display(result.totals.low)}–{display(result.totals.high)}</small></div>{Object.entries(metrics).map(([key, { label, color }]) => <div key={key}><dt>{label} · {formatDate(end.date)}</dt><dd style={{ color }}>{display(end.mid[key])}</dd><small>{display(end.range[key].low)}–{display(end.range[key].high)}</small></div>)}</dl>
       <div className="week-chart-heading"><div className="week-metric-switch" role="group" aria-label="Projection metric">{Object.entries(metrics).map(([key, { label }]) => <button key={key} aria-pressed={metric === key} onClick={() => setMetric(key)}>{label}</button>)}</div><div className="week-chart-key"><span style={{ color: selected.color }}>● Plan</span><span>┄ Rest</span><span>Scenario range</span></div></div>
+      <DataCard as="div" title={`Seven-day ${selected.label} projection`} detail={<DetailTable
+        caption="Intervals.icu-style estimates · baseline and daily projected outputs" columns={["Date", "Plan", "Scenario range", "Rest"]}
+        rows={chart.map(row => [row.label, display(row.value), row.range.map(display).join("–"), display(row.rest)])} />}>
       <div className="week-plan-chart" role="group" aria-label={`Estimated seven-day ${selected.label} with historical scenario range and rest comparison`}>
         <ResponsiveContainer width="100%" height="100%"><ComposedChart data={chart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }} accessibilityLayer>
           <CartesianGrid vertical={false} stroke="#3d454e" />
@@ -80,11 +95,11 @@ export default function WeekPlanner({ report }) {
           <YAxis tick={{ fill: "#b9c4ce", fontSize: 12 }} axisLine={false} tickLine={false} width={40} domain={["auto", "auto"]} />
           <Tooltip content={<ChartTooltip metric={metric} />} />
           {metric === "form" && <ReferenceLine y={0} stroke="#68727d" />}
-          <Area type="linear" dataKey="range" fill={selected.color} fillOpacity={0.14} stroke="none" isAnimationActive={false} />
-          <Line type="linear" dataKey="rest" stroke="#9ba6b0" strokeDasharray="4 4" dot={false} strokeWidth={1.5} isAnimationActive={false} />
-          <Line type="linear" dataKey="value" stroke={selected.color} dot={{ r: 2 }} strokeWidth={2.5} isAnimationActive={false} />
+          <Area type="monotoneX" dataKey="range" fill={selected.color} fillOpacity={0.14} stroke="none" isAnimationActive={false} />
+          <Line type="monotoneX" dataKey="rest" stroke="#9ba6b0" strokeDasharray="4 4" dot={false} strokeWidth={1.5} isAnimationActive={false} />
+          <Line type="monotoneX" dataKey="value" stroke={selected.color} dot={{ r: 2 }} strokeWidth={2.5} isAnimationActive={false} />
         </ComposedChart></ResponsiveContainer>
-      </div>
+      </div></DataCard>
       <details className="week-plan-data"><summary>Daily outputs</summary><div className="table-scroll"><table><caption className="sr-only">Estimated Intervals daily plan and rest projection</caption><thead><tr><th>Date</th><th>Session</th><th>TL</th><th>CTL</th><th>ATL</th><th>TSB</th><th>Rest TSB</th></tr></thead><tbody>{result.rows.map(row => <tr key={row.date}><td>{formatDate(row.date)}</td><td>{sports.find(([value]) => value === row.plan.sport)?.[1]}{row.plan.sport !== "Rest" ? ` · ${row.plan.minutes}′` : ""}</td><td>{display(row.estimate.mid)}</td><td>{display(row.mid.fitness)}</td><td>{display(row.mid.fatigue)}</td><td>{display(row.mid.form)}</td><td>{display(row.rest.form)}</td></tr>)}</tbody></table></div></details>
     </>}
     <details className="week-plan-settings"><summary>Model settings</summary>
