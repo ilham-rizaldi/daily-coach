@@ -39,14 +39,35 @@
 .detail-table td { color: var(--text); }
 .detail-table tbody th { font-weight: 530; }
 .card-history-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
-.card-detail-views { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
 .card-history-controls .report-action[aria-pressed="true"] {
   border-color: var(--blue); color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, var(--surface));
 }
 .card-history-coverage { font-size: 12px; }
-.card-history .battery-range-chart { margin: 4px 0 14px; }
+.card-history-plot {
+  margin: 0 0 12px; padding: 10px 12px 9px;
+  border-radius: 12px; background: var(--canvas); border: 1px solid var(--rule);
+}
+.card-history-plot figcaption { min-height: 28px; color: var(--text); font-size: 13px; font-weight: 580; }
+.card-history-plot svg { display: block; width: 100%; height: auto; overflow: visible; }
+.card-history-plot svg text { fill: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.card-history-grid { stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.card-history-line { fill: none; stroke: var(--blue); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.card-history-point, .card-history-battery circle { fill: var(--blue); }
+.card-history-battery line { stroke: var(--blue); stroke-linecap: round; stroke-opacity: .46; }
+.card-history-dates {
+  display: flex; justify-content: space-between; gap: 10px; margin: -4px 8px 0 8%;
+  color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.card-history-select { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.card-history-select select {
+  min-height: 33px; max-width: 100%; color: var(--text); background: var(--surface-raised);
+  padding: 4px 7px; border: 1px solid var(--control-border); border-radius: 7px; font: inherit;
+}
 .card-history .detail-table th[scope="row"] { white-space: nowrap; }
 .card-history-more { margin-top: 12px; }
+.card-detail-more { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule); }
+.card-detail-more summary { width: fit-content; cursor: pointer; color: var(--blue); }
+.card-detail-more[open] summary { margin-bottom: 10px; }
 .sleep-detail-hero {
   display: grid; grid-template-columns: auto 1fr; align-items: center; gap: clamp(14px, 4vw, 34px);
   padding: 14px 0 22px;

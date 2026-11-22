@@ -1,4 +1,4 @@
-import { decimal, duration, shiftDate } from "./report.js";
+import { coversWindow, DAY, decimal, duration, shiftDate } from "./report.js";
 import { paceClock, rangeFor, targetEvidence } from "./pacing.js";
 
 const present = value => value != null && value !== "" && (typeof value !== "number" || Number.isFinite(value));
@@ -9,11 +9,13 @@ const rangeText = values => rangeFor(values)?.join("–");
 const numberText = value => Number.isFinite(value) ? decimal(value) : null;
 const clockText = value => Number.isFinite(value) ? paceClock(value) : null;
 
-export function datedHistory(caption, columns, entries, read, dateOf = row => row.date) {
-  return { caption, columns, rows: (entries || []).flatMap(row => {
-    const date = dateOf(row);
+export function datedHistory(caption, columns, entries, read, { chart, daily = false } = {}) {
+  return { caption, columns, daily, chart: chart?.map(([label]) => label), rows: (entries || []).flatMap(row => {
+    const date = row.date;
     const values = read(row);
-    return day(date) && values.some(present) ? [{ date, values, precision: row.precision }] : [];
+    if (!day(date) || !values.some(present)) return [];
+    const plot = chart?.map(([, value]) => value(row));
+    return [{ date, values, precision: row.precision, plot }];
   }) };
 }
 
@@ -24,6 +26,36 @@ export function filterCardHistory(rows, end, days) {
     .slice().sort((a, b) => b.date.localeCompare(a.date));
 }
 
+export function historyChartSeries(history, rows) {
+  const labels = history?.chart || history?.columns || [];
+  return labels.flatMap((label, index) => {
+    const points = rows.flatMap(row => {
+      const value = (history.chart ? row.plot : row.values)?.[index];
+      return Number.isFinite(value) ? [{ date: row.date, precision: row.precision, value }] : [];
+    }).reverse();
+    return points.length ? [{ label, points }] : [];
+  });
+}
+
+export function dailyChartRuns(points) {
+  const groups = new Map();
+  for (const point of points) {
+    if (!groups.has(point.date)) groups.set(point.date, []);
+    groups.get(point.date).push(point);
+  }
+  const runs = [];
+  let run = [];
+  for (const [date, group] of groups) {
+    if (group.length !== 1 || (run.length && shiftDate(run.at(-1).date, 1) !== date)) {
+      if (run.length > 1) runs.push(run);
+      run = [];
+    }
+    if (group.length === 1) run.push(group[0]);
+  }
+  if (run.length > 1) runs.push(run);
+  return runs;
+}
+
 const wellnessMetrics = {
   battery: ["Body Battery · Garmin Connect", ["Low", "High", "Sleep charge"],
     row => [row.bodyBatteryLow, row.bodyBatteryHigh, row.bodyBatteryCharge]],
@@ -31,11 +63,15 @@ const wellnessMetrics = {
     row => [row.hrvMs, row.hrv7dMs, present(row.hrvLowMs) && present(row.hrvHighMs) ? `${row.hrvLowMs}–${row.hrvHighMs}` : null]],
   "resting-hr": ["Resting heart rate · Garmin Connect", ["RHR · bpm"], row => [row.rhrBpm]],
   sleep: ["Sleep · Garmin Connect", ["Asleep", "Sleep need", "Score", "Deep", "REM"],
-    row => [minuteText(row.sleepMinutes), minuteText(row.sleepNeedMinutes), row.sleepScore, minuteText(row.deepSleepMinutes), minuteText(row.remSleepMinutes)]],
+    row => [minuteText(row.sleepMinutes), minuteText(row.sleepNeedMinutes), row.sleepScore, minuteText(row.deepSleepMinutes), minuteText(row.remSleepMinutes)],
+    [["Asleep · min", row => row.sleepMinutes], ["Sleep need · min", row => row.sleepNeedMinutes], ["Sleep score", row => row.sleepScore],
+      ["Deep sleep · min", row => row.deepSleepMinutes], ["REM sleep · min", row => row.remSleepMinutes]]],
   readiness: ["Readiness · Garmin Connect", ["Readiness /100", "Status"], row => [row.readiness, row.readinessStatus]],
-  recovery: ["Remaining recovery at capture · Garmin Connect", ["Time", "Status"], row => [minuteText(row.recoveryTimeMinutes), row.recoveryTimeStatus]],
+  recovery: ["Remaining recovery at capture · Garmin Connect", ["Time", "Status"], row => [minuteText(row.recoveryTimeMinutes), row.recoveryTimeStatus],
+    [["Remaining recovery · h", row => Number.isFinite(row.recoveryTimeMinutes) ? row.recoveryTimeMinutes / 60 : null]]],
   vitals: ["Overnight vitals · Garmin Connect", ["SpO₂ · %", "Respiration · br/min", "Awake"],
-    row => [row.averageSpo2, row.averageRespiration, minuteText(row.awakeMinutes)]],
+    row => [row.averageSpo2, row.averageRespiration, minuteText(row.awakeMinutes)],
+    [["SpO₂ · %", row => row.averageSpo2], ["Respiration · br/min", row => row.averageRespiration], ["Awake · min", row => row.awakeMinutes]]],
   adaptation: ["Adaptation · Garmin Connect", ["VO₂ max", "Heat · %", "Training status"],
     row => [row.vo2Max, row.heatAcclimationPercent, row.trainingStatus]],
 };
@@ -65,22 +101,78 @@ function garminWellness(report, snapshots) {
   return [...byDate.values()];
 }
 
+function trainingActivities(report, sport) {
+  return [...(report.activities || []), ...(report.baseHistory?.additionalActivities || [])].filter(row =>
+    (!sport || sport === "All" || (sport === "Other" ? !["Ride", "Run", "Weight Training"].includes(row.sport) : row.sport === sport))
+    && !row.planned && row.classification !== "non-training");
+}
+
 function activityHistory(report, sport, metric) {
-  const rows = [...(report.activities || []), ...(report.baseHistory?.additionalActivities || [])].filter(row =>
-    (!sport || row.sport === sport) && !row.planned && row.classification !== "non-training");
+  const rows = trainingActivities(report, sport);
   const read = {
     hrBpm: ["Avg HR · bpm", row => row.averageHr],
     powerWatts: ["Avg power · W", row => sport === "Run" ? row.averageRunningPowerWatts : row.measuredPowerWatts],
-    paceSecondsPerKm: ["Avg pace · /km", row => clockText(row.averagePaceSeconds)],
+    paceSecondsPerKm: ["Avg pace · /km", row => clockText(row.averagePaceSeconds), ["Avg pace · sec/km", row => row.averagePaceSeconds]],
     intervalsLoad: ["Intervals TL", row => row.intervalsLoad],
   }[metric];
   const source = row => row.sources?.join(" · ") || row.source;
   if (read) return datedHistory("Recorded sessions · session averages", ["Activity", read[0], "Source"],
-    rows.filter(row => present(read[1](row))), row => [row.name, read[1](row), metric === "intervalsLoad" ? "Intervals.icu" : row.source]);
+    rows.filter(row => present(read[1](row))), row => [row.name, read[1](row), metric === "intervalsLoad" ? "Intervals.icu" : row.source],
+    { chart: [read[2] || [read[0], read[1]]] });
   return datedHistory("Recorded training sessions", ["Activity", "Time", "Distance · km", "Avg HR · bpm", "Source"],
     rows, row => [row.name || row.sport, Number.isFinite(row.timerSeconds ?? row.movingSeconds) ? duration(row.timerSeconds ?? row.movingSeconds) : null,
-      numberText(row.distanceKm), row.averageHr, source(row)]);
+      numberText(row.distanceKm), row.averageHr, source(row)], { chart: activityChart });
 }
+
+function activityTotalsHistory(report, query) {
+  const { sport, kind, metric } = query;
+  const weekly = kind === "activity-weeks";
+  const end = weekly ? shiftDate(report.date, -1) : report.date;
+  const buckets = new Map();
+  const totalDay = date => weekly ? shiftDate(end, -7 * Math.floor((Date.parse(end) - Date.parse(date)) / (7 * DAY))) : date;
+  for (const row of trainingActivities(report, sport)) {
+    if (!day(row.date) || row.date > end) continue;
+    const stamp = totalDay(row.date);
+    if (!buckets.has(stamp)) buckets.set(stamp, []);
+    buckets.get(stamp).push(row);
+  }
+  // Only dates inside the report's verified coverage can acquire a recorded
+  // zero-workout bucket. Missing capture outside that range stays blank.
+  const step = weekly ? 7 : 1;
+  if (report.coverage?.complete) {
+    for (let stamp = end; stamp >= report.coverage.start; stamp = shiftDate(stamp, -step)) {
+      if (!buckets.has(stamp) && coversWindow(report, shiftDate(stamp, 1 - step), stamp)) buckets.set(stamp, []);
+    }
+  }
+  const label = {
+    duration: "Duration · min", sessions: "Sessions", activeDays: "Active days",
+    longest: "Longest recorded session · min", intervalsLoad: "Recorded Intervals TL",
+  }[metric];
+  const rows = [...buckets].map(([date, entries]) => {
+    const seconds = entries.map(row => row.timerSeconds ?? row.movingSeconds).filter(Number.isFinite);
+    const loads = entries.map(row => row.intervalsLoad).filter(Number.isFinite);
+    const durationKnown = seconds.length === entries.length;
+    const value = {
+      duration: durationKnown ? seconds.reduce((sum, time) => sum + time, 0) / 60 : null,
+      sessions: entries.length,
+      activeDays: new Set(entries.map(row => row.date)).size,
+      longest: seconds.length ? Math.max(...seconds) / 60 : null,
+      intervalsLoad: loads.length ? loads.reduce((sum, load) => sum + load, 0) : null,
+    }[metric];
+    const complete = report.coverage && coversWindow(report, shiftDate(date, 1 - step), date);
+    const coverage = date === report.date ? "Report day through capture" : complete ? "Complete" : "Captured sessions";
+    return { date, value, coverage: metric === "intervalsLoad" && loads.length < entries.length ?
+      `${loads.length}/${entries.length} loads recorded` : coverage };
+  }).filter(row => Number.isFinite(row.value));
+  return datedHistory(weekly ? "Recorded training · seven-day period ending on date shown" : "Recorded training by day",
+    [label, "Coverage"], rows, row => [Number(row.value.toFixed(1)), row.coverage], { daily: !weekly });
+}
+
+const activityChart = [
+  ["Session duration · min", row => Number.isFinite(row.timerSeconds ?? row.movingSeconds) ? (row.timerSeconds ?? row.movingSeconds) / 60 : null],
+  ["Distance · km", row => row.distanceKm],
+  ["Avg HR · bpm", row => row.averageHr],
+];
 
 function intervalHistory(report, snapshots) {
   const unique = new Map();
@@ -93,7 +185,7 @@ function intervalHistory(report, snapshots) {
     unique.set(row.date, row);
   }
   return datedHistory("Fitness and fatigue · Intervals.icu", ["CTL", "ATL", "Form"], [...unique.values()],
-    row => [numberText(row.fitness), numberText(row.fatigue), numberText(row.form)]);
+    row => [row.fitness, row.fatigue, row.form], { daily: true });
 }
 
 export function resolveCardHistory(report, reports, definition) {
@@ -101,6 +193,7 @@ export function resolveCardHistory(report, reports, definition) {
   if (typeof definition === "object" && Array.isArray(definition.rows)) return definition;
   const query = typeof definition === "string" ? { kind: definition } : definition;
   const { kind, sport, metric } = query;
+  if (kind === "activity-days" || kind === "activity-weeks") return activityTotalsHistory(report, query);
   if (kind === "activities") return activityHistory(report, sport, metric);
   if (kind === "source") {
     const source = query.source;
@@ -108,11 +201,26 @@ export function resolveCardHistory(report, reports, definition) {
     return datedHistory(`Activities · ${source}`, ["Activity", "Time", "Km", "Avg HR", "Avg power", "TL"],
       records, row => [row.name || row.sourceType, Number.isFinite(row.timerSeconds ?? row.movingSeconds) ?
         duration(row.timerSeconds ?? row.movingSeconds) : null, numberText(row.distanceKm), row.averageHr,
-      row.measuredPowerWatts ?? row.averageRunningPowerWatts, row.intervalsLoad]);
+      row.measuredPowerWatts ?? row.averageRunningPowerWatts, row.intervalsLoad], { chart: [
+        ...activityChart, ["Avg power · W", row => row.measuredPowerWatts ?? row.averageRunningPowerWatts],
+        ["Intervals TL", row => row.intervalsLoad],
+      ] });
+  }
+  if (kind === "intervals-wellness") {
+    const rows = report.baseHistory?.intervalsWellness || [];
+    return datedHistory("Wellness · Intervals.icu",
+      ["Resting HR · bpm", "HRV · ms", "Asleep", "Sleeping HR · bpm", "Steps", "Sleep score"],
+      rows, row => [row.restingHrBpm, row.hrvMs, Number.isFinite(row.sleepSeconds) ? duration(row.sleepSeconds) : null,
+        row.sleepingHrBpm, row.steps, row.sleepScore], { daily: true, chart: [
+        ["Resting HR · bpm", row => row.restingHrBpm], ["HRV · ms", row => row.hrvMs],
+        ["Asleep · min", row => Number.isFinite(row.sleepSeconds) ? row.sleepSeconds / 60 : null],
+        ["Sleeping HR · bpm", row => row.sleepingHrBpm], ["Steps", row => row.steps], ["Sleep score", row => row.sleepScore],
+      ] });
   }
   const snapshots = reportSnapshots(report, reports);
   if (wellnessMetrics[kind]) {
-    return datedHistory(...wellnessMetrics[kind].slice(0, 2), garminWellness(report, snapshots), wellnessMetrics[kind][2]);
+    const [caption, columns, read, chart] = wellnessMetrics[kind];
+    return datedHistory(caption, columns, garminWellness(report, snapshots), read, { chart, daily: true });
   }
   if (kind === "intervals") return intervalHistory(report, snapshots);
   if (kind === "garmin-load") {
@@ -124,12 +232,13 @@ export function resolveCardHistory(report, reports, definition) {
       for (const row of item.garminLoadHistory?.rows || []) unique.set(row.date, row);
     }
     return datedHistory("Training Load · Garmin Connect", ["Acute", "Chronic"],
-      [...unique.values()], row => [row.acute, row.chronic]);
+      [...unique.values()], row => [row.acute, row.chronic], { daily: true });
   }
   if (kind === "threshold") return datedHistory("Dated threshold checks", ["Value", "Source", "Confidence"],
     snapshots.flatMap(item => (item.thresholdReview?.rows || []).filter(row => row.title === query.title)
       .map(row => ({ ...row, date: row.evidence?.date || item.thresholdReview.date }))),
-    row => [[row.value, row.unit].filter(present).join(" "), row.evidence?.source, row.evidence?.confidence]);
+    row => [[row.value, row.unit].filter(present).join(" "), row.evidence?.source, row.evidence?.confidence],
+    { chart: [["Threshold reading", row => row.value]] });
   if (kind === "coach") return datedHistory("Saved coaching decisions", ["Decision", "Confidence"],
     snapshots.filter(item => item.coaching?.headline), row => [row.coaching.headline, row.coaching.confidence]);
   if (kind === "pacing") {
@@ -143,10 +252,12 @@ export function resolveCardHistory(report, reports, definition) {
       const value = metric === "paceSecondsPerKm" ? limits.map(clockText).join("–") : rangeText(limits);
       return [{ ...evidence, value: `${value} ${fields[metric]}` }];
     });
-    const history = datedHistory("Saved pacing targets", ["Target", "Source", "Confidence"], captured,
+    const history = datedHistory("Pacing targets and recorded sessions", ["Reading", "Source", "Confidence"], captured,
       row => [row.value, row.source, row.confidence]);
-    for (const row of activityHistory(report, sport, metric).rows) {
-      history.rows.push({ date: row.date, values: [row.values[1], row.values[2], "Recorded session average"] });
+    const sessions = activityHistory(report, sport, metric);
+    history.chart = sessions.chart;
+    for (const row of sessions.rows) {
+      history.rows.push({ ...row, values: [`${row.values[1]} ${fields[metric]}`, row.values[2], "Recorded session average"] });
     }
     history.columns[2] = "Confidence / type";
     return history;

@@ -56,6 +56,7 @@ const glossary = [
   ["P25 / P50 / P75", "Load estimate", "Load/h", "Lower quartile, median and upper quartile of same-sport historical load rates."],
   ["Scenario range", "Forecast", "Load / ratio", "Historical variation propagated through the model; displayed bounds are scenario extrema."],
   ["Steady-effort HR", "Predictions", "bpm", "Median final five-minute HR from comparable eight-minute recorded blocks. The app chooses at most one block per day near the input, with the same source, recording device and sport context. The displayed range is the spread of matched observations."],
+  ["Garmin TCX / Intervals FIT", "Predictions", "Recording source", "Intervals exports can include changes to activity streams. An Intervals FIT session enters the model when its recorder is verified against the same Garmin activity. Model results keep the two sources and indoor/outdoor recordings separate."],
   ["Prediction confidence", "Predictions", "Low / Medium / High", "Low marks sparse or weakly tested evidence. Medium requires at least four later-day tests, lower average error than the earlier HR median and at most 8 bpm error. High also requires at least eight tests, at least five supporting dates, documented comparable conditions and at most 5 bpm error. Estimates are unavailable outside supported effort ranges."],
   ["Extrapolation", "Forecast", "Status", "A planned duration or current load state outside the captured calibration range."],
 ];
@@ -66,6 +67,7 @@ const methodLinks = [
   { title: "Garmin training load", url: "https://www.garmin.com/en-US/garmin-technology/cycling-science/physiological-measurements/training-load/" },
   { title: "Garmin readiness colors", url: "https://www8.garmin.com/manuals-apac/webhelp/forerunner265series/EN-SG/GUID-35D1273C-4F9C-4029-9B8F-F997F4D7C3A8-7793.html" },
   { title: "Testing predictions in chronological order", url: "https://otexts.com/fpp3/toolbox.html#time-series-cross-validation" },
+  { title: "Intervals.icu activity FIT exports", url: "https://forum.intervals.icu/t/import-and-download-workout-and-activity-fit-files/19295" },
 ];
 
 function ColorKey({ items }) {

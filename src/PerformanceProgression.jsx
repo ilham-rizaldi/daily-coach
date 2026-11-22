@@ -203,7 +203,10 @@ function SpeedCard({ sport, groups }) {
     .sort((a, b) => b.points.at(-1).at - a.points.at(-1).at)[0];
   const recorded = recordedGroup?.points.at(-1);
   return <DataCard className="progression-card" title={label}
-    history={datedHistory(`${scope || label} · ${speedMethods[basis]} · ${source}`, [`${label} · ${unit}`, "Distance · km"], points, row => [display(row.value), Number.isFinite(row.distance) ? decimal(row.distance) : null])} detail={<>
+    history={datedHistory(`${scope || label} · ${speedMethods[basis]} · ${source}`, [`${label} · ${unit}`, "Distance · km"], points,
+      row => [display(row.value), Number.isFinite(row.distance) ? decimal(row.distance) : null], {
+        chart: [[`${label} · ${running ? "sec/km" : unit}`, row => row.value], ["Distance · km", row => row.distance]],
+      })} detail={<>
     <DetailFacts rows={[["Source", source], ["Scope", scope], ["Timing basis", speedMethods[basis]]]} />
     <DetailTable columns={["Date", `${label} · ${unit}`, "Distance · km"]} rows={[...points].reverse().map(point =>
       [pointDate(point, true), display(point.value), Number.isFinite(point.distance) ? decimal(point.distance) : null])} />
@@ -223,7 +226,9 @@ function RecordCard({ record }) {
   const timed = Number.isFinite(value) && unit === "s";
   const result = timed ? effortClock(value) : typeof value === "number" ? decimal(value, 2) : value;
   return <DataCard className="progression-card progression-record" title={label}
-    history={datedHistory("Verified record", ["Result", "Source"], [record], () => [timed ? result : `${result} ${unit || ""}`.trim(), source])} detail={<DetailFacts rows={[
+    history={datedHistory("Verified record", ["Result", "Source"], [record], () => [timed ? result : `${result} ${unit || ""}`.trim(), source], {
+      chart: [[unit ? `Result · ${unit}` : "Result", row => row.value]],
+    })} detail={<DetailFacts rows={[
     ["Sport", sport], ["Result", <MetricValue value={result} unit={timed ? undefined : unit} />], ["Date", formatDate(date, { year: "numeric" })],
     ["Source", url ? <a href={url} target="_blank" rel="noopener noreferrer">{source}</a> : source],
   ]} />}>

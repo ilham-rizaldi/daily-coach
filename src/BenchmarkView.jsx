@@ -122,7 +122,9 @@ function SegmentPanel({ data }) {
   const deltaLabel = delta == null ? null : delta === 0 ? "Same as prior" : `${clock(Math.abs(delta))} ${delta < 0 ? "faster" : "slower"}`;
   return <DataCard as="section" className="benchmark-card" aria-labelledby="benchmark-segments-title" title={group?.label || "Segment benchmarks"}
     history={group && datedHistory(`Segment efforts · ${group.source}`, ["Elapsed", "Avg HR · bpm", "Record"], group.efforts,
-      row => [clock(row.seconds), row.hr, row.verifiedRecord ? "Verified PR" : null])}
+      row => [clock(row.seconds), row.hr, row.verifiedRecord ? "Verified PR" : null], {
+        chart: [["Elapsed · sec", row => row.seconds], ["Avg HR · bpm", row => row.hr]],
+      })}
     detail={group ? <>
       <DetailFacts rows={[["Source", group.source], ["Change vs prior dated effort", deltaLabel]]} />
       <DetailTable caption="Recorded segment efforts" columns={["Date", "Elapsed", "Average HR", "Record"]} rows={[...group.efforts].reverse().map(effort =>

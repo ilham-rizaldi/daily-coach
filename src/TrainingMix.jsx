@@ -79,7 +79,9 @@ function HeartRateMix({ report }) {
   return <DataCard className="mix-card" title="Heart rate time in zone"
     history={group && datedHistory(`Recorded time in zone · ${group.source}`, ["Zone", "Minutes", "Low · bpm", "High · bpm"],
       (report.trainingMix?.heartRateZones || []).filter(row => row.sport === group.sport && row.source === group.source),
-      row => [row.zone, Number.isFinite(row.seconds) ? decimal(row.seconds / 60) : null, row.lowerBpm, row.upperBpm])} detail={<>
+      row => [row.zone, Number.isFinite(row.seconds) ? decimal(row.seconds / 60) : null, row.lowerBpm, row.upperBpm], {
+        chart: zoneOrder.map(zone => [`${zone} · min`, row => row.zone === zone && Number.isFinite(row.seconds) ? row.seconds / 60 : null]),
+      })} detail={<>
     <DetailFacts rows={[["Source", group?.source], ["Sport", group && (sportLabel[group.sport] || group.sport)], ["Latest activity", latest?.sourceUrl && <a href={latest.sourceUrl} target="_blank" rel="noopener noreferrer">Open source</a>]]} />
     <DetailTable columns={["Period", "Captured sessions", ...zones.map(zone => `${zone} · min`)]}
       rows={periods.map(period => [`${period.label}${period.today ? " · Partial day" : ""}`, period.listed == null ? period.tracked : `${period.tracked} / ${period.listed}`,

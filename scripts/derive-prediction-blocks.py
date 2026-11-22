@@ -1,12 +1,16 @@
-"""Attach prediction evidence from the owner's native Garmin TCX exports."""
+"""Attach prediction evidence from Garmin TCX and Intervals.icu FIT exports."""
 
 import argparse
+import csv
 import json
 import math
+import re
 import statistics
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+import zipfile
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 BLOCK_SECONDS = 8 * 60
@@ -116,38 +120,161 @@ def block_measurements(window, sport):
     return result
 
 
-def blocks_from_tcx(path, activity):
-    root = ET.parse(path).getroot()
-    record = root.find(".//{*}Activity")
-    sport = activity["sport"]
-    expected = {"Ride": "Biking", "Run": "Running"}[sport]
-    if record is None or record.get("Sport") != expected:
-        raise ValueError("The TCX sport does not match the report.")
-    device = record.findtext("{*}Creator/{*}Name")
-    exported_start = timestamp(record.findtext("{*}Id"))
-    report_start = timestamp(activity.get("startedAt"))
-    if not device or exported_start is None or report_start is None or abs(exported_start - report_start) > 150:
-        raise ValueError("The TCX device or start time could not be matched.")
-    context = "outdoor" if record.find(".//{*}Position") is not None else "indoor"
+def steady_blocks(tracks, start, sport, metadata):
     rows = []
-    for points in read_tracks(record):
+    for points in tracks:
         for chunk in continuous_samples(points):
-            measured = [sample for sample in chunk if sample[0] >= exported_start + WARMUP_SECONDS]
+            measured = [sample for sample in chunk if sample[0] >= start + WARMUP_SECONDS]
             offset = 0
             while offset + BLOCK_SECONDS <= len(measured):
                 window = measured[offset:offset + BLOCK_SECONDS]
                 block = block_measurements(window, sport)
                 if block:
                     rows.append({
-                        **block, "date": activity["date"], "sport": sport,
-                        "activityId": str(activity["externalIds"]["garmin"]),
-                        "source": "Garmin Connect TCX",
-                        "sourceUrl": "https://connect.garmin.com/app/activity/" + str(activity["externalIds"]["garmin"]),
-                        "device": device, "environment": context,
-                        "startSeconds": int(window[0][0] - exported_start),
+                        **block, **metadata, "sport": sport,
+                        "startSeconds": int(window[0][0] - start),
                     })
                 offset += BLOCK_SECONDS if block else SCAN_SECONDS
     return rows
+
+
+def blocks_from_tcx(path, activity):
+    record = ET.parse(path).getroot().find(".//{*}Activity")
+    sport = activity["sport"]
+    if record is None or record.get("Sport") != {"Ride": "Biking", "Run": "Running"}[sport]:
+        raise ValueError("The TCX sport does not match the report.")
+    device = record.findtext("{*}Creator/{*}Name")
+    start = timestamp(record.findtext("{*}Id"))
+    report_start = timestamp(activity.get("startedAt"))
+    if not device or start is None or report_start is None or abs(start - report_start) > 150:
+        raise ValueError("The TCX device or start time could not be matched.")
+    context = "outdoor" if record.find(".//{*}Position") is not None else "indoor"
+    key = str(activity["externalIds"]["garmin"])
+    points = list(read_tracks(record))
+    metadata = {
+        "date": activity["date"], "activityId": key, "device": device, "environment": context,
+        "source": "Garmin Connect TCX", "sourceUrl": "https://connect.garmin.com/app/activity/" + key,
+    }
+    return steady_blocks(points, start, sport, metadata), {
+        "device": device, "environment": context,
+        "hasRecordedPower": any(row[3] is not None and row[3] > 0 for track in points for row in track),
+    }
+
+
+def fit_points(records, power_recorded):
+    for row in records:
+        time = row.get("timestamp")
+        if not isinstance(time, datetime) or time.tzinfo is None:
+            continue
+        yield (time.timestamp(), measure(row.get("enhanced_speed", row.get("speed")), 0, 60),
+               measure(row.get("heart_rate"), 35, 235), measure(row.get("power"), 0, 2000) if power_recorded else None)
+
+
+def read_intervals_fit(path, report, recorders, zone):
+    # Run this import only when processing FIT. The Garmin SDK validates message
+    # encodings and checksums. A FIT download from Intervals can contain edits.
+    from garmin_fit_sdk import Decoder, Stream
+
+    catalog = {row["id"]: row for row in report["baseHistory"]["providerActivities"]["Intervals.icu"]}
+    sport_lookup = {"cycling": "Ride", "running": "Run"}
+    selected = {str(row["externalIds"]["intervals"]): row for row in report["activities"]
+                if row.get("externalIds", {}).get("intervals") and row.get("classification") != "non-training"}
+    first = (date.fromisoformat(report["date"]) - timedelta(days=41)).isoformat()
+    blocks, verified, dates = [], set(), []
+    counts = {"files": 0, "matchedFiles": 0, "recentRideRun": 0, "verifiedRecorder": 0, "eligibleFiles": 0}
+    with zipfile.ZipFile(path) as archive:
+        for member in archive.infolist():
+            if member.is_dir():
+                continue
+            counts["files"] += 1
+            name = Path(member.filename)
+            match = re.match(r"^(i?\d+)(?:_|$)", name.stem)
+            activity_id = match[1] if match else None
+            if name.suffix.lower() != ".fit" or activity_id not in catalog or activity_id in verified or member.file_size > 20_000_000:
+                continue
+            stream = Stream.from_byte_array(bytearray(archive.read(member)))
+            messages, errors = Decoder(stream).read()
+            sessions = messages.get("session_mesgs", [])
+            if errors or len(sessions) != 1:
+                continue
+            session = sessions[0]
+            start = session.get("start_time")
+            published = catalog[activity_id]
+            if not isinstance(start, datetime) or start.tzinfo is None or not published.get("sourceLocalStart"):
+                continue
+            expected = datetime.fromisoformat(published["sourceLocalStart"]).replace(tzinfo=zone)
+            if abs((start - expected).total_seconds()) > 150:
+                continue
+            verified.add(activity_id)
+            day = published["date"]
+            dates.append(day)
+            counts["matchedFiles"] += 1
+            sport = sport_lookup.get(session.get("sport"))
+            if not sport or sport != published["sport"] or not first <= day <= report["date"]:
+                continue
+            counts["recentRideRun"] += 1
+            activity = selected.get(activity_id)
+            if not activity or activity["sport"] != sport or activity["date"] != day:
+                continue
+            recorder = recorders.get(str(activity.get("externalIds", {}).get("garmin")))
+            if not recorder:
+                continue
+            records = messages.get("record_mesgs", [])
+            environment = "outdoor" if any(row.get("position_lat") is not None for row in records) else (
+                "indoor" if session.get("sub_sport") in ("indoor_running", "treadmill", "indoor_cycling") else None)
+            if environment != recorder["environment"] or (sport == "Ride" and not recorder["hasRecordedPower"]):
+                continue
+            counts["verifiedRecorder"] += 1
+            points = list(fit_points(records, recorder["hasRecordedPower"]))
+            metadata = {
+                "date": day, "activityId": activity_id, "device": recorder["device"], "environment": environment,
+                "source": "Intervals.icu FIT", "sourceUrl": published["sourceUrl"],
+            }
+            rows = steady_blocks([points], start.timestamp(), sport, metadata)
+            counts["eligibleFiles"] += bool(rows)
+            blocks.extend(rows)
+    return blocks, {**counts, "first": min(dates, default=None), "last": max(dates, default=None)}
+
+
+WELLNESS = {
+    "restingHR": ("restingHrBpm", 25, 180), "hrv": ("hrvMs", 1, 500),
+    "sleepSecs": ("sleepSeconds", 0, 86400), "sleepScore": ("sleepScore", 0, 100),
+    "avgSleepingHR": ("sleepingHrBpm", 25, 180), "steps": ("steps", 0, 200_000),
+    "spO2": ("spo2", 0, 100), "respiration": ("respiration", 0, 120),
+    "readiness": ("readiness", 0, 100), "weight": ("weightKg", 0, 400),
+}
+
+
+def read_intervals_wellness(path, cutoff):
+    by_date = {}
+    with path.open(newline="", encoding="utf-8-sig") as stream:
+        reader = csv.DictReader(stream)
+        if not {"date", "ctl", "atl"}.issubset(reader.fieldnames or ()):
+            raise ValueError("Intervals wellness columns or fitness fields are missing.")
+        for row in reader:
+            day = date.fromisoformat(row["date"]).isoformat()
+            if day > cutoff:
+                continue
+            if day in by_date:
+                raise ValueError("Intervals wellness has a duplicate date.")
+            by_date[day] = row
+    wellness, training = [], []
+    for day, row in sorted(by_date.items()):
+        readings = {"date": day}
+        for field, (label, low, high) in WELLNESS.items():
+            value = measure(row.get(field), low, high)
+            if value is not None:
+                readings[label] = value
+        if len(readings) > 1:
+            wellness.append(readings)
+        fitness = measure(row.get("ctl"), 0, 1500)
+        fatigue = measure(row.get("atl"), 0, 1500)
+        if fitness is not None and fatigue is not None:
+            training.append({"date": day, "fitness": fitness, "fatigue": fatigue})
+    return wellness, training, {
+        "csvRows": len(by_date), "recordedDays": len(wellness), "fitnessDays": len(training),
+        "first": min(by_date, default=None), "last": max(by_date, default=None),
+    }
 
 
 def main():
@@ -155,21 +282,39 @@ def main():
     parser.add_argument("report", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("exports", nargs="+", type=Path)
+    parser.add_argument("--intervals-fit", type=Path)
+    parser.add_argument("--intervals-wellness", type=Path)
+    parser.add_argument("--timezone", default="Asia/Jakarta")
     args = parser.parse_args()
     report = json.loads(args.report.read_text())
     lookup = {str(activity.get("externalIds", {}).get("garmin")): activity
               for activity in report["activities"] if activity.get("sport") in ("Ride", "Run")
               and activity.get("classification") != "non-training"}
-    blocks = []
+    blocks, recorders = [], {}
     for export in args.exports:
         key = export.stem.removeprefix("activity_")
         if key not in lookup:
             raise ValueError(f"Could not match {export.name} to the selected report.")
-        rows = blocks_from_tcx(export, lookup[key])
+        rows, recorders[key] = blocks_from_tcx(export, lookup[key])
         blocks.extend(rows)
         print(lookup[key]["date"], lookup[key]["sport"], len(rows), "eligible blocks")
+    if args.intervals_fit or args.intervals_wellness:
+        base = report["baseHistory"]
+        counts = base.setdefault("intervalsDownloads", {})
+        counts["capturedAt"] = datetime.now(timezone.utc).isoformat()
+        if args.intervals_fit:
+            rows, counts["fit"] = read_intervals_fit(args.intervals_fit, report, recorders, ZoneInfo(args.timezone))
+            blocks.extend(rows)
+            print("Intervals FIT", counts["fit"], len(rows), "eligible blocks")
+        if args.intervals_wellness:
+            base["intervalsWellness"], base["intervalsDaily"], counts["wellness"] = read_intervals_wellness(args.intervals_wellness, report["date"])
+            print("Intervals wellness", counts["wellness"])
+        for provider in base["providers"]:
+            if provider["source"] == "Intervals.icu":
+                captured = ["Activity CSV"] + (["FIT archive"] if counts.get("fit") else []) + (["wellness CSV"] if counts.get("wellness") else [])
+                provider["status"] = "Downloaded " + ", ".join(captured)
     report["predictionEvidence"] = {
-        "method": "Eight-minute TCX blocks after the first five minutes. The first eligible window at each 30-second scan is kept and never reused. HR uses the final five minutes.",
+        "method": "Eight-minute blocks after the first five minutes. The first eligible window at each 30-second scan is kept and never reused. HR uses the final five minutes. Garmin TCX and Intervals.icu FIT remain separate.",
         "processedAt": datetime.now(timezone.utc).isoformat(),
         "blocks": blocks,
     }

@@ -21,7 +21,8 @@ function EvidenceDetails({ result, dataset, cohort, mode }) {
       ["Basis", result.reason],
       ["Window", `${dateText(dataset.first)} – ${dateText(dataset.last)}`],
       ["Recording", cohort && `${cohort.device} · ${cohort.environment} · ${cohort.source}`],
-      ["Eligible data", `${cohort?.rows.length ?? 0} blocks · ${cohort?.dates ?? 0} recorded days`],
+      ["Eligible blocks", cohort?.rows.length ?? 0],
+      ["Eligible dates", cohort?.dates ?? 0],
       ["Later sessions checked", validation?.tests || "Awaiting more comparable sessions"],
       ["Average test error", validation?.tests >= 4 ? `${decimal(validation.meanError)} bpm` : null],
       ["Recent HR median error", validation?.tests >= 4 ? `${decimal(validation.baselineError)} bpm` : null],
@@ -56,7 +57,10 @@ function PredictionCard({ report, name, modes }) {
   const sourcePeriod = sourceDates.length === 1 ? dateText(sourceDates[0]) :
     sourceDates.length > 1 ? `${dateText(sourceDates[0])} – ${dateText(sourceDates.at(-1))}` : null;
   const history = datedHistory("Eligible steady blocks · final 5 min HR", ["Effort", "HR · bpm", "Device", "Source"], cohort?.rows,
-    row => [observedEffort(row.value, mode), decimal(row.hrBpm), row.device, row.source]);
+    row => [observedEffort(row.value, mode), decimal(row.hrBpm), row.device, row.source], { chart: [
+      ["Final 5 min HR · bpm", row => row.hrBpm],
+      [paceMode(mode) ? "Pace · sec/km" : "Power · W", row => row.value],
+    ] });
   return <DataCard className="prediction-card" title={`${name} prediction`} history={history}
     data-sport={name} detail={<EvidenceDetails result={result} dataset={data} cohort={cohort} mode={mode} />}>
     <header><h2>{name}</h2>
@@ -68,9 +72,9 @@ function PredictionCard({ report, name, modes }) {
       {modes.map(key => <button className="report-action" type="button" key={key} aria-pressed={key === mode}
         onClick={() => { setMode(key); setSelected(""); setInput(null); }}>{paceMode(key) ? "Pace" : "Watch power"}</button>)}
     </div>}
-    {data.groups.length > 1 && <label className="prediction-input">Recording context
+    {data.groups.length > 1 && <label className="prediction-input prediction-context">Recording context
       <select value={cohort.id} onChange={event => { setSelected(event.target.value); setInput(null); }}>
-        {data.groups.map(group => <option key={group.id} value={group.id}>{group.device} · {group.environment} · {group.dates}d</option>)}
+        {data.groups.map(group => <option key={group.id} value={group.id}>{group.source} · {group.device} · {group.environment} · {group.dates}d</option>)}
       </select>
     </label>}
     <label className="prediction-input">
