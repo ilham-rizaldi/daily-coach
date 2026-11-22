@@ -7,7 +7,7 @@ const frame = { left: 44, right: 919, top: 13, bottom: 232 };
 const validLoad = value => Number.isFinite(value) && value >= 0;
 
 export function DailyLoad({ report }) {
-  const pattern = useId();
+  const fill = useId();
   const start = shiftDate(report.date, -41);
   const rows = (report.garminLoadHistory?.rows || []).filter(row => row?.date >= start && row.date <= report.date
     && Number.isFinite(Date.parse(row.date)) && validLoad(row.acute) && validLoad(row.chronic))
@@ -37,12 +37,12 @@ export function DailyLoad({ report }) {
       </dl>}
     </header>
     {latest ? <figure className="daily-load-plot">
-      <svg viewBox="0 0 934 246" preserveAspectRatio="none" role="img" aria-label={`Daily Garmin acute and chronic load from ${formatDate(start)} to ${formatDate(report.date)}. White marks show acute load and gray marks show chronic load.`}>
+      <svg viewBox="0 0 934 246" preserveAspectRatio="none" role="img" aria-label={`Daily Garmin acute and chronic load from ${formatDate(start)} to ${formatDate(report.date)}. Cyan marks show acute load and amber marks show chronic load.`}>
         <defs>
-          <pattern id={pattern} width="8" height="8" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1.5" r=".85" fill="var(--muted)" opacity=".55" />
-            <circle cx="5.5" cy="5" r=".62" fill="var(--text)" opacity=".32" />
-          </pattern>
+          <linearGradient id={fill} x1="0" x2="0" y1="0" y2="1">
+            <stop stopColor="var(--blue)" stopOpacity=".18" />
+            <stop offset="1" stopColor="var(--blue)" stopOpacity="0" />
+          </linearGradient>
         </defs>
         {Array.from({ length: 42 }, (_, i) => shiftDate(start, i)).map(date =>
           <line key={date} className="daily-grid-line" x1={x(date)} x2={x(date)} y1={frame.top} y2={frame.bottom} />)}
@@ -51,9 +51,9 @@ export function DailyLoad({ report }) {
           <text x={frame.left - 9} y={y(top * ratio) + 4} textAnchor="end">{decimal(top * ratio, 0)}</text>
         </g>)}
         {runs.filter(run => run.length > 1).map((run, index) => {
-          const border = [...run.map(row => [x(row.date), y(row.acute)]),
-            ...run.slice().reverse().map(row => [x(row.date), y(row.chronic)])];
-          return <polygon key={index} points={border.map(point => point.join(",")).join(" ")} fill={`url(#${pattern})`} />;
+          const points = run.map(row => [x(row.date), y(row.acute)]);
+          const boundary = `L${points.at(-1)[0]},${frame.bottom}L${points[0][0]},${frame.bottom}Z`;
+          return <path key={index} d={smoothLinePath(points) + boundary} fill={`url(#${fill})`} />;
         })}
         {["chronic", "acute"].map(metric => <g key={metric} data-load-series={metric}>
           {runs.map(run => <path key={run[0].date}

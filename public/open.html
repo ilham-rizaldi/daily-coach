@@ -7,19 +7,17 @@
   <meta name="color-scheme" content="dark">
   <title>Open report · Performance Desk</title>
   <style>
-    :root { font-family: system-ui, sans-serif; color: #f4f4ef; background: #000; }
+    :root { font-family: system-ui, sans-serif; color: #f3f5f9; background: #070809; }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 16px; }
-    main { width: min(100%, 450px); padding: clamp(16px, 4vw, 34px); border: 1px solid #333; background: #000; }
-    .brand { margin: 0 0 28px; padding-bottom: 16px; border-bottom: 1px dotted #626262; font: 600 13px monospace; }
-    .brand::before { content: ""; display: inline-block; background: #b3f46c; width: 6px; height: 6px; border-radius: 50%; margin-right: 9px; vertical-align: 2px; }
-    h1 { margin: 0 0 22px; font-size: clamp(30px, 5.3vw, 46px); line-height: 1; letter-spacing: -.055em; }
-    label { display: block; margin-bottom: 8px; color: #b4b4ae; font: 13px monospace; }
-    input, button { width: 100%; min-height: 48px; border-radius: 0; font: inherit; }
-    input { border: 1px solid #626262; background: #080808; color: #fff; padding: 10px 12px; }
-    input:focus-visible, button:focus-visible { outline: 2px solid #b3f46c; outline-offset: 3px; }
-    button { margin-top: 14px; border: 1px solid #729d46; background: #10160b; color: #b3f46c; font-weight: 650; cursor: pointer; }
-    button:hover { background: #1c2812; }
+    body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px; }
+    main { width: min(100%, 420px); padding: clamp(20px, 6vw, 32px); border: 1px solid #2d3036; border-radius: 20px; background: linear-gradient(150deg, #15171c, #0b0c0e 65%); }
+    .brand { margin: 0 0 28px; color: #c6fa74; font-size: 14px; font-weight: 650; }
+    h1 { margin: 0 0 28px; font-size: 30px; letter-spacing: -0.8px; }
+    label { display: block; margin-bottom: 9px; color: #cdd3db; font-size: 14px; }
+    input, button { width: 100%; min-height: 48px; border-radius: 8px; font: inherit; }
+    input { border: 1px solid #5d636d; background: #0f1013; color: white; padding: 10px 12px; }
+    input:focus-visible, button:focus-visible { outline: 3px solid #56e8f4; outline-offset: 3px; }
+    button { margin-top: 16px; border: 0; background: #c6fa74; color: #14210b; font-weight: 700; cursor: pointer; }
     button:disabled { opacity: 0.65; cursor: wait; }
     #status { color: #ffb9ad; font-size: 14px; line-height: 1.5; }
     #status:empty { display: none; }

@@ -1,66 +1,17 @@
-/* Performance Desk visual system */
+/* Responsive dashboard layout and featured load chart. */
 :root {
-  --canvas: #000;
-  --surface: #080808;
-  --surface-raised: #131313;
-  --surface-gradient: var(--surface);
-  --panel-border: #333;
-  --rule: #333;
-  --control-border: #626262;
-  --text: #f4f4ef;
-  --muted: #b4b4ae;
-  --quiet: #a2a39e;
-  --lime: #b3f46c;
-  --action-surface: #10160b;
-  --accent-surface: #10160b;
-  --action-hover: #1c2812;
-  --action-border: #729d46;
-  --action-text: var(--lime);
-  --blue: #ecece6;
-  --green: var(--lime);
-  --amber: #d0cdb6;
-  --red: #d1c0bd;
-  --purple: #a8a9a3;
-  --metric-gray: #979992;
-  --sleep-deep: #989993;
-  --sleep-light: #e4e4df;
-  --sleep-rem: #bdbeb6;
-  --panel-radius: 0px;
-  --metric-radius: 0px;
-  --panel-inset: clamp(12px, 1.5vw, 20px);
   --workspace-gutter: clamp(80px, 6.25vw, 120px);
   --workspace-width: calc(1520px + 2 * var(--workspace-gutter));
   --layout-columns: 12;
   --grid-gap: 12px;
-  --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
-html, body { background: var(--canvas); }
 body .app-header {
-  background: var(--canvas);
   gap: clamp(10px, 2vw, 26px);
   min-height: 62px;
   padding-inline: max(var(--workspace-gutter), calc((100% - var(--workspace-width)) / 2 + var(--workspace-gutter)));
 }
-body .app-header .wordmark {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 18px;
-  font-weight: 720;
-  letter-spacing: -.035em;
-}
-.app-header .wordmark::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  background: var(--lime);
-  border-radius: 50%;
-}
 body .app-header nav { gap: clamp(12px, 1.75vw, 24px); }
-body .app-header nav button { font: 500 12px/1.3 var(--mono); border-bottom-color: transparent; }
-body .app-header nav button[aria-current] { color: var(--lime); border-bottom-color: var(--lime); }
 body .header-lock { min-width: 44px; }
 body main#main {
   max-width: var(--workspace-width);
@@ -72,21 +23,16 @@ body main#main {
 main#main > * { grid-column: 1 / -1; min-width: 0; }
 body .report-meta {
   padding-block: 14px;
-  font: 500 11px/1.4 var(--mono);
-  border-bottom: 1px dotted var(--control-border);
   column-gap: 12px;
 }
 .report-meta .request-report-button { min-height: 36px; }
-.section-masthead { padding-block: clamp(16px, 2vw, 29px); }
-.section-masthead h1, body .empty-report h1 {
+.section-masthead { padding-block: 8px 16px; }
+.section-masthead h1 {
   margin: 0;
-  font-size: clamp(38px, 6.2vw, 84px);
-  line-height: 1.03;
-  letter-spacing: -.068em;
-  font-weight: 650;
+  font-size: clamp(23px, 3vw, 31px);
+  line-height: 1.14;
+  letter-spacing: -.035em;
 }
-body .empty-report { padding: clamp(16px, 4vw, 48px) 0; }
-body .empty-report h1 { font-size: clamp(38px, 6vw, 66px); }
 
 .daily-lead {
   display: grid;
@@ -97,8 +43,9 @@ body .empty-report h1 { font-size: clamp(38px, 6vw, 66px); }
 .daily-load {
   grid-column: span 9;
   padding: var(--panel-inset);
-  background: var(--canvas);
+  background: var(--surface-gradient);
   border: 1px solid var(--panel-border);
+  border-radius: var(--panel-radius);
   display: flex;
   flex-direction: column;
 }
@@ -106,24 +53,24 @@ body .empty-report h1 { font-size: clamp(38px, 6vw, 66px); }
 .daily-load-heading h2 { margin: 0 0 4px; font-size: clamp(17px, 2vw, 23px); letter-spacing: -.035em; }
 .daily-load-heading p, .daily-load-empty { margin: 0; font-size: 11px; color: var(--muted); }
 .daily-load-key { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 0; }
-.daily-load-key dt { font: 11px var(--mono); color: var(--muted); }
+.daily-load-key dt { font-size: 11px; color: var(--muted); }
 .daily-load-key dt::before {
   content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
-  margin-inline-end: 6px; vertical-align: 2px; background: var(--text);
+  margin-inline-end: 6px; vertical-align: 2px; background: var(--blue);
 }
-.daily-load-key div + div dt::before { background: #979992; }
+.daily-load-key div + div dt::before { background: var(--amber); }
 .daily-load-key dd { margin: 1px 0 0; font-size: clamp(23px, 2.6vw, 37px); letter-spacing: -.05em; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .daily-load-plot { margin: auto 0 0; padding-top: 8px; }
 .daily-load-plot svg { display: block; width: 100%; }
-.daily-load-plot svg text { fill: var(--muted); font: 12px var(--mono); }
-.daily-load-plot figcaption { display: flex; justify-content: space-between; margin-inline: 4.7% 1.7%; font: 10px var(--mono); color: var(--muted); }
-.daily-grid-line { stroke: var(--control-border); stroke-width: .75; stroke-dasharray: 1 5; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-[data-load-series] { color: var(--text); }
-[data-load-series="chronic"] { color: #979992; }
-[data-load-series] path { fill: none; stroke: currentColor; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.daily-load-plot svg text { fill: var(--muted); font-size: 12px; }
+.daily-load-plot figcaption { display: flex; justify-content: space-between; margin-inline: 4.7% 1.7%; font-size: 11px; color: var(--muted); }
+.daily-grid-line { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+[data-load-series] { color: var(--blue); }
+[data-load-series="chronic"] { color: var(--amber); }
+[data-load-series] path { fill: none; stroke: currentColor; stroke-width: 2; vector-effect: non-scaling-stroke; }
 [data-load-series="chronic"] path { stroke-dasharray: 2 4; }
 [data-load-series] circle { fill: currentColor; }
-[data-load-series="acute"] [data-latest="true"] { fill: var(--lime); }
+[data-load-series] [data-latest="true"] { stroke: var(--canvas); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
 .daily-load-empty { padding-block: 32px; }
 body .daily-lead .workout-advice {
   grid-column: span 3;
@@ -133,53 +80,10 @@ body .daily-lead .workout-advice {
   padding: var(--panel-inset);
   margin: 0;
   gap: 14px;
-  border: 1px solid var(--panel-border);
-  border-top: 2px solid var(--advice-color);
+  border-radius: var(--panel-radius);
 }
 .daily-lead .workout-advice .card-details-access { margin: auto 0 0; align-self: flex-end; }
 body .workout-advice-main h2 { font-size: clamp(19px, 2vw, 28px); }
-
-body :is(.body-overview, .coach-suggestions, .prediction-sport, .reference-page, .week-plan, .benchmark-card, .performance-trends > section) {
-  border-radius: 0;
-  background: var(--canvas);
-}
-body :is(.condition-heading, .training-heading, .coach-suggestions-header, .performance-heading, .week-plan-heading,
-  .benchmark-card-heading, .prediction-sport-header) {
-  padding-block-end: 10px;
-  border-block-end: 1px dotted var(--control-border);
-}
-body :is(.body-tile, .body-secondary > section, .pacing-target, .pacing-timeline > div, .report-action, .header-lock,
-  .report-switcher button, .prediction-control, .prediction-context select, .prediction-mode, .prediction-mode button,
-  .prediction-estimate, .prediction-confidence, .prediction-chart, .archive-list button, .card-details-dialog,
-  .report-request-dialog, .card-history-plot, .card-history-select, .week-day, .check-in-panel,
-  .card-details-access button, .workout-advice-evidence dl > div, .progression-card) {
-  border-radius: 0;
-}
-body :is(.body-overview, .coach-suggestions, .volume-detail, .check-in-panel, .workout-advice, .prediction-chart,
-  .card-history-plot, .card-details-dialog, .report-request-dialog) { box-shadow: none; }
-body :is(.body-tile dd > strong, .body-stat-row dd, .prediction-output > strong, .training-number,
-  .performance-chart-title strong, .performance-cycling-stats strong) { color: var(--text); }
-body :is(.report-action, .metric-provider, .prediction-confidence, .prediction-chart figcaption span, .prediction-plot-footer,
-  .card-history-coverage, .target-evidence, .coach-suggestions-label, .workout-advice-main > span) { font-family: var(--mono); }
-body :is(.prediction-chart, .card-history-plot, .battery-range-track) { background: var(--canvas); }
-body .battery-range-day > i {
-  width: 1px; background: none; border-inline-start: 1px dotted var(--muted);
-}
-body .battery-range-day > i::before, body .battery-range-day > i::after { box-shadow: none; }
-body .battery-range-day > i::after { background: var(--text); }
-body .baseline-meter .baseline-marker { box-shadow: none; }
-body .prediction-sport[data-sport] { --prediction-accent: var(--text); }
-body .prediction-ceiling-line { stroke: var(--lime); }
-body .prediction-legend-cap::before { background: var(--lime); }
-body .prediction-point[data-matched="true"] { fill: var(--lime); stroke: var(--canvas); }
-body .prediction-legend-matched::before { background: var(--lime); }
-body .prediction-grid-line, body .card-history-grid { stroke: var(--control-border); stroke-dasharray: 1 5; }
-body .card-history-point { fill: var(--text); }
-body .card-history-line { stroke-width: 1.25; }
-body .card-history-plot .card-history-heading strong { color: var(--text); }
-body .card-details-dialog::backdrop, body .report-request-dialog::backdrop { background: #000c; }
-body .card-details-content > header { border-bottom-style: dotted; }
-body :is(input, select, button, a, summary):focus-visible { outline: 2px solid var(--lime); outline-offset: 2px; }
 
 body .body-primary {
   grid-template-columns: repeat(var(--layout-columns), minmax(0, 1fr));
