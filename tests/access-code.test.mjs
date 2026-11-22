@@ -23,17 +23,23 @@ function envelope() {
     wrappedkey: wrapped.toString("base64url"), iv: payload.iv, data: payload.ciphertext });
 }
 
-function loadPage(params) {
-  const elements = Object.fromEntries(["access", "open", "status", "code"].map(id => [id,
+function loadPage(params, storage = new Map()) {
+  const elements = Object.fromEntries(["access", "open", "status", "code", "report-file"].map(id => [id,
     { value: "", textContent: "", disabled: false, focus() {} }]));
   let submit;
+  let selectFile;
   let destination;
   elements.access.addEventListener = (_, callback) => { submit = callback; };
+  elements["report-file"].addEventListener = (_, callback) => { selectFile = callback; };
   const location = { hash: "#" + params, href: "https://example.com/daily-coach/open.html#" + params,
     replace(url) { destination = url; } };
   runInNewContext(script, { document: { getElementById: id => elements[id] }, location,
+    localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) },
     URL, URLSearchParams, Uint8Array, TextEncoder, atob, btoa, crypto: webcrypto });
-  return { elements, destination: () => destination, async submit(code) {
+  return { elements, destination: () => destination, async selectFile(contents) {
+    elements["report-file"].files = [{ size: contents.length, text: async () => contents }];
+    await selectFile();
+  }, async submit(code) {
     elements.code.value = code;
     await submit({ preventDefault() {} });
   } };
@@ -47,6 +53,38 @@ test("a correct access code opens the intended authenticated report", async () =
   const { key, incoming } = parseAccessInput(target.href);
   assert.deepEqual(await openArchive(key, incoming), { version: 1, reports: [demoReport] });
   assert.equal(page.elements.code.value, "");
+});
+
+test("the live access page imports a local encrypted report and remembers it after a successful unlock", async () => {
+  const params = envelope();
+  const storage = new Map();
+  const page = loadPage("", storage);
+  assert.equal(page.elements.open.disabled, true);
+  await page.selectFile(params.toString());
+  assert.equal(page.elements.open.disabled, false);
+  await page.submit("incorrect-code");
+  assert.equal(storage.size, 0);
+  await page.submit("sample-access-code");
+  assert.ok(page.destination());
+  assert.deepEqual([...storage.values()], [params.toString()]);
+  const reopened = loadPage("", storage);
+  await reopened.submit("sample-access-code");
+  assert.equal(reopened.destination(), page.destination());
+});
+
+test("invalid files or altered report ciphertext cannot replace a saved encrypted report", async () => {
+  const original = envelope();
+  const storage = new Map([["daily-coach-wrapped-report", original.toString()]]);
+  const page = loadPage("", storage);
+  await page.selectFile("not a report");
+  assert.equal(page.elements.open.disabled, true);
+  const changed = new URLSearchParams(original);
+  const ciphertext = changed.get("data");
+  changed.set("data", (ciphertext[0] === "A" ? "B" : "A") + ciphertext.slice(1));
+  await page.selectFile(changed.toString());
+  await page.submit("sample-access-code");
+  assert.equal(page.destination(), undefined);
+  assert.deepEqual([...storage.values()], [original.toString()]);
 });
 
 test("a wrong code keeps the report locked and allows another attempt", async () => {

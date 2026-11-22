@@ -19,6 +19,9 @@
     input:focus-visible, button:focus-visible { outline: 3px solid #56e8f4; outline-offset: 3px; }
     button { margin-top: 16px; border: 0; background: #c6fa74; color: #14210b; font-weight: 700; cursor: pointer; }
     button:disabled { opacity: 0.65; cursor: wait; }
+    .report-file { margin-top: 26px; padding-top: 18px; border-top: 1px solid #2d3036; }
+    .report-file p { color: #b0b5c0; font-size: 13px; line-height: 1.5; margin-bottom: 0; }
+    input[type="file"]::file-selector-button { margin-right: 10px; padding: 5px 8px; border: 0; border-radius: 4px; cursor: pointer; }
     #status { color: #ffb9ad; font-size: 14px; line-height: 1.5; }
     #status:empty { display: none; }
   </style>
@@ -31,46 +34,97 @@
       <label for="code">Access code</label>
       <input id="code" type="password" autocomplete="one-time-code" maxlength="128" required>
       <button id="open" type="submit">Open report</button>
-      <p id="status" role="alert"></p>
     </form>
+    <div class="report-file">
+      <label for="report-file">Encrypted report file</label>
+      <input id="report-file" type="file" accept=".performance-desk" aria-describedby="file-help">
+      <p id="file-help">Choose your report file once on this browser. It opens locally.</p>
+    </div>
+    <p id="status" role="status" aria-live="polite"></p>
   </main>
   <script type="module">
-    const params = new URLSearchParams(location.hash.slice(1));
+    const fragment = location.hash.slice(1);
+    const savedReport = "daily-coach-wrapped-report";
+    const file = document.getElementById("report-file");
     const form = document.getElementById("access");
     const button = document.getElementById("open");
     const status = document.getElementById("status");
     const code = document.getElementById("code");
     const decode = value => Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), character => character.charCodeAt(0));
-    const valid = /^[A-Za-z0-9_-]{22}$/.test(params.get("salt") || "")
-      && /^[A-Za-z0-9_-]{16}$/.test(params.get("wrapiv") || "")
-      && /^[A-Za-z0-9_-]{64}$/.test(params.get("wrappedkey") || "")
-      && /^[A-Za-z0-9_-]{16}$/.test(params.get("iv") || "")
-      && /^[A-Za-z0-9_-]{1,2000000}$/.test(params.get("data") || "");
-    if (!valid) {
-      status.textContent = "Open the complete private report link to continue.";
-      button.disabled = true;
-      code.disabled = true;
+    const maximumPackageSize = 2_001_024;
+
+    function parseEnvelope(value) {
+      if (!value || value.length > maximumPackageSize) return null;
+      const input = new URLSearchParams(value);
+      const fields = {
+        salt: /^[A-Za-z0-9_-]{22}$/,
+        wrapiv: /^[A-Za-z0-9_-]{16}$/,
+        wrappedkey: /^[A-Za-z0-9_-]{64}$/,
+        iv: /^[A-Za-z0-9_-]{16}$/,
+        data: /^[A-Za-z0-9_-]{1,2000000}$/,
+      };
+      if (!Object.entries(fields).every(([name, pattern]) => pattern.test(input.get(name) || ""))) return null;
+      return new URLSearchParams(Object.keys(fields).map(name => [name, input.get(name)]));
     }
+
+    function savedEnvelope() {
+      try { return localStorage.getItem(savedReport); } catch { return null; }
+    }
+
+    let params = parseEnvelope(fragment || savedEnvelope());
+    function renderStatus(message) {
+      status.textContent = message;
+      code.disabled = button.disabled = !params;
+    }
+    renderStatus(params ? "" : "Choose your encrypted report file or open a complete private report link.");
+
+    // The file is read in the browser and never submitted to a server.
+    let selection = 0;
+    file.addEventListener("change", async () => {
+      const picked = file.files[0];
+      if (!picked) return;
+      const request = ++selection;
+      params = null;
+      renderStatus("Reading report file…");
+      try {
+        if (picked.size <= maximumPackageSize) {
+          const envelope = parseEnvelope((await picked.text()).trim());
+          if (request !== selection) return;
+          params = envelope;
+        }
+      } catch {
+        if (request !== selection) return;
+      }
+      renderStatus(params ? "Report file selected. Enter your access code." : "This file could not be read as an encrypted Performance Desk report.");
+      if (params) code.focus();
+    });
+
     form.addEventListener("submit", async event => {
       event.preventDefault();
-      if (!valid || button.disabled) return;
+      if (!params || button.disabled) return;
+      const envelope = params;
       button.disabled = true;
+      file.disabled = true;
       button.textContent = "Opening…";
       status.textContent = "";
       try {
         const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(code.value.trim()), "PBKDF2", false, ["deriveKey"]);
-        const wrappingKey = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: decode(params.get("salt")), iterations: 600000, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-        const bytes = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: decode(params.get("wrapiv")), additionalData: new TextEncoder().encode("daily-coach-code-v1") }, wrappingKey, decode(params.get("wrappedkey"))));
+        const wrappingKey = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: decode(envelope.get("salt")), iterations: 600000, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+        const bytes = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: decode(envelope.get("wrapiv")), additionalData: new TextEncoder().encode("daily-coach-code-v1") }, wrappingKey, decode(envelope.get("wrappedkey"))));
         if (bytes.length !== 32) throw new Error("Invalid key");
+        const reportKey = await crypto.subtle.importKey("raw", bytes, "AES-GCM", false, ["decrypt"]);
+        await crypto.subtle.decrypt({ name: "AES-GCM", iv: decode(envelope.get("iv")), additionalData: new TextEncoder().encode("daily-coach-v1") }, reportKey, decode(envelope.get("data")));
         const key = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
         const target = new URL("./", location.href);
         target.search = "";
-        target.hash = new URLSearchParams({ key, iv: params.get("iv"), data: params.get("data") }).toString();
+        target.hash = new URLSearchParams({ key, iv: envelope.get("iv"), data: envelope.get("data") }).toString();
+        try { localStorage.setItem(savedReport, envelope.toString()); } catch { /* A report can open without browser storage. */ }
         code.value = "";
         location.replace(target.href);
       } catch {
         status.textContent = "The code could not open this report. Check the code and try again.";
         button.disabled = false;
+        file.disabled = false;
         button.textContent = "Open report";
         code.focus();
       }
