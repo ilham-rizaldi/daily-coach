@@ -2,6 +2,7 @@ import { useState } from "react";
 import PerformanceProgression, { effortClock as clock, personalRecords } from "./PerformanceProgression.jsx";
 import { MetricValue } from "./Readout.jsx";
 import { decimal, formatDate } from "./report.js";
+import { WorkoutReview } from "./TrainingTargets.jsx";
 import "./benchmark.css";
 
 const rows = value => Array.isArray(value) ? value : [];
@@ -189,6 +190,7 @@ export default function BenchmarkView({ report }) {
   const workouts = workoutRows(report);
   return <div className="benchmark-view">
     <h1 className="sr-only">Benchmarks</h1>
+    <WorkoutReview key={`${report.date}:${report.capturedAt}`} report={report} />
     <div className="benchmark-grid">
       <SegmentPanel data={data} />
       <WorkoutPanel data={workouts} />

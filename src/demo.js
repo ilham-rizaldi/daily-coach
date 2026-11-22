@@ -1,6 +1,7 @@
 import { shiftDate } from "./report.js";
 
 const date = "2026-11-05";
+const sampleEvidence = (confidence, reason = null) => ({ source: "Illustrative activity data", date, dateLabel: "Sample", confidence, reason });
 const minutes = [30, 50, 40, 30, 45, 50, 60, 100, 45, 40, 35, 50, 40, 60, 55, 70, 80, 160, 60, 50, 30, 60, 50, 55, 30, 45, 90, 42];
 const demoZones = [1, 2, 8, 10, 15, 17, 22, 24].flatMap((index) => [0.34, 0.49, 0.17].map((share, zone) => ({
   date: shiftDate(date, index - 27), sport: index % 7 === 1 ? "Run" : "Ride", activityId: String(index),
@@ -10,7 +11,7 @@ const demoZones = [1, 2, 8, 10, 15, 17, 22, 24].flatMap((index) => [0.34, 0.49, 
 export const demoReport = {
   schemaVersion: 1, date, capturedAt: "2026-11-05T09:24:00+07:00", athlete: "Riezaldd", preview: true,
   coverage: { start: "2026-09-01", end: date, complete: true, note: "Illustrative training history for layout preview." },
-  activities: minutes.map((value, index) => ({ source: "Sample", externalIds: { sample: String(index) }, date: shiftDate(date, index - 27), sport: index % 7 === 0 ? "Weight Training" : index % 7 === 1 ? "Run" : "Ride", name: "Illustrative training session", movingSeconds: value * 60, distanceKm: null, averageHr: null, intervalsLoad: value * (0.5 + index % 4 / 10), intervalsListLoad: value * (0.5 + index % 4 / 10) })).filter((_, index) => index % 7 !== 6),
+  activities: minutes.map((value, index) => ({ source: "Sample", externalIds: { sample: String(index) }, date: shiftDate(date, index - 27), sport: index % 7 === 0 ? "Weight Training" : index % 7 === 1 ? "Run" : "Ride", name: "Illustrative training session", movingSeconds: value * 60, distanceKm: null, averageHr: index === 27 ? 132 : null, measuredPowerWatts: index === 27 ? 106 : null, normalizedPowerWatts: index === 27 ? 112 : null, intervalsLoad: value * (0.5 + index % 4 / 10), intervalsListLoad: value * (0.5 + index % 4 / 10) })).filter((_, index) => index % 7 !== 6 || index === 27),
   wellness: {
     date, sleepMinutes: 370, sleepScore: 76, readiness: 48, readinessStatus: "Low", readinessUpdatedAtLocal: "07:15",
     bodyBattery: 62, bodyBatteryCharged: 55, bodyBatteryDrained: 12, bodyBatteryDailyHigh: 74, bodyBatteryDailyLow: 19,
@@ -39,6 +40,15 @@ export const demoReport = {
   garminLoadHistory: { observedAt: "2026-11-05T09:24:00+07:00", sourceUrl: "https://connect.garmin.com/app/report", method: "Illustrative values only", rows: minutes.map((_, index) => ({ date: shiftDate(date, index - 27), acute: index === 27 ? 350 : [300, 330, 360, 350, 340, 320, 280][index % 7], chronic: 354 - index * 2 })) },
   wellnessHistory: { source: "Illustrative design data", observedAt: "2026-11-05T09:24:00+07:00", rows: Array.from({ length: 56 }, (_, index) => ({ date: shiftDate(date, index - 55), hrvMs: [44, 48, 53, 41, 46, null, 50][index % 7], hrv7dMs: [47, 48, 49, 48, 47, 48, 49][index % 7], hrvLowMs: 43, hrvHighMs: 61, rhrBpm: [55, 56, 54, 59, 57, 56, 55][index % 7], sleepMinutes: [410, 385, 440, 350, 390, null, 450][index % 7], sleepNeedMinutes: 450, bodyBatteryHigh: [78, 70, 85, 59, 73, 68, 88][index % 7], bodyBatteryLow: [21, 18, 30, 12, 19, 17, 32][index % 7], bodyBatteryCharge: [60, 54, 62, 42, 55, null, 65][index % 7] })) },
   sources: ["Garmin Connect", "Intervals.icu", "Strava"].map(name => ({ name, status: "Sample", observedAt: "09.24 WIB", detail: "Illustrative data." })),
+  thresholdReview: {
+    date, decision: "Illustrative threshold review",
+    rows: [
+      { title: "Cycling FTP", tone: "power", value: "180", unit: "W", status: "Estimated", detail: "Illustrative duration-based estimate", evidence: sampleEvidence("Low") },
+      { title: "Cycling threshold HR", tone: "hr", value: "168", unit: "bpm", status: "Configured", detail: "Illustrative setting", evidence: sampleEvidence("Low") },
+      { title: "Running threshold pace", tone: "pace", value: "5:30", unit: "/km", status: "Estimated", detail: "Illustrative watch estimate", evidence: sampleEvidence("Medium") },
+    ],
+    powerComparison: { date, note: "Illustrative provider summaries", rows: [{ provider: "Illustrative device", averageWatts: 106, normalizedWatts: 112 }, { provider: "Illustrative filtered view", averageWatts: 101, normalizedWatts: 109 }] },
+  },
   coaching: {
     headline: "Keep the next session easy", rationale: "Readiness is low after a moderate recent ride and short sleep, so an easy session will support recovery and keep you on track.", confidence: "Sample assessment",
     actionPlan: {
@@ -55,6 +65,19 @@ export const demoReport = {
     research: [{ id: "sport-nutrition", citation: "Thomas et al. · Journal of the Academy of Nutrition and Dietetics · 2016", url: "https://doi.org/10.1016/j.jand.2015.12.006", application: "Adjust food and fluid intake to the demands of the session." }],
     note: "Do an easy ride of about 35 minutes at a comfortable, conversational effort. Keep it relaxed and focus on feeling smooth. If you still feel low on energy, rest instead and reassess tomorrow.",
     nextSession: { date: shiftDate(date, 1), name: "Easy ride", minutes: 35, target: "Comfortable conversational effort", alternative: "Rest and reassess.", condition: "Illustrative prescription for design preview.", steps: [{ name: "Warm-up", minutes: 8, detail: "Start gently." }, { name: "Main set", minutes: 20, detail: "Keep the effort conversational." }, { name: "Cool-down", minutes: 7, detail: "Ease off gradually." }] },
+    pacing: {
+      status: "Illustrative steady-work targets for layout preview.",
+      cycling: { minutes: 40, stepsMinutes: [5, 30, 5], powerWatts: [100, 120], hrBpm: [120, 140], hrCeiling: 145, rpe: [2, 3],
+        evidence: { powerWatts: sampleEvidence("Low", "Example power trace"), hrBpm: sampleEvidence("Medium", "Example easy rides") },
+        adjustment: "Ease off if breathing or heart rate rises." },
+      running: { minutes: 30, stepsMinutes: [5, 20, 5], format: "run-walk", powerWatts: [175, 220], hrBpm: [125, 145], paceSecondsPerKm: [480, 540], hrCeiling: 150, rpe: [2, 3],
+        evidence: { powerWatts: sampleEvidence("Low", "Example watch estimate"), hrBpm: sampleEvidence("Medium", "Example easy runs"), paceSecondsPerKm: sampleEvidence("Low", "Example easy pace") },
+        adjustment: "Use the talk test and walk as needed." },
+    },
+    workoutReviews: [{ activity: { provider: "sample", id: "27" }, date, sport: "Ride",
+      plan: { date: shiftDate(date, -1), hrBpm: [120, 140], powerWatts: [100, 120] },
+      workBlock: { source: "Illustrative", scope: "steady-work", seconds: 1800, hrBpm: 132, powerWatts: 105 } }],
+    progression: { decision: "Repeat easy sessions before progressing", steps: ["Recheck recovery before the next session.", "Repeat the same easy effort and compare paired heart rate and pace or power.", "Progress one variable at a time when the repeat is comfortable."] },
     findings: [], adjustments: [], feedback: "How did the session feel?", references: [],
   },
   quality: ["All values in this preview are illustrative."],

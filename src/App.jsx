@@ -8,6 +8,7 @@ import { ConditionOverview } from "./ConditionOverview.jsx";
 import CoachSuggestions, { hasCoachSuggestions } from "./CoachSuggestions.jsx";
 import { Reference } from "./Reference.jsx";
 import { SessionCheckIn } from "./SessionCheckIn.jsx";
+import { RecoveryProgression, TrainingPacing } from "./TrainingTargets.jsx";
 
 const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
 const BenchmarkView = lazy(() => import("./BenchmarkView.jsx"));
@@ -196,6 +197,7 @@ export function App() {
                   <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
                 </>
               )}
+              <TrainingPacing report={report} onThresholds={() => changeSection("Reference")} />
               <details className="check-in-panel"><summary>Session check-in</summary><SessionCheckIn key={`${report.date}:${accessKey}`} report={report} accessKey={accessKey} preview={preview} /></details>
             </>
           )}
@@ -220,6 +222,7 @@ export function App() {
           )}
           {section === "Plan" && (
             <>
+              <RecoveryProgression report={report} />
               <ChartBoundary key={`plan:${report.date}:${report.capturedAt}`}>
                 <Suspense fallback={<p className="quiet" role="status">Loading…</p>}>
                   <WeekPlanner report={report} />

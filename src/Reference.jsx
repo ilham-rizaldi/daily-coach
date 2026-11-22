@@ -3,6 +3,7 @@ import { palette } from "./MetricGraphics.jsx";
 import { decimal, formatDate } from "./report.js";
 import { contributionWeights, historicalLoadRate } from "./forecast.js";
 import { projectGarminRest } from "./garminForecast.js";
+import { ThresholdChecks } from "./TrainingTargets.jsx";
 
 const glossary = [
   ["RHR Δ", "Recovery trend", "bpm", "Daily RHR minus the median of the preceding 28 calendar days. At least seven prior readings are required; the current day is excluded from its baseline."],
@@ -245,6 +246,7 @@ export function Reference({ report, researchOpen = false }) {
 
   return <section className="reference-page" aria-labelledby="reference-title">
     <div className="page-title"><h1 id="reference-title">Reference</h1></div>
+    <ThresholdChecks report={report} />
     <CoachingResearch coaching={report.coaching} open={researchOpen} />
     <label className="reference-search">Search terms<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="CTL, RPE, HRV…" /></label>
     <div className="table-scroll"><table className="reference-table">

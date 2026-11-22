@@ -7,17 +7,17 @@
   <meta name="color-scheme" content="dark">
   <title>Open report · Performance Desk</title>
   <style>
-    :root { font-family: system-ui, sans-serif; color: #f2f4f6; background: #12161c; }
+    :root { font-family: system-ui, sans-serif; color: #f3f5f9; background: #070809; }
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px; }
-    main { width: min(100%, 420px); padding: 32px; border: 1px solid #39434f; border-radius: 18px; background: linear-gradient(145deg, #26303b, #191f27); }
-    .brand { margin: 0 0 28px; color: #c4f18b; font-size: 14px; font-weight: 650; }
+    main { width: min(100%, 420px); padding: clamp(20px, 6vw, 32px); border: 1px solid #2d3036; border-radius: 20px; background: linear-gradient(150deg, #15171c, #0b0c0e 65%); }
+    .brand { margin: 0 0 28px; color: #c6fa74; font-size: 14px; font-weight: 650; }
     h1 { margin: 0 0 28px; font-size: 30px; letter-spacing: -0.8px; }
     label { display: block; margin-bottom: 9px; color: #cdd3db; font-size: 14px; }
     input, button { width: 100%; min-height: 48px; border-radius: 8px; font: inherit; }
-    input { border: 1px solid #65717f; background: #111821; color: white; padding: 10px 12px; }
-    input:focus-visible, button:focus-visible { outline: 3px solid #94c9f8; outline-offset: 3px; }
-    button { margin-top: 16px; border: 0; background: #c4f18b; color: #172111; font-weight: 700; cursor: pointer; }
+    input { border: 1px solid #5d636d; background: #0f1013; color: white; padding: 10px 12px; }
+    input:focus-visible, button:focus-visible { outline: 3px solid #56e8f4; outline-offset: 3px; }
+    button { margin-top: 16px; border: 0; background: #c6fa74; color: #14210b; font-weight: 700; cursor: pointer; }
     button:disabled { opacity: 0.65; cursor: wait; }
     #status { color: #ffb9ad; font-size: 14px; line-height: 1.5; }
     #status:empty { display: none; }
@@ -47,7 +47,7 @@
       && /^[A-Za-z0-9_-]{16}$/.test(params.get("iv") || "")
       && /^[A-Za-z0-9_-]{1,2000000}$/.test(params.get("data") || "");
     if (!valid) {
-      status.textContent = "Open the complete report link from your coaching email.";
+      status.textContent = "Open the complete private report link to continue.";
       button.disabled = true;
       code.disabled = true;
     }

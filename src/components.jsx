@@ -83,7 +83,7 @@ function activityMetrics(activity) {
   if (activity.intervalsListLoad !== activity.intervalsLoad) add("List TL · Intervals", activity.intervalsListLoad, "pts", 1);
   add("HR avg · Intervals", activity.intervalsAverageHr, "bpm", 0, 1);
   if (activity.sport !== "Run") {
-    add("Power avg", firstRecorded(activity.averagePowerWatts, activity.averageCyclingPowerWatts), "W");
+    add("Power avg", firstRecorded(activity.measuredPowerWatts, activity.averagePowerWatts, activity.averageCyclingPowerWatts), "W");
     add("Power max", firstRecorded(activity.maximumPowerWatts, activity.maxPowerWatts, activity.maximumCyclingPowerWatts), "W");
     add("Normalized power", firstRecorded(activity.normalizedPowerWatts, activity.normalizedCyclingPowerWatts), "W");
   }
