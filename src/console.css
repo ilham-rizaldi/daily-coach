@@ -160,6 +160,8 @@ body { background: var(--canvas); }
 .pacing-controls { display: flex; gap: 6px 14px; flex-wrap: wrap; border-top: 1px solid var(--rule); padding-top: 11px; color: var(--muted); font-size: 12px; }
 .pacing-controls p { flex-basis: 100%; margin: 0; line-height: 1.4; }
 .pacing-controls b { color: var(--text); margin-left: 3px; }
+.pacing-garmin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 14px; }
+.pacing-garmin .report-action { min-height: 42px; }
 .threshold-grid .training-number { margin-top: 9px; }
 .training-panel .threshold-status { color: var(--signal, var(--muted)); }
 .power-check { margin-top: 12px; }

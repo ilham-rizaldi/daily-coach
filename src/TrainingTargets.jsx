@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { decimal, duration, formatDate } from "./report.js";
-import { compareWorkBlock, paceClock, pacingMetrics, pacingSports, rangeFor, reviewMetrics, targetEvidence } from "./pacing.js";
+import { compareWorkBlock, garminPacingWorkout, paceClock, pacingMetrics, pacingSports, rangeFor, reviewMetrics, targetEvidence } from "./pacing.js";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { activityMetrics } from "./components.jsx";
 
@@ -26,6 +26,7 @@ function Evidence({ evidence }) {
 
 function PacingCard({ definition, plan }) {
   const phases = plan?.stepsMinutes;
+  const garmin = garminPacingWorkout(plan, definition.sport);
   const hasTimeline = Array.isArray(phases) && phases.length === 3 && phases.every(value => Number.isFinite(value) && value > 0);
   const phaseNames = ["Warm-up", "Steady work", "Cool-down"];
   const targets = pacingMetrics.filter(metric => metric.key !== "paceSecondsPerKm" || definition.key === "running")
@@ -35,6 +36,7 @@ function PacingCard({ definition, plan }) {
       ...hasTimeline ? phaseNames.map((name, index) => [name, `${phases[index]} min`]) : [],
       ["HR ceiling", Number.isFinite(plan.hrCeiling) ? `${plan.hrCeiling} bpm` : null],
       ["RPE", rangeFor(plan.rpe) ? `${rangeLabel(plan.rpe)} / 10` : null], ["Adjustment", plan.adjustment],
+      ["Garmin workout", garmin && <a href={garmin.url} target="_blank" rel="noopener noreferrer">{garmin.name}</a>],
     ]} />
     <DetailTable columns={["Target", "Range", "Source", "Date", "Confidence"]} rows={targets.map(metric =>
       [metric.label, metric.range ? `${rangeLabel(metric.range, metric.unit)} ${metric.unit}` : null,
@@ -70,6 +72,10 @@ function PacingCard({ definition, plan }) {
       {Number.isFinite(plan.hrCeiling) && <span>HR ceiling <b>{plan.hrCeiling} bpm</b></span>}
       {rangeFor(plan.rpe) && <span>RPE <b>{rangeLabel(plan.rpe)} / 10</b></span>}
       {plan.adjustment && <p>{plan.adjustment}</p>}
+    </div>}
+    {garmin && <div className="pacing-garmin">
+      <a className="report-action report-action-primary" href={garmin.url} target="_blank" rel="noopener noreferrer"
+        aria-label={`Open ${definition.label.toLowerCase()} workout in Garmin Connect`}>Open in Garmin Connect <span aria-hidden="true">↗</span></a>
     </div>}
   </DataCard>;
 }

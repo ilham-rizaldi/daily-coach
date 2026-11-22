@@ -26,6 +26,24 @@ export function targetEvidence(target) {
   return target;
 }
 
+export function pacingWorkoutSignature(plan, sport) {
+  return JSON.stringify([sport, plan?.stepsMinutes, plan?.powerWatts, plan?.hrBpm, plan?.paceSecondsPerKm]);
+}
+
+export function garminPacingWorkout(plan, sport) {
+  const saved = plan?.garminWorkout;
+  const type = { Ride: "cycling", Run: "running" }[sport];
+  if (!saved?.url || !type || saved.signature !== pacingWorkoutSignature(plan, sport)) return null;
+  try {
+    const url = new URL(saved.url);
+    if (url.origin !== "https://connect.garmin.com" || url.username || url.password
+      || !/^\/app\/workout\/\d+$/.test(url.pathname) || url.searchParams.get("workoutType") !== type) return null;
+    return { name: saved.name || "Saved Garmin workout", url: `${url.origin}${url.pathname}?workoutType=${type}` };
+  } catch {
+    return null;
+  }
+}
+
 export function compareWorkBlock(activity, reviews = []) {
   if (!Array.isArray(reviews)) return null;
   const match = reviews.find(review => review?.activity?.provider && review.activity.id

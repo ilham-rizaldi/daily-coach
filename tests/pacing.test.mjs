@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { compareWorkBlock, paceClock, rangeFor, reviewMetrics, targetEvidence } from "../src/pacing.js";
+import { compareWorkBlock, garminPacingWorkout, paceClock, pacingWorkoutSignature, rangeFor, reviewMetrics, targetEvidence } from "../src/pacing.js";
 
 const date = "2026-11-22";
 const activity = { sport: "Run", date, externalIds: { garmin: "1", strava: "2" }, averageHr: 146 };
@@ -9,6 +9,16 @@ const review = {
   plan: { date: "2026-11-20", hrBpm: [130, 145], paceSecondsPerKm: [570, 660], powerWatts: [160, 200] },
   workBlock: { source: "Garmin", scope: "steady-work", seconds: 1200, hrBpm: 140, paceSecondsPerKm: 560 },
 };
+
+test("the Garmin link targets the saved workout for the exact sport and pacing plan", () => {
+  const plan = { stepsMinutes: [5, 30, 5], powerWatts: [100, 110], hrBpm: [125, 145] };
+  const url = new URL(`/app/workout/${1}?workoutType=cycling`, "https://connect.garmin.com").href;
+  plan.garminWorkout = { url, signature: pacingWorkoutSignature(plan, "Ride") };
+  assert.equal(garminPacingWorkout(plan, "Ride").url, url);
+  assert.equal(garminPacingWorkout({ ...plan, powerWatts: [105, 115] }, "Ride"), null);
+  assert.equal(garminPacingWorkout(plan, "Run"), null);
+  assert.equal(garminPacingWorkout({ ...plan, garminWorkout: { ...plan.garminWorkout, url: url.replace("connect.garmin.com", "example.com") } }, "Ride"), null);
+});
 
 test("work-block comparison uses the matched plan and omits missing stream values", () => {
   const comparison = compareWorkBlock(activity, [review]);
