@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="dark">
+  <title>Open report · Performance Desk</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #f2f4f6; background: #12161c; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px; }
+    main { width: min(100%, 420px); padding: 32px; border: 1px solid #39434f; border-radius: 18px; background: linear-gradient(145deg, #26303b, #191f27); }
+    .brand { margin: 0 0 28px; color: #c4f18b; font-size: 14px; font-weight: 650; }
+    h1 { margin: 0 0 28px; font-size: 30px; letter-spacing: -0.8px; }
+    label { display: block; margin-bottom: 9px; color: #cdd3db; font-size: 14px; }
+    input, button { width: 100%; min-height: 48px; border-radius: 8px; font: inherit; }
+    input { border: 1px solid #65717f; background: #111821; color: white; padding: 10px 12px; }
+    input:focus-visible, button:focus-visible { outline: 3px solid #94c9f8; outline-offset: 3px; }
+    button { margin-top: 16px; border: 0; background: #c4f18b; color: #172111; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: 0.65; cursor: wait; }
+    #status { color: #ffb9ad; font-size: 14px; line-height: 1.5; }
+    #status:empty { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="brand">Performance Desk</p>
+    <h1>Open your report</h1>
+    <form id="access">
+      <label for="code">Access code</label>
+      <input id="code" type="password" autocomplete="one-time-code" maxlength="128" required>
+      <button id="open" type="submit">Open report</button>
+      <p id="status" role="alert"></p>
+    </form>
+  </main>
+  <script type="module">
+    const params = new URLSearchParams(location.hash.slice(1));
+    const form = document.getElementById("access");
+    const button = document.getElementById("open");
+    const status = document.getElementById("status");
+    const code = document.getElementById("code");
+    const decode = value => Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), character => character.charCodeAt(0));
+    const valid = /^[A-Za-z0-9_-]{22}$/.test(params.get("salt") || "")
+      && /^[A-Za-z0-9_-]{16}$/.test(params.get("wrapiv") || "")
+      && /^[A-Za-z0-9_-]{64}$/.test(params.get("wrappedkey") || "")
+      && /^[A-Za-z0-9_-]{16}$/.test(params.get("iv") || "")
+      && /^[A-Za-z0-9_-]{1,2000000}$/.test(params.get("data") || "");
+    if (!valid) {
+      status.textContent = "Open the complete report link from your coaching email.";
+      button.disabled = true;
+      code.disabled = true;
+    }
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (!valid || button.disabled) return;
+      button.disabled = true;
+      button.textContent = "Opening…";
+      status.textContent = "";
+      try {
+        const material = await crypto.subtle.importKey("raw", new TextEncoder().encode(code.value.trim()), "PBKDF2", false, ["deriveKey"]);
+        const wrappingKey = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: decode(params.get("salt")), iterations: 600000, hash: "SHA-256" }, material, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+        const bytes = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: decode(params.get("wrapiv")), additionalData: new TextEncoder().encode("daily-coach-code-v1") }, wrappingKey, decode(params.get("wrappedkey"))));
+        if (bytes.length !== 32) throw new Error("Invalid key");
+        const key = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        const target = new URL("./", location.href);
+        target.search = "";
+        target.hash = new URLSearchParams({ key, iv: params.get("iv"), data: params.get("data") }).toString();
+        code.value = "";
+        location.replace(target.href);
+      } catch {
+        status.textContent = "The code could not open this report. Check the code and try again.";
+        button.disabled = false;
+        button.textContent = "Open report";
+        code.focus();
+      }
+    });
+  </script>
+</body>
+</html>
