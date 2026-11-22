@@ -9,11 +9,13 @@ import CoachSuggestions, { hasCoachSuggestions } from "./CoachSuggestions.jsx";
 import { Reference } from "./Reference.jsx";
 import { SessionCheckIn } from "./SessionCheckIn.jsx";
 import { RecoveryProgression, TrainingPacing } from "./TrainingTargets.jsx";
+import { HistoryContext } from "./CardDetails.jsx";
 
 const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
 const BenchmarkView = lazy(() => import("./BenchmarkView.jsx"));
+const PerformancePrediction = lazy(() => import("./PerformancePrediction.jsx"));
 const WeekPlanner = lazy(() => import("./WeekPlanner.jsx"));
-const sections = ["Daily", "Trends", "Benchmarks", "Plan", "Archive", "Reference"];
+const sections = ["Daily", "Trends", "Benchmarks", "Predictions", "Plan", "Archive", "Reference"];
 const reportRequest = "Generate my current Performance Desk report using the existing reporting framework. In signed-in Google Chrome, freshly verify Garmin Connect, Strava, and Intervals.icu. If any required data is unavailable or unverified, stop and tell me exactly what is missing. If all checks pass, verify that the private report opens and email it to my configured address.";
 const reportRequestUrl = `https://chatgpt.com/?q=${encodeURIComponent(reportRequest)}`;
 
@@ -184,7 +186,7 @@ export function App() {
             <a className="report-action" href="https://chatgpt.com/library" target="_blank" rel="noreferrer">Open ChatGPT Library</a>
           </section>
         )}
-        {report && <>
+        {report && <HistoryContext.Provider value={{ report, reports }}>
           {section === "Daily" && (
             <>
               <ConditionOverview report={report} />
@@ -198,7 +200,7 @@ export function App() {
                   <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
                 </>
               )}
-              <TrainingPacing report={report} onThresholds={() => changeSection("Reference")} />
+              <TrainingPacing report={report} onThresholds={() => changeSection("Reference")} onPredictions={() => changeSection("Predictions")} />
               <details className="check-in-panel"><summary>Session check-in</summary><SessionCheckIn key={`${report.date}:${accessKey}`} report={report} accessKey={accessKey} preview={preview} /></details>
             </>
           )}
@@ -219,6 +221,11 @@ export function App() {
           {section === "Benchmarks" && (
             <ChartBoundary key={`benchmarks:${report.date}:${report.capturedAt}`}>
               <Suspense fallback={<p className="quiet" role="status">Loading…</p>}><BenchmarkView report={report} /></Suspense>
+            </ChartBoundary>
+          )}
+          {section === "Predictions" && (
+            <ChartBoundary key={`predictions:${report.date}:${report.capturedAt}`}>
+              <Suspense fallback={<p className="quiet" role="status">Loading…</p>}><PerformancePrediction report={report} /></Suspense>
             </ChartBoundary>
           )}
           {section === "Plan" && (
@@ -243,7 +250,7 @@ export function App() {
               {!preview && <div className="archive-actions"><button onClick={copyLink}>Copy link</button><button onClick={lockArchive}>Lock</button></div>}
             </>
           )}
-        </>}
+        </HistoryContext.Provider>}
       </main>
     </>
   );

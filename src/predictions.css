@@ -1,0 +1,26 @@
+.prediction-intro { margin: 0 0 16px; color: var(--muted); }
+.prediction-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px; }
+.prediction-card { padding: clamp(16px, 3vw, 23px); border: 1px solid var(--panel-border); border-radius: 19px; background: var(--surface); }
+.prediction-card[data-sport="Cycling"] { --prediction-accent: var(--blue); }
+.prediction-card[data-sport="Running"] { --prediction-accent: var(--green); }
+.prediction-card header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.prediction-card h2 { margin: 0; font-size: clamp(20px, 3vw, 26px); }
+.prediction-confidence { font-size: 12px; color: var(--muted); }
+.prediction-confidence[data-confidence="Low"] { color: var(--amber); }
+.prediction-confidence[data-confidence="Medium"], .prediction-confidence[data-confidence="High"] { color: var(--green); }
+.prediction-input { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 135px); gap: 10px; align-items: center; margin-bottom: 10px; font-weight: 570; }
+.prediction-input small { margin-left: 4px; color: var(--muted); font-weight: 450; }
+.prediction-input input, .prediction-input select {
+  min-width: 0; width: 100%; min-height: 40px; padding: 7px 9px;
+  color: var(--text); background: var(--surface-raised); border: 1px solid var(--control-border); border-radius: 8px;
+  font-family: inherit; font-size: 15px; font-variant-numeric: tabular-nums;
+}
+.prediction-input input:focus-visible, .prediction-input select:focus-visible { outline: 2px solid var(--prediction-accent); outline-offset: 2px; }
+.prediction-readout { display: grid; gap: 4px; margin: 13px 0 12px; padding: 13px; border: 1px solid var(--rule); border-radius: 12px; background: var(--canvas); }
+.prediction-readout > span, .prediction-readout > small, .prediction-reason, .prediction-source { color: var(--muted); }
+.prediction-readout > strong { font-size: clamp(24px, 4.5vw, 39px); line-height: 1.15; letter-spacing: -.04em; color: var(--prediction-accent); }
+.prediction-readout > .prediction-unavailable { color: var(--text); font-size: clamp(21px, 3.5vw, 28px); }
+.prediction-reason, .prediction-source { margin: 7px 0 0; font-size: 13px; }
+.prediction-source { font-size: 12px; }
+.pacing-heading-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+@media (max-width: 660px) { .prediction-grid { grid-template-columns: 1fr; } }

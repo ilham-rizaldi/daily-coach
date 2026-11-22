@@ -6,7 +6,7 @@ import { DataCard, DetailTable } from "./CardDetails.jsx";
 export default function TrainingChart({ report, days = 28, sport = "All" }) {
   const data = dailySeries(report, days, sport);
   return (
-    <DataCard as="div" className="training-chart" title="Daily training duration" detail={<DetailTable
+    <DataCard as="div" className="training-chart" title="Daily training duration" history={{ kind: "activities", sport: sport === "All" ? undefined : sport }} detail={<DetailTable
       caption={`${sport} · ${days} days ending ${formatDate(report.date)}`} columns={["Date", "Duration · min", "7-day mean · min"]}
       rows={[...data].reverse().map(row => [formatDate(row.date), Number.isFinite(row.minutes) ? decimal(row.minutes) : null,
         Number.isFinite(row.mean) ? decimal(row.mean) : null])} />}>

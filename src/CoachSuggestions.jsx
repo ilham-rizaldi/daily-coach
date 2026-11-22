@@ -74,7 +74,7 @@ export default function CoachSuggestions({ report, onEvidence, children }) {
       )}
       <div className="coach-suggestions-grid">
         {plan.sections.map(({ kind, title, items }, index) => (
-          <DataCard as="section" key={`${kind}-${index}`} className="coach-suggestion" data-kind={kind} title={title}
+          <DataCard as="section" key={`${kind}-${index}`} className="coach-suggestion" data-kind={kind} title={title} history="coach"
             detail={<><ul>{items.map(item => <li key={item}>{item}</li>)}</ul>
               <DetailFacts rows={[["Report", formatDate(report.date, { year: "numeric" })],
                 ["Signals", plan.why.join(" · ")], ["Alternative", plan.alternative], ["Reassess", plan.reassess]]} />

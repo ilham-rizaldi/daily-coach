@@ -58,7 +58,7 @@ export default function WeekPlanner({ report }) {
       const estimate = estimateSessionLoad(report, { sport: plan.sport, minutes: numeric(plan.minutes), effort: plan.effort });
       const valid = plan.sport === "Rest" || (numeric(plan.minutes) > 0 && numeric(plan.minutes) <= 600);
       const output = result.available ? result.rows[index] : null;
-      return <DataCard as="fieldset" className={`week-day ${plan.sport === "Rest" ? "week-day-rest" : ""}`} key={plan.date} title={`Plan · ${formatDate(plan.date)}`}
+      return <DataCard as="fieldset" className={`week-day ${plan.sport === "Rest" ? "week-day-rest" : ""}`} key={plan.date} title={`Plan · ${formatDate(plan.date)}`} history={plan.sport === "Rest" ? "recovery" : { kind: "activities", sport: plan.sport }}
         detail={<>
           <DetailFacts rows={[["Date", formatDate(plan.date, { year: "numeric" })], ["Session", sports.find(([value]) => value === plan.sport)?.[1]],
             ["Duration", plan.sport !== "Rest" && valid ? `${plan.minutes} min` : null], ["Effort", plan.sport !== "Rest" ? plan.effort : null],
@@ -85,7 +85,7 @@ export default function WeekPlanner({ report }) {
     {result.available && <>
       <dl className="week-plan-summary"><div><dt>Volume</dt><dd><DurationValue seconds={result.totals.minutes * 60} /></dd><small>{result.totals.sessions} sessions</small></div><div><dt>TL · Est.</dt><dd>{display(result.totals.load)}</dd><small>{display(result.totals.low)}–{display(result.totals.high)}</small></div>{Object.entries(metrics).map(([key, { label, color }]) => <div key={key}><dt>{label} · {formatDate(end.date)}</dt><dd style={{ color }}>{display(end.mid[key])}</dd><small>{display(end.range[key].low)}–{display(end.range[key].high)}</small></div>)}</dl>
       <div className="week-chart-heading"><div className="week-metric-switch" role="group" aria-label="Projection metric">{Object.entries(metrics).map(([key, { label }]) => <button key={key} aria-pressed={metric === key} onClick={() => setMetric(key)}>{label}</button>)}</div><div className="week-chart-key"><span style={{ color: selected.color }}>● Plan</span><span>┄ Rest</span><span>Scenario range</span></div></div>
-      <DataCard as="div" title={`Seven-day ${selected.label} projection`} detail={<DetailTable
+      <DataCard as="div" title={`Seven-day ${selected.label} projection`} history="intervals" detail={<DetailTable
         caption="Intervals.icu-style estimates · baseline and daily projected outputs" columns={["Date", "Plan", "Scenario range", "Rest"]}
         rows={chart.map(row => [row.label, display(row.value), row.range.map(display).join("–"), display(row.rest)])} />}>
       <div className="week-plan-chart" role="group" aria-label={`Estimated seven-day ${selected.label} with historical scenario range and rest comparison`}>

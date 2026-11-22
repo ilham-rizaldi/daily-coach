@@ -4,6 +4,7 @@ import { decimal, formatDate } from "./report.js";
 import { contributionWeights, historicalLoadRate } from "./forecast.js";
 import { projectGarminRest } from "./garminForecast.js";
 import { ThresholdChecks } from "./TrainingTargets.jsx";
+import { SourceHistory } from "./SourceHistory.jsx";
 
 const glossary = [
   ["RHR Δ", "Recovery trend", "bpm", "Daily RHR minus the median of the preceding 28 calendar days. At least seven prior readings are required; the current day is excluded from its baseline."],
@@ -54,6 +55,8 @@ const glossary = [
   ["7d mean", "Volume", "min/day", "Recorded duration over the current date and preceding six dates, divided by seven."],
   ["P25 / P50 / P75", "Load estimate", "Load/h", "Lower quartile, median and upper quartile of same-sport historical load rates."],
   ["Scenario range", "Forecast", "Load / ratio", "Historical variation propagated through the model; displayed bounds are scenario extrema."],
+  ["Steady-effort HR", "Predictions", "bpm", "Median final five-minute HR from comparable eight-minute recorded blocks. The app chooses at most one block per day near the input, with the same source, recording device and sport context. The displayed range is the spread of matched observations."],
+  ["Prediction confidence", "Predictions", "Low / Medium / High", "Low marks sparse or weakly tested evidence. Medium requires at least four later-day tests, lower average error than the earlier HR median and at most 8 bpm error. High also requires at least eight tests, at least five supporting dates, documented comparable conditions and at most 5 bpm error. Estimates are unavailable outside supported effort ranges."],
   ["Extrapolation", "Forecast", "Status", "A planned duration or current load state outside the captured calibration range."],
 ];
 
@@ -62,6 +65,7 @@ const methodLinks = [
   { title: "Sport contributions", url: "https://forum.intervals.icu/t/fitness-and-fatigue-for-different-activity-types/652" },
   { title: "Garmin training load", url: "https://www.garmin.com/en-US/garmin-technology/cycling-science/physiological-measurements/training-load/" },
   { title: "Garmin readiness colors", url: "https://www8.garmin.com/manuals-apac/webhelp/forerunner265series/EN-SG/GUID-35D1273C-4F9C-4029-9B8F-F997F4D7C3A8-7793.html" },
+  { title: "Testing predictions in chronological order", url: "https://otexts.com/fpp3/toolbox.html#time-series-cross-validation" },
 ];
 
 function ColorKey({ items }) {
@@ -247,6 +251,7 @@ export function Reference({ report, researchOpen = false }) {
   return <section className="reference-page" aria-labelledby="reference-title">
     <div className="page-title"><h1 id="reference-title">Reference</h1></div>
     <ThresholdChecks report={report} />
+    <SourceHistory capture={report.baseHistory} />
     <CoachingResearch coaching={report.coaching} open={researchOpen} />
     <label className="reference-search">Search terms<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="CTL, RPE, HRV…" /></label>
     <div className="table-scroll"><table className="reference-table">

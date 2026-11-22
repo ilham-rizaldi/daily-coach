@@ -22,7 +22,7 @@ export function Session({ report, expanded, onExpand }) {
   const session = report.coaching.nextSession;
   const historical = !report.preview && report.date < jakartaDate();
   return (
-    <DataCard as="section" className="session-section" aria-labelledby="session-title" title={session.name} detail={<>
+    <DataCard as="section" className="session-section" aria-labelledby="session-title" title={session.name} history={{ kind: "activities", sport: ["Ride", "Run", "Weight Training"].includes(session.sport) ? session.sport : undefined }} detail={<>
       <DetailFacts rows={[["Date", formatDate(session.date)], ["Target", session.target], ["Condition", session.condition], ["Alternative", session.alternative]]} />
       <DetailTable columns={["Step", "Minutes", "Instructions"]} rows={session.steps.map(step => [step.name, step.minutes, step.detail])} />
       {report.coaching.adjustments?.length > 0 && <ul>{report.coaching.adjustments.map(item => <li key={item}>{item}</li>)}</ul>}
@@ -257,9 +257,9 @@ export function Trends({ report }) {
         <h2 id="comparison-title">7d comparison {!comparison.comparable && <small className="quiet">Partial</small>}</h2>
         <p className="quiet period-dates">{formatDate(current.start)}–{formatDate(current.end)} / {formatDate(previous.start)}–{formatDate(previous.end)}</p>
         <div className="comparison-grid">
-          <DataCard as="div" title="Duration comparison" detail={compareDetail("Duration", row => duration(row.seconds), timeLabel)}><span>Duration</span><DurationValue as="strong" seconds={currentAvailable ? current.seconds : NaN} /><small>{timeLabel}</small><PeriodBars label="Duration in seconds" format={duration} current={currentAvailable?current.seconds:null} previous={previousAvailable?previous.seconds:null} /></DataCard>
-          <DataCard as="div" title="Session count comparison" detail={compareDetail("Sessions", row => row.sessions, changeLabel(comparison.sessionChange, "sessions"))}><span>Sessions</span><strong>{currentAvailable ? current.sessions : "—"}</strong><small>{changeLabel(comparison.sessionChange, "sessions")}</small><PeriodBars label="Sessions" current={currentAvailable?current.sessions:null} previous={previousAvailable?previous.sessions:null} /></DataCard>
-          <DataCard as="div" title="Active days comparison" detail={compareDetail("Active days", row => row.activeDays, changeLabel(comparison.activeDayChange, "days"))}><span>Active days</span><strong className="metric-value"><span className="metric-number">{currentAvailable ? current.activeDays : "—"}</span>{currentAvailable && <small className="metric-unit metric-unit-tight">/7</small>}</strong><small>{changeLabel(comparison.activeDayChange, "days")}</small><PeriodBars label="Active days" current={currentAvailable?current.activeDays:null} previous={previousAvailable?previous.activeDays:null} /></DataCard>
+          <DataCard as="div" title="Duration comparison" history="activities" detail={compareDetail("Duration", row => duration(row.seconds), timeLabel)}><span>Duration</span><DurationValue as="strong" seconds={currentAvailable ? current.seconds : NaN} /><small>{timeLabel}</small><PeriodBars label="Duration in seconds" format={duration} current={currentAvailable?current.seconds:null} previous={previousAvailable?previous.seconds:null} /></DataCard>
+          <DataCard as="div" title="Session count comparison" history="activities" detail={compareDetail("Sessions", row => row.sessions, changeLabel(comparison.sessionChange, "sessions"))}><span>Sessions</span><strong>{currentAvailable ? current.sessions : "—"}</strong><small>{changeLabel(comparison.sessionChange, "sessions")}</small><PeriodBars label="Sessions" current={currentAvailable?current.sessions:null} previous={previousAvailable?previous.sessions:null} /></DataCard>
+          <DataCard as="div" title="Active days comparison" history="activities" detail={compareDetail("Active days", row => row.activeDays, changeLabel(comparison.activeDayChange, "days"))}><span>Active days</span><strong className="metric-value"><span className="metric-number">{currentAvailable ? current.activeDays : "—"}</span>{currentAvailable && <small className="metric-unit metric-unit-tight">/7</small>}</strong><small>{changeLabel(comparison.activeDayChange, "days")}</small><PeriodBars label="Active days" current={currentAvailable?current.activeDays:null} previous={previousAvailable?previous.activeDays:null} /></DataCard>
         </div>
       </section>
       <TrainingChart report={report} days={days} sport={sport} />
@@ -270,7 +270,7 @@ export function Trends({ report }) {
       </table></div></details>
       <h2 className="mix-title">Sport mix · 28d</h2>
       {mixSeconds>0 && <div className="sport-mix-bar" role="img" aria-label={mix.map(row=>`${row.sport} ${decimal(row.seconds/mixSeconds*100,0)}%`).join(", ")}>{mix.map(row=><span key={row.sport} style={{width:`${row.seconds/mixSeconds*100}%`,background:sportColors[row.sport] ?? palette.green}} />)}</div>}
-      <div className="sport-mix">{mix.map(row => <DataCard as="div" key={row.sport} title={`${row.sport} · 28-day volume`} detail={<DetailFacts rows={[
+      <div className="sport-mix">{mix.map(row => <DataCard as="div" key={row.sport} title={`${row.sport} · 28-day volume`} history={{ kind: "activities", sport: row.sport }} detail={<DetailFacts rows={[
         ["Period", `${formatDate(mixStart)}–${formatDate(report.date)}`], ["Duration", duration(row.seconds)], ["Sessions", row.sessions],
         ["Distance", row.distanceAvailable ? `${decimal(row.distanceKm, 2)} km` : null],
         ["Coverage", coversWindow(report, mixStart, report.date) ? "Includes report day through capture" : "Partial coverage"],

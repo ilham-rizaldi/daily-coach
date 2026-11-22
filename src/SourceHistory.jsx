@@ -1,0 +1,30 @@
+import { DataCard, DetailFacts } from "./CardDetails.jsx";
+import { formatDate } from "./report.js";
+
+const span = item => item.first && item.last
+  ? `${formatDate(item.first, { year: "numeric" })} – ${formatDate(item.last, { year: "numeric" })}` : "Dates unavailable";
+
+export function SourceHistory({ capture }) {
+  if (!capture) return null;
+  const battery = capture.bodyBattery;
+  return <section className="training-section" aria-labelledby="source-history-heading">
+    <div className="training-heading"><div><h2 id="source-history-heading">Historical source coverage</h2>
+      <p>Activity counts are per provider. The same workout can appear in multiple sources.</p></div></div>
+    <div className="threshold-grid">
+      {capture.providers?.map(item => <DataCard key={item.source} title={item.source} className="training-panel"
+        history={{ kind: "source", source: item.source }}
+        detail={<DetailFacts rows={[["Source", item.source], ["Activity summaries", item.records], ["Recorded dates", span(item)],
+          ["Files", item.status], ["Coverage note", item.detail]]} />}>
+        <h3>{item.source}</h3><strong className="training-number">{item.records}<small> activities</small></strong>
+        <p>{span(item)}</p><p>{item.status}</p>
+      </DataCard>)}
+      {battery && <DataCard title="Body Battery source coverage" className="training-panel" history="battery"
+        detail={<DetailFacts rows={[["Source", battery.detail], ["Recorded dates", span(battery)],
+          ["Days with low and high", battery.records], ["Files", battery.files],
+          ["Conflicting dates", battery.unresolvedDates?.length || "None in downloaded windows"]]} />}>
+        <h3>Body Battery</h3><strong className="training-number">{battery.records}<small> days</small></strong>
+        <p>{span(battery)}</p><p>{battery.status}</p>
+      </DataCard>}
+    </div>
+  </section>;
+}

@@ -10,7 +10,7 @@ export function GarminRestForecast({ report }) {
   const ratio = result.baseline?.displayRatio ?? report.wellness.garminLoadRatio;
   const acute = result.baseline?.acute ?? report.wellness.garminAcuteLoad;
   const chronic = result.baseline?.chronic ?? report.wellness.garminChronicLoad;
-  return <DataCard as="section" className="garmin-rest garmin-rest-compact" aria-labelledby="garmin-rest-heading" title="Garmin rest projection" detail={<>
+  return <DataCard as="section" className="garmin-rest garmin-rest-compact" aria-labelledby="garmin-rest-heading" title="Garmin rest projection" history="garmin-load" detail={<>
     <DetailFacts rows={[["Projection date", formatDate(date)], ["Model", "Paired historical Garmin load changes on days with no recorded activity"],
       ["Calibration days", result.n], ["Confidence", result.available ? "Low" : null], ["Status", result.error],
       ["Applicability", result.extrapolation ? "Extrapolated beyond the captured baseline range" : null]]} />

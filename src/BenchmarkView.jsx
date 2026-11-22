@@ -3,6 +3,7 @@ import PerformanceProgression, { effortClock as clock, personalRecords } from ".
 import { MetricValue } from "./Readout.jsx";
 import { decimal, formatDate } from "./report.js";
 import { WorkoutReview } from "./TrainingTargets.jsx";
+import { datedHistory } from "./cardHistory.js";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { smoothLinePath } from "./chart-lines.js";
 import "./benchmark.css";
@@ -120,6 +121,8 @@ function SegmentPanel({ data }) {
   const delta = previous && group.efforts.at(-2).date !== latest.date ? latest.seconds - previous.seconds : null;
   const deltaLabel = delta == null ? null : delta === 0 ? "Same as prior" : `${clock(Math.abs(delta))} ${delta < 0 ? "faster" : "slower"}`;
   return <DataCard as="section" className="benchmark-card" aria-labelledby="benchmark-segments-title" title={group?.label || "Segment benchmarks"}
+    history={group && datedHistory(`Segment efforts · ${group.source}`, ["Elapsed", "Avg HR · bpm", "Record"], group.efforts,
+      row => [clock(row.seconds), row.hr, row.verifiedRecord ? "Verified PR" : null])}
     detail={group ? <>
       <DetailFacts rows={[["Source", group.source], ["Change vs prior dated effort", deltaLabel]]} />
       <DetailTable caption="Recorded segment efforts" columns={["Date", "Elapsed", "Average HR", "Record"]} rows={[...group.efforts].reverse().map(effort =>
@@ -157,6 +160,8 @@ function WorkoutPanel({ data }) {
   const lapPace = workout?.intervals.every(interval => interval.classification === "lap" && positive(interval.averagePaceSeconds));
   const maxPace = lapPace ? Math.max(...workout.intervals.map(interval => interval.averagePaceSeconds)) : 0;
   return <DataCard as="section" className="benchmark-card" aria-labelledby="benchmark-workouts-title" title={workout?.label || "Workout execution"}
+    history={datedHistory("Workouts with captured splits", ["Workout", "Blocks", "Source"], data,
+      row => [row.label, row.intervals.length, row.source])}
     detail={workout ? <>
       <DetailFacts rows={[["Source", <Source name={workout.source} href={workout.url} date={workout.date} />]]} />
       <DetailTable caption={lapPace ? "Recorded lap splits" : "Recorded intervals"} columns={["Block", "Time", "Avg HR", "Max HR", "Distance", "Pace", "Speed"]}

@@ -38,6 +38,15 @@
 .detail-table thead { color: var(--muted); }
 .detail-table td { color: var(--text); }
 .detail-table tbody th { font-weight: 530; }
+.card-history-controls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.card-detail-views { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+.card-history-controls .report-action[aria-pressed="true"] {
+  border-color: var(--blue); color: var(--blue); background: color-mix(in srgb, var(--blue) 10%, var(--surface));
+}
+.card-history-coverage { font-size: 12px; }
+.card-history .battery-range-chart { margin: 4px 0 14px; }
+.card-history .detail-table th[scope="row"] { white-space: nowrap; }
+.card-history-more { margin-top: 12px; }
 .sleep-detail-hero {
   display: grid; grid-template-columns: auto 1fr; align-items: center; gap: clamp(14px, 4vw, 34px);
   padding: 14px 0 22px;

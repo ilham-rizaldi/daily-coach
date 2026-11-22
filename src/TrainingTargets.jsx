@@ -31,7 +31,7 @@ function PacingCard({ definition, plan }) {
   const phaseNames = ["Warm-up", "Steady work", "Cool-down"];
   const targets = pacingMetrics.filter(metric => metric.key !== "paceSecondsPerKm" || definition.key === "running")
     .map(metric => ({ ...metric, range: rangeFor(plan?.[metric.key]), evidence: targetEvidence(plan?.evidence?.[metric.key]) }));
-  return <DataCard className="pacing-card" title={`${definition.label} pacing`} data-signal={definition.key === "cycling" ? "power" : "pace"} detail={plan && <>
+  return <DataCard className="pacing-card" title={`${definition.label} pacing`} history={{ kind: "pacing", sport: definition.sport }} data-signal={definition.key === "cycling" ? "power" : "pace"} detail={plan && <>
     <DetailFacts rows={[
       ...hasTimeline ? phaseNames.map((name, index) => [name, `${phases[index]} min`]) : [],
       ["HR ceiling", Number.isFinite(plan.hrCeiling) ? `${plan.hrCeiling} bpm` : null],
@@ -54,7 +54,7 @@ function PacingCard({ definition, plan }) {
     </div>}
     <dl className="pacing-metrics">
       {targets.map(({ range, evidence, ...metric }) =>
-        <DataCard as="div" definition key={metric.key} className="pacing-target" data-signal={metric.tone} title={`${definition.label} ${metric.label.toLowerCase()}`}
+        <DataCard as="div" definition key={metric.key} className="pacing-target" data-signal={metric.tone} title={`${definition.label} ${metric.label.toLowerCase()}`} history={{ kind: "pacing", sport: definition.sport, metric: metric.key }}
           detail={<DetailFacts rows={[
             ["Steady-work range", range ? `${rangeLabel(range, metric.unit)} ${metric.unit}` : "Target unavailable"],
             ["Source", evidence?.source], [evidence?.dateLabel || "Evidence date", evidence ? shownDate(evidence.date) : null],
@@ -80,12 +80,15 @@ function PacingCard({ definition, plan }) {
   </DataCard>;
 }
 
-export function TrainingPacing({ report, onThresholds }) {
+export function TrainingPacing({ report, onThresholds, onPredictions }) {
   const pacing = report.coaching?.pacing;
   return <section className="training-section" aria-labelledby="pacing-heading">
     <div className="training-heading">
       <div><h2 id="pacing-heading">Pacing cards</h2><p>{pacing?.status || "Pacing guidance for this report."}</p></div>
-      <button className="report-action" onClick={onThresholds}>Threshold & data checks</button>
+      <div className="pacing-heading-actions">
+        <button className="report-action" onClick={onThresholds}>Threshold & data checks</button>
+        <button className="report-action" onClick={onPredictions}>View predictions</button>
+      </div>
     </div>
     <div className="pacing-grid">{pacingSports.map(definition =>
       <PacingCard key={definition.key} definition={definition} plan={pacing?.[definition.key]} />)}</div>
@@ -103,7 +106,7 @@ export function ThresholdChecks({ report }) {
         <p>{checks ? `Checked ${shownDate(checks.date)} · ${checks.decision}` : "Threshold review unavailable for this snapshot."}</p></div>
     </div>
     {checks && <div className="threshold-grid">
-      {checks.rows.map(row => <DataCard key={row.title} className="training-panel" data-signal={row.tone} title={row.title}
+      {checks.rows.map(row => <DataCard key={row.title} className="training-panel" data-signal={row.tone} title={row.title} history={{ kind: "threshold", title: row.title }}
         detail={<><DetailFacts rows={[["Value", `${row.value} ${row.unit || ""}`], ["Status", row.status], ["Account settings", row.detail], ["Decision", checks.decision]]} />
           <Evidence evidence={targetEvidence(row.evidence)} /></>}>
         <h3>{row.title}</h3>
@@ -113,7 +116,7 @@ export function ThresholdChecks({ report }) {
         <Evidence evidence={targetEvidence(row.evidence)} />
       </DataCard>)}
     </div>}
-    {comparisons.length > 0 && <DataCard className="training-panel power-check" data-signal="power" title="Power by provider"
+    {comparisons.length > 0 && <DataCard className="training-panel power-check" data-signal="power" title="Power by provider" history={{ kind: "activities", sport: "Ride", metric: "powerWatts" }}
       detail={<><p>{shownDate(checks.powerComparison.date)} · {checks.powerComparison.note}</p><DetailTable columns={["Provider", "Average power", "Provider effort metric"]}
         rows={comparisons.map(row => [row.provider, Number.isFinite(row.averageWatts) ? `${row.averageWatts} W` : null,
           Number.isFinite(row.normalizedWatts) ? `${row.normalizedWatts} W NP` : row.effort])} /></>}>
@@ -158,7 +161,7 @@ export function WorkoutReview({ report }) {
         </select></label>}
       </div>
     </div>
-    {selected ? <DataCard className="training-panel workout-review" title={selected.name || sport} detail={<>
+    {selected ? <DataCard className="training-panel workout-review" title={selected.name || sport} history={{ kind: "activities", sport }} detail={<>
       <DetailFacts rows={[
         ["Date", shownDate(selected.date)], ["Source", selected.source], ["Average HR", Number.isFinite(selected.averageHr) ? `${selected.averageHr} bpm` : null],
         ["Distance", Number.isFinite(selected.distanceKm) ? `${decimal(selected.distanceKm, 2)} km` : null],
@@ -208,7 +211,7 @@ export function RecoveryProgression({ report }) {
     <div className="training-heading">
       <div><h2 id="progression-heading">Recovery & progression</h2><p>{report.coaching?.actionPlan?.reassess}</p></div>
     </div>
-    <DataCard as="div" className="training-panel progression-check" title="Recovery & progression" detail={<>
+    <DataCard as="div" className="training-panel progression-check" title="Recovery & progression" history="readiness" detail={<>
       <DetailFacts rows={[["Source", report.preview ? "Illustrative Garmin data" : "Garmin Connect"], ["Snapshot", w?.date ? shownDate(w.date) : null],
         ...readings.map(([label, value, unit]) => [label, value == null ? null : `${value}${unit}`]), ["Readiness status", w?.readinessStatus],
         ["Recovery status", w?.recoveryTimeStatus], ["Reassess", report.coaching?.actionPlan?.reassess]]} />

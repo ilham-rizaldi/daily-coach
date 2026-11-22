@@ -1,4 +1,5 @@
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
+import { datedHistory } from "./cardHistory.js";
 import { smoothLinePath } from "./chart-lines.js";
 import { useState } from "react";
 import { palette } from "./MetricGraphics.jsx";
@@ -174,7 +175,8 @@ function Sparkline({ label, points, color, display = decimal, connect = true }) 
 function Vo2Card({ series }) {
   const { sport, source, points } = series, latest = points.at(-1), color = sportColor(sport);
   const hasMonthly = points.some(point => point.precision === "month"), hasDaily = points.some(point => point.precision === "day");
-  return <DataCard className="progression-card" title={`${sport} VO₂ max`} detail={<>
+  return <DataCard className="progression-card" title={`${sport} VO₂ max`}
+    history={datedHistory(`VO₂ max · ${source}`, ["mL/kg/min", "Date precision"], points, row => [row.value, row.precision === "month" ? "Monthly" : "Daily"])} detail={<>
     <DetailFacts rows={[["Source", source]]} />
     <DetailTable columns={["Date", "VO₂ max · mL/kg/min", "Date precision"]} rows={[...points].reverse().map(point =>
       [pointDate(point, true), decimal(point.value), point.precision === "month" ? "Monthly" : "Daily"])} />
@@ -200,7 +202,8 @@ function SpeedCard({ sport, groups }) {
   const recordedGroup = groups.filter(row => row.basis === "recorded" || row.basis === "displayed")
     .sort((a, b) => b.points.at(-1).at - a.points.at(-1).at)[0];
   const recorded = recordedGroup?.points.at(-1);
-  return <DataCard className="progression-card" title={label} detail={<>
+  return <DataCard className="progression-card" title={label}
+    history={datedHistory(`${scope || label} · ${speedMethods[basis]} · ${source}`, [`${label} · ${unit}`, "Distance · km"], points, row => [display(row.value), Number.isFinite(row.distance) ? decimal(row.distance) : null])} detail={<>
     <DetailFacts rows={[["Source", source], ["Scope", scope], ["Timing basis", speedMethods[basis]]]} />
     <DetailTable columns={["Date", `${label} · ${unit}`, "Distance · km"]} rows={[...points].reverse().map(point =>
       [pointDate(point, true), display(point.value), Number.isFinite(point.distance) ? decimal(point.distance) : null])} />
@@ -219,7 +222,8 @@ function RecordCard({ record }) {
   const { sport, source, label, value, unit, date, url } = record;
   const timed = Number.isFinite(value) && unit === "s";
   const result = timed ? effortClock(value) : typeof value === "number" ? decimal(value, 2) : value;
-  return <DataCard className="progression-card progression-record" title={label} detail={<DetailFacts rows={[
+  return <DataCard className="progression-card progression-record" title={label}
+    history={datedHistory("Verified record", ["Result", "Source"], [record], () => [timed ? result : `${result} ${unit || ""}`.trim(), source])} detail={<DetailFacts rows={[
     ["Sport", sport], ["Result", <MetricValue value={result} unit={timed ? undefined : unit} />], ["Date", formatDate(date, { year: "numeric" })],
     ["Source", url ? <a href={url} target="_blank" rel="noopener noreferrer">{source}</a> : source],
   ]} />}>
