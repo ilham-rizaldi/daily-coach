@@ -23,23 +23,18 @@ function envelope() {
     wrappedkey: wrapped.toString("base64url"), iv: payload.iv, data: payload.ciphertext });
 }
 
-function loadPage(params, storage = new Map()) {
-  const elements = Object.fromEntries(["access", "open", "status", "code", "report-file"].map(id => [id,
+function loadPage(params, storage = new Map(), protocol = "https:") {
+  const elements = Object.fromEntries(["access", "open", "status", "code"].map(id => [id,
     { value: "", textContent: "", disabled: false, focus() {} }]));
   let submit;
-  let selectFile;
   let destination;
   elements.access.addEventListener = (_, callback) => { submit = callback; };
-  elements["report-file"].addEventListener = (_, callback) => { selectFile = callback; };
-  const location = { hash: "#" + params, href: "https://example.com/daily-coach/open.html#" + params,
+  const location = { protocol, hash: "#" + params, href: "https://example.com/daily-coach/open.html#" + params,
     replace(url) { destination = url; } };
   runInNewContext(script, { document: { getElementById: id => elements[id] }, location,
     localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) },
     URL, URLSearchParams, Uint8Array, TextEncoder, atob, btoa, crypto: webcrypto });
-  return { elements, destination: () => destination, async selectFile(contents) {
-    elements["report-file"].files = [{ size: contents.length, text: async () => contents }];
-    await selectFile();
-  }, async submit(code) {
+  return { elements, destination: () => destination, async submit(code) {
     elements.code.value = code;
     await submit({ preventDefault() {} });
   } };
@@ -55,12 +50,10 @@ test("a correct access code opens the intended authenticated report", async () =
   assert.equal(page.elements.code.value, "");
 });
 
-test("the live access page imports a local encrypted report and remembers it after a successful unlock", async () => {
+test("a complete private link allows later code-only access on the same browser", async () => {
   const params = envelope();
   const storage = new Map();
-  const page = loadPage("", storage);
-  assert.equal(page.elements.open.disabled, true);
-  await page.selectFile(params.toString());
+  const page = loadPage(params, storage);
   assert.equal(page.elements.open.disabled, false);
   await page.submit("incorrect-code");
   assert.equal(storage.size, 0);
@@ -72,16 +65,13 @@ test("the live access page imports a local encrypted report and remembers it aft
   assert.equal(reopened.destination(), page.destination());
 });
 
-test("invalid files or altered report ciphertext cannot replace a saved encrypted report", async () => {
+test("altered report ciphertext cannot replace a saved encrypted report", async () => {
   const original = envelope();
   const storage = new Map([["daily-coach-wrapped-report", original.toString()]]);
-  const page = loadPage("", storage);
-  await page.selectFile("not a report");
-  assert.equal(page.elements.open.disabled, true);
   const changed = new URLSearchParams(original);
   const ciphertext = changed.get("data");
   changed.set("data", (ciphertext[0] === "A" ? "B" : "A") + ciphertext.slice(1));
-  await page.selectFile(changed.toString());
+  const page = loadPage(changed, storage);
   await page.submit("sample-access-code");
   assert.equal(page.destination(), undefined);
   assert.deepEqual([...storage.values()], [original.toString()]);
@@ -97,12 +87,20 @@ test("a wrong code keeps the report locked and allows another attempt", async ()
   assert.ok(page.destination());
 });
 
-test("missing envelope fields disable opening before cryptographic work", async () => {
+test("missing envelope fields leave the code editable and explain how to open the report", async () => {
   const page = loadPage(new URLSearchParams("iv=bad&data=bad"));
-  assert.equal(page.elements.code.disabled, true);
-  assert.equal(page.elements.open.disabled, true);
+  assert.equal(page.elements.code.disabled, false);
+  assert.equal(page.elements.open.disabled, false);
   await page.submit("sample-access-code");
   assert.equal(page.destination(), undefined);
+  assert.equal(page.elements.code.value, "");
+  assert.match(page.elements.status.textContent, /private report link/);
+});
+
+test("the bare local page opens the live access form", () => {
+  const page = loadPage("", new Map(), "file:");
+  assert.equal(page.destination(), "https://ilham-rizaldi.github.io/daily-coach/open.html");
+  assert.doesNotMatch(readFileSync(new URL("../public/open.html", import.meta.url), "utf8"), /type="file"/);
 });
 
 test("tampering with a wrapped key cannot expose the report key", async () => {
