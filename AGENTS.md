@@ -45,3 +45,5 @@ Card dialogs offer dated history in seven-day, four-week, three-month and all-hi
 Open card dialogs with the recorded chart above its historical table. Keep device and methodology details available below the table. Leave missing days blank, distinguish sessions or occasional records from daily series, and use numeric values on their original scales.
 
 Use narrow segmented bars for bounded readiness scores, a compact ring for sleep score, and a segmented half-circle for heat acclimation when recorded. Give measured trend charts quiet dashed guides and clear date/value labels. Keep the existing metric colors and use fill only under continuous recorded runs.
+
+Use equal left and right gutters for the header and report, and reduce spacing between related cards without shrinking numeric readouts. Use consistent cyan for cycling power, lime for running pace and pink for heart rate in Predictions. Show paired observations as points. Keep both pacing prediction directions visible, each with its own confidence and chart-first evidence history. Check recovery against the dated capture before suggesting a workout.

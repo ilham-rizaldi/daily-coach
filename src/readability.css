@@ -5,17 +5,18 @@
 .metric-value .metric-unit-tight { margin-left:0; }
 .metric-duration { gap:.14em; }
 .metric-duration .metric-part { display:inline-flex; align-items:baseline; font:inherit; color:inherit; white-space:nowrap; }
-main { max-width:1600px; padding-inline:32px; }
-.report-meta { padding-block:18px; }
-.body-overview { padding:22px; margin-bottom:24px; }
-.body-overview .condition-heading { margin-bottom:18px; }
-.body-primary { gap:12px; }
-.body-tile { padding:18px 16px; border-radius:8px; }
+:root { --workspace-width: 1600px; --workspace-gutter: clamp(12px, 2.25vw, 28px); }
+main { max-width:var(--workspace-width); padding-inline:var(--workspace-gutter); }
+.report-meta { padding-block:10px; }
+.body-overview { padding:var(--panel-inset); margin-bottom:12px; }
+.body-overview .condition-heading { margin-bottom:12px; }
+.body-primary { gap:8px; }
+.body-tile { padding:13px 12px; border-radius:8px; }
 .body-tile dt { font-size:12px; line-height:1.4; }
 .body-tile dd { margin-top:12px; }
 .body-tile dd > strong { font-size:clamp(40px,3.2vw,48px); font-weight:650; line-height:1.08; letter-spacing:-.035em; }
-.body-tile-meta { margin-top:12px; font-size:11px; gap:5px 12px; }
-.body-secondary { gap:12px; padding-top:16px; }
+.body-tile-meta { margin-top:8px; font-size:11px; gap:4px 8px; }
+.body-secondary { gap:9px; padding-top:10px; }
 .body-secondary > section, .body-secondary > section + section, .body-secondary > section:nth-child(3) { padding:16px; border:1px solid var(--panel-border); border-radius:8px; background:var(--surface); }
 .body-secondary h3 { font-size:13px; margin-bottom:16px; }
 .body-stat-row { gap:12px; }
@@ -126,14 +127,15 @@ td small { font-size:11px; }
 .session-checkin .checkin-actions { margin-top:20px; }
 .session-checkin .checkin-actions button { min-height:44px; font-size:14px; }
 
-@media(max-width:1400px) {
+@media(max-width:1260px) {
   .body-primary { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media(max-width:1400px) {
   .body-secondary { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .week-planner .week-plan-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
 }
 @media(min-width:1401px) and (max-width:1600px) { .body-secondary { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:700px) {
-  main { padding-inline:16px; }
   .body-overview { padding:14px; }
   .body-primary { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
   .body-tile { padding:16px 12px; }

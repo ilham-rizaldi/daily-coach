@@ -58,7 +58,7 @@ export default function CoachSuggestions({ report, onEvidence, children }) {
     <section className="coach-suggestions" aria-labelledby={headingId}>
       <header className="coach-suggestions-header">
         <div>
-          <p className="coach-suggestions-label">Coach suggestions{plan.plannedDate && <> · <time dateTime={plan.plannedDate}>{formatDate(plan.plannedDate)}</time></>}</p>
+          <p className="coach-suggestions-label">Saved coach plan{plan.plannedDate && <> · <time dateTime={plan.plannedDate}>{formatDate(plan.plannedDate)}</time></>}</p>
           <h1 id={headingId}>{plan.title}</h1>
         </div>
         {typeof onEvidence === "function" && plan.referenceIds.length > 0 && (

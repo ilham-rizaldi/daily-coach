@@ -1,0 +1,28 @@
+.workout-advice {
+  --advice-color: var(--quiet);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 18px;
+  margin-block-end: 12px;
+  padding: 12px var(--panel-inset);
+  border: 1px solid var(--panel-border);
+  border-inline-start: 3px solid var(--advice-color);
+  border-radius: var(--metric-radius);
+  background: var(--surface);
+}
+.workout-advice[data-workout-state="rest"] { --advice-color: var(--red); }
+.workout-advice[data-workout-state="easy"] { --advice-color: var(--amber); }
+.workout-advice[data-workout-state="planned"] { --advice-color: var(--green); }
+.workout-advice-main > span { font-size: 11px; font-weight: 650; color: var(--advice-color); }
+.workout-advice-main h2 { margin: 3px 0; font-size: clamp(16px, 2vw, 20px); letter-spacing: -.025em; }
+.workout-advice-main p, .workout-advice-evidence small { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.workout-advice-evidence dl { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 4px; }
+.workout-advice-evidence dl > div { padding: 6px 8px; border: 1px solid var(--rule); border-radius: 7px; background: var(--canvas); }
+.workout-advice-evidence dt { color: var(--muted); font-size: 10px; }
+.workout-advice-evidence dd { margin: 2px 0 0; font-size: 16px; font-weight: 650; }
+.workout-advice > .card-details-access { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 660px) {
+  .workout-advice { grid-template-columns: 1fr; }
+  .workout-advice-main p { max-width: 55ch; }
+}

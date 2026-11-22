@@ -1,9 +1,9 @@
 :root {
-  --canvas: #070809;
-  --surface: #0f1013;
-  --surface-raised: #181a1f;
-  --surface-gradient: linear-gradient(150deg, #15171c, #0b0c0e 65%);
-  --panel-border: #272a30;
+  --canvas: #080a0c;
+  --surface: #11151a;
+  --surface-raised: #1b2128;
+  --surface-gradient: linear-gradient(155deg, #171c22, #0e1216 78%);
+  --panel-border: #2b333c;
   --control-border: #5d636d;
   --text: #f3f5f9;
   --muted: #b0b5c0;
@@ -25,12 +25,15 @@
   --action-text: #eaf7d3;
   --panel-radius: 18px;
   --metric-radius: 13px;
-  --panel-inset: clamp(14px, 2.2vw, 23px);
+  --panel-inset: clamp(12px, 1.55vw, 18px);
   --panel-heading: clamp(19px, 2.2vw, 23px);
 }
 
 body { background: var(--canvas); }
-.app-header { background: #0b0c0e; }
+.app-header {
+  background: var(--surface);
+  padding-inline: max(var(--workspace-gutter), calc((100% - var(--workspace-width)) / 2 + var(--workspace-gutter)));
+}
 .wordmark { font-weight: 740; }
 .body-overview, .coach-suggestions, .benchmark-card, .week-plan,
 .forecast-results-compact { border-radius: var(--panel-radius); }
@@ -126,6 +129,7 @@ body { background: var(--canvas); }
   line-height: 1.48;
 }
 .pacing-grid, .threshold-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pacing-heading-actions { display: flex; flex-wrap: wrap; gap: 7px; }
 .threshold-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
 [data-signal=power] { --signal: var(--blue); }
 [data-signal=hr] { --signal: var(--red); }

@@ -14,10 +14,22 @@ const demoZones = [1, 2, 8, 10, 15, 17, 22, 24].flatMap((index) => [0.34, 0.49, 
   date: shiftDate(date, index - 27), sport: index % 7 === 1 ? "Run" : "Ride", activityId: String(index),
   zone: `Z${zone + 1}`, seconds: Math.round(minutes[index] * 60 * share), source: "Illustrative",
 })));
+const demoBlocks = [100, 115, 104, 118, 102, 113, 106, 120, 110, 116, 108, 114].flatMap((power, index) => {
+  const datedBlock = { date: shiftDate(date, index * 2 - 24), source: "Illustrative", environment: "outdoor",
+    durationSeconds: 480, pairedFraction: 1, startSeconds: 300 };
+  return [
+    { ...datedBlock, sport: "Ride", activityId: `demo-ride-${index}`, device: "Sample bike meter",
+      powerWatts: power, hrBpm: 121 + Math.round((power - 100) * 1.1) + index % 3 },
+    { ...datedBlock, sport: "Run", activityId: `demo-run-${index}`, device: "Sample watch",
+      paceSecondsPerKm: 600 - (power - 100) * 4, hrBpm: 128 + (power - 100) + index % 3,
+      runningPowerWatts: 180 + (power - 100) * 2, runningPowerHrBpm: 128 + (power - 100) + index % 3 },
+  ];
+});
 
 export const demoReport = {
-  schemaVersion: 1, date, capturedAt: "2026-11-05T09:24:00+07:00", athlete: "Riezaldd", preview: true,
+  schemaVersion: 1, date, capturedAt: "2026-11-05T09:24:00+07:00", athlete: "Demo athlete", preview: true,
   coverage: { start: "2026-09-01", end: date, complete: true, note: "Illustrative training history for layout preview." },
+  predictionEvidence: { blocks: demoBlocks },
   activities: minutes.map((value, index) => ({ source: "Sample", externalIds: { sample: String(index) }, date: shiftDate(date, index - 27), sport: index % 7 === 0 ? "Weight Training" : index % 7 === 1 ? "Run" : "Ride", name: "Illustrative training session", movingSeconds: value * 60, distanceKm: null, averageHr: index === 27 ? 132 : null, measuredPowerWatts: index === 27 ? 106 : null, normalizedPowerWatts: index === 27 ? 112 : null, intervalsLoad: value * (0.5 + index % 4 / 10), intervalsListLoad: value * (0.5 + index % 4 / 10) })).filter((_, index) => index % 7 !== 6 || index === 27),
   wellness: {
     date, sleepMinutes: 370, sleepScore: 76, readiness: 48, readinessStatus: "Low", readinessUpdatedAtLocal: "07:15",

@@ -1,27 +1,96 @@
-.prediction-intro { margin: 0 0 16px; color: var(--muted); }
-.prediction-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 14px; }
-.prediction-card { padding: clamp(16px, 3vw, 23px); border: 1px solid var(--panel-border); border-radius: 19px; background: var(--surface); }
-.prediction-card[data-sport="Cycling"] { --prediction-accent: var(--blue); }
-.prediction-card[data-sport="Running"] { --prediction-accent: var(--green); }
-.prediction-card header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.prediction-card h2 { margin: 0; font-size: clamp(20px, 3vw, 26px); }
-.prediction-confidence { font-size: 12px; color: var(--muted); }
-.prediction-confidence[data-confidence="Low"] { color: var(--amber); }
-.prediction-confidence[data-confidence="Medium"], .prediction-confidence[data-confidence="High"] { color: var(--green); }
-.prediction-input { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 135px); gap: 10px; align-items: center; margin-bottom: 10px; font-weight: 570; }
-.prediction-input small { margin-left: 4px; color: var(--muted); font-weight: 450; }
-.prediction-input input, .prediction-input select {
-  min-width: 0; width: 100%; min-height: 40px; padding: 7px 9px;
-  color: var(--text); background: var(--surface-raised); border: 1px solid var(--control-border); border-radius: 8px;
-  font-family: inherit; font-size: 15px; font-variant-numeric: tabular-nums;
+.prediction-heading {
+  display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap;
+  gap: 4px 12px; margin: 0 0 12px;
 }
-.prediction-input input:focus-visible, .prediction-input select:focus-visible { outline: 2px solid var(--prediction-accent); outline-offset: 2px; }
-.prediction-context { grid-template-columns: 1fr; gap: 5px; }
-.prediction-readout { display: grid; gap: 4px; margin: 13px 0 12px; padding: 13px; border: 1px solid var(--rule); border-radius: 12px; background: var(--canvas); }
-.prediction-readout > span, .prediction-readout > small, .prediction-reason, .prediction-source { color: var(--muted); }
-.prediction-readout > strong { font-size: clamp(24px, 4.5vw, 39px); line-height: 1.15; letter-spacing: -.04em; color: var(--prediction-accent); }
-.prediction-readout > .prediction-unavailable { color: var(--text); font-size: clamp(21px, 3.5vw, 28px); }
-.prediction-reason, .prediction-source { margin: 7px 0 0; font-size: 13px; }
-.prediction-source { font-size: 12px; }
-.pacing-heading-actions { display: flex; flex-wrap: wrap; gap: 7px; }
-@media (max-width: 660px) { .prediction-grid { grid-template-columns: 1fr; } }
+.prediction-heading h1 { margin: 0; font-size: clamp(23px, 3vw, 31px); line-height: 1.14; letter-spacing: -.035em; }
+.prediction-heading p, .prediction-sport-header p { margin: 0; color: var(--muted); font-size: 12px; }
+.prediction-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.prediction-sport {
+  --prediction-accent: var(--blue);
+  display: flex; flex-direction: column;
+  min-width: 0; padding: var(--panel-inset);
+  border: 1px solid var(--panel-border); border-radius: var(--panel-radius); background: var(--surface-gradient);
+}
+.prediction-sport[data-sport="Running"] { --prediction-accent: var(--lime); }
+.prediction-sport-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin-bottom: 10px; }
+.prediction-sport-header h2 { margin: 0 0 3px; font-size: 21px; letter-spacing: -.035em; }
+.prediction-mode {
+  display: flex; gap: 3px; padding: 3px; border: 1px solid var(--rule); border-radius: 9px; background: var(--canvas);
+}
+.prediction-mode button { min-height: 34px; padding: 4px 9px; border-radius: 6px; color: var(--muted); font-size: 12px; }
+.prediction-mode button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--prediction-accent) 13%, var(--surface));
+  color: var(--prediction-accent);
+}
+.prediction-context { display: grid; gap: 4px; margin-bottom: 10px; color: var(--muted); font-size: 11px; }
+.prediction-context select, .prediction-control {
+  width: 100%; min-width: 0; min-height: 42px;
+  color: var(--text); font-family: inherit; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--control-border); border-radius: 8px; background: var(--surface);
+}
+.prediction-context select { padding: 6px 8px; font-size: 14px; }
+.prediction-calculators { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.prediction-estimate {
+  --result-color: var(--prediction-accent);
+  display: flex; flex-direction: column; min-width: 0; padding: 10px 11px 7px;
+  border: 1px solid var(--panel-border); border-radius: var(--metric-radius); background: var(--canvas);
+}
+.prediction-estimate[data-axis="hr"] { --result-color: var(--red); }
+.prediction-estimate h3 { margin: 0 0 8px; color: var(--result-color); font-size: 13px; font-weight: 650; }
+.prediction-input { display: grid; gap: 4px; color: var(--muted); font-size: 11px; }
+.prediction-control { display: flex; align-items: center; gap: 4px; padding: 0 8px; }
+.prediction-control:focus-within { border-color: var(--result-color); }
+.prediction-control input {
+  color: var(--text); font: inherit; font-size: 16px; font-weight: 650;
+  flex: 1 1 auto; min-width: 0; width: 100%; padding: 6px 0; border: 0; background: transparent;
+}
+.prediction-control input:focus { outline: none; }
+.prediction-control small { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.prediction-output {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 4px 8px;
+  margin-top: 9px; color: var(--muted);
+}
+.prediction-output > strong { grid-column: 1 / -1; font-size: clamp(21px, 2.7vw, 34px); font-weight: 690; color: var(--result-color); }
+.prediction-output > .prediction-unavailable { font-size: clamp(16px, 2.1vw, 22px); letter-spacing: -.025em; color: var(--text); }
+.prediction-output > small { font-size: 11px; }
+.prediction-dates { grid-column: 1 / -1; }
+.prediction-confidence {
+  justify-self: start; padding: 2px 5px; border-radius: 4px; background: var(--surface-raised);
+  font-size: 10px; font-weight: 650; white-space: nowrap;
+}
+.prediction-confidence[data-confidence="Low"] { color: var(--amber); }
+.prediction-confidence[data-confidence="Medium"] { color: var(--blue); }
+.prediction-confidence[data-confidence="High"] { color: var(--green); }
+.prediction-reason { margin: 6px 0 0; font-size: 11px; line-height: 1.34; color: var(--muted); }
+.prediction-estimate .card-details-access { margin: auto 0 0; padding-top: 4px; }
+.prediction-estimate .card-details-access button { min-height: 32px; }
+.prediction-session-context { margin-top: 9px; }
+.prediction-session-context summary { color: var(--blue); cursor: pointer; }
+.prediction-chart {
+  margin: 9px 0 0; padding: 9px 10px 8px; border: 1px solid var(--rule);
+  border-radius: var(--metric-radius); background: var(--canvas);
+}
+.prediction-chart figcaption, .prediction-plot-footer {
+  display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+}
+.prediction-chart figcaption strong { font-size: 12px; }
+.prediction-chart figcaption span, .prediction-plot-footer { color: var(--muted); font-size: 10px; }
+.prediction-chart svg { display: block; width: 100%; height: auto; }
+.prediction-chart text { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.prediction-grid-line { stroke: var(--rule); stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
+.prediction-ceiling-line { stroke: var(--red); stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.prediction-effort-line { stroke: var(--prediction-accent); stroke-opacity: .42; vector-effect: non-scaling-stroke; }
+.prediction-target-band { fill: var(--prediction-accent); fill-opacity: .11; }
+.prediction-point { fill: var(--prediction-accent); fill-opacity: .74; stroke: var(--canvas); vector-effect: non-scaling-stroke; }
+.prediction-point[data-matched="true"] { fill-opacity: 1; stroke: var(--text); stroke-width: 1.4; }
+.prediction-legend { display: flex; flex-wrap: wrap; gap: 4px 9px; }
+.prediction-legend span::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin-inline-end: 4px;
+  border-radius: 50%; background: var(--prediction-accent);
+}
+.prediction-legend .prediction-legend-matched::before { outline: 1px solid var(--text); }
+.prediction-legend .prediction-legend-cap::before { width: 10px; height: 2px; vertical-align: middle; border-radius: 0; background: var(--red); }
+.prediction-legend .prediction-legend-target::before { background: var(--prediction-accent); opacity: .4; border-radius: 1px; }
+.prediction-chart-empty { margin: 10px 0 0; padding: 12px; color: var(--muted); background: var(--canvas); border-radius: 9px; font-size: 12px; }
+@media (max-width: 860px) { .prediction-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 400px) { .prediction-calculators { grid-template-columns: minmax(0, 1fr); } }

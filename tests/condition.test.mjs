@@ -1,6 +1,35 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { conditionOverview, conditionStamp } from "../src/condition.js";
+import { workoutAdvice } from "../src/workoutAdvice.js";
+
+const date = "2026-04-06";
+const observedAt = "2026-04-06T01:30:00Z";
+const recoveryReport = (metrics = {}) => ({
+  date, capturedAt: "2026-04-06T02:00:00Z",
+  wellness: { date, readiness: 70, recoveryTimeMinutes: 0,
+    provenance: { datedRecovery: { readiness: { observedAt }, hrv: { observedAt } } }, ...metrics },
+});
+
+test("workout advice uses a dated recovery reading and preserves zero time", () => {
+  assert.equal(workoutAdvice(recoveryReport(), date).state, "planned");
+  assert.equal(workoutAdvice(recoveryReport({ readiness: 24 }), date).state, "rest");
+  assert.equal(workoutAdvice(recoveryReport({ readiness: 49 }), date).state, "easy");
+  assert.equal(workoutAdvice(recoveryReport({ recoveryTimeMinutes: 60 }), date).state, "easy");
+  assert.equal(workoutAdvice(recoveryReport({ hrvStatus: "Unbalanced" }), date).state, "easy");
+  assert.equal(workoutAdvice(recoveryReport({ recoveryTimeMinutes: null }), date).state, "recheck");
+});
+
+test("historical and misdated recovery cannot produce a current workout suggestion", () => {
+  assert.equal(workoutAdvice(recoveryReport({ readiness: 15 }), "2026-04-07").state, "recheck");
+  assert.equal(workoutAdvice(recoveryReport({ date: "2026-04-05" }), date).state, "recheck");
+  assert.equal(workoutAdvice(recoveryReport({ provenance: {} }), date).state, "recheck");
+  const observationWindow = { start: observedAt, end: "2026-04-06T01:45:00Z" };
+  const report = recoveryReport({ provenance: { datedRecovery: { readiness: { observationWindow } } } });
+  assert.deepEqual(workoutAdvice(report, date).observationWindow, observationWindow);
+  report.wellness.provenance.datedRecovery.readiness.date = "2026-04-05";
+  assert.equal(workoutAdvice(report, date).state, "recheck");
+});
 
 test("zero readings are retained while absent fields stay unavailable", () => {
   const result = conditionOverview({ wellness: { readiness: 0, bodyBattery: 0, sleepScore: 0, awakeMinutes: 0 }, intervals: { fitness: 0, fatigue: 0, form: 0 } });

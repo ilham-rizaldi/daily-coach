@@ -38,7 +38,7 @@ function HistoryPanel({ history, end, battery }) {
   </div>;
 }
 
-export function DataCard({ as: Tag = "article", title, detail, history, className = "", definition = false, children, ...attributes }) {
+export function DataCard({ as: Tag = "article", title, detail, detailExpanded = false, history, className = "", definition = false, children, ...attributes }) {
   const [open, setOpen] = useState(false);
   const archive = useContext(HistoryContext);
   const trigger = useRef(null);
@@ -75,7 +75,7 @@ export function DataCard({ as: Tag = "article", title, detail, history, classNam
         <div className="card-details-data">
           <HistoryPanel history={historyData} end={archive?.report.date} battery={history === "battery"} />
           {detail && (historyData?.rows?.length
-            ? <details className="card-detail-more"><summary>Card details</summary>{detail}</details>
+            ? <details className="card-detail-more" open={detailExpanded}><summary>Card details</summary>{detail}</details>
             : detail)}
         </div>
       </div>

@@ -2,6 +2,8 @@ import { shiftDate } from "./report.js";
 import { rangeFor } from "./pacing.js";
 
 export const PREDICTION_DAYS = 42;
+export const HR_CEILING_MIN = 35;
+export const HR_CEILING_MAX = 235;
 const SIMILAR_EFFORT = 0.15;
 const MIN_PAIRED_FRACTION = 0.9;
 const MIN_BLOCK_SECONDS = 8 * 60;
@@ -81,8 +83,8 @@ export function predictionDataset(report, key) {
   const first = shiftDate(report.date, 1 - PREDICTION_DAYS);
   const seed = Array.isArray(report.predictionEvidence?.blocks) ? report.predictionEvidence.blocks : [];
   const seen = new Set();
-  const rows = seed.filter(block => {
-    if (!eligibleBlock(block, mode, first, report.date)) return false;
+  const history = seed.filter(block => {
+    if (!eligibleBlock(block, mode, "", report.date)) return false;
     const id = JSON.stringify([block.date, block.activityId, block.startSeconds ?? 0]);
     if (seen.has(id)) return false;
     seen.add(id);
@@ -90,15 +92,17 @@ export function predictionDataset(report, key) {
   }).map(block => ({ ...block, value: block[mode.field], x: effort(mode, block[mode.field]),
     hrBpm: key === "runningPower" ? block.runningPowerHrBpm : block.hrBpm }))
     .sort((a, b) => a.date.localeCompare(b.date) || (a.startSeconds ?? 0) - (b.startSeconds ?? 0));
-  const cohorts = groupOn(rows, row => JSON.stringify([row.source, row.device, row.environment, row.conditions || null]));
-  const groups = [...cohorts].map(([id, observations]) => {
-    const { source, device, environment, conditions } = observations[0];
-    return { id, source, device, environment, conditions, rows: observations, dates: groupOn(observations, row => row.date).size };
-  }).sort((a, b) => b.dates - a.dates || b.rows.at(-1).date.localeCompare(a.rows.at(-1).date));
+  const rows = history.filter(row => row.date >= first);
+  const cohorts = groupOn(history, row => JSON.stringify([row.source, row.device, row.environment, row.conditions || null]));
+  const groups = [...cohorts].map(([id, historyRows]) => {
+    const { source, device, environment, conditions } = historyRows[0];
+    const observations = historyRows.filter(row => row.date >= first);
+    return { id, source, device, environment, conditions, historyRows, rows: observations, dates: groupOn(observations, row => row.date).size };
+  }).sort((a, b) => b.dates - a.dates || b.historyRows.at(-1).date.localeCompare(a.historyRows.at(-1).date));
   // Whole-session readings are an inspectable reference and never enter the fit.
   const context = (report.activities || []).flatMap(activity => {
     if (activity.sport !== mode.sport || activity.classification === "non-training" || activity.planned
-      || !validDay(activity.date) || activity.date < first || activity.date > report.date) return [];
+      || !validDay(activity.date) || activity.date > report.date) return [];
     const value = { powerWatts: activity.measuredPowerWatts, paceSecondsPerKm: activity.averagePaceSeconds,
       runningPowerWatts: activity.averageRunningPowerWatts }[mode.field];
     if (!values[mode.field](value) || !finiteIn(activity.averageHr, 35, 235)) return [];
@@ -108,24 +112,29 @@ export function predictionDataset(report, key) {
   return { groups, rows, context, first, last: report.date };
 }
 
-function chronologicalErrors(days, target) {
-  const earlier = new Map(), errors = [];
+function chronologicalChecks(days) {
+  const earlier = new Map(), checks = [];
   for (const [date, rows] of days) {
     const test = dayRepresentative(rows);
-    if (earlier.size >= 3 && distance(target, test) <= target * SIMILAR_EFFORT) {
+    if (earlier.size >= 3) {
       const matched = comparisonDays(earlier, test.x);
       if (matched.length) {
         const reference = [...earlier.values()].slice(-7).map(day => dayRepresentative(day).hrBpm);
-        errors.push({
-          error: Math.abs(median(matched.map(row => row.hrBpm)) - test.hrBpm),
-          baselineError: Math.abs(median(reference) - test.hrBpm),
+        const outcomes = matched.map(row => row.hrBpm);
+        checks.push({
+          ...test, estimatedHr: median(outcomes), maxHr: Math.max(...outcomes), baselineHr: median(reference),
         });
       }
     }
     earlier.set(date, rows);
   }
-  const mean = key => errors.length ? errors.reduce((sum, row) => sum + row[key], 0) / errors.length : null;
-  return { tests: errors.length, meanError: mean("error"), baselineError: mean("baselineError") };
+  return checks;
+}
+
+function forwardValidation(checks, target) {
+  const rows = checks.filter(row => distance(target, row) <= target * SIMILAR_EFFORT);
+  const error = key => rows.length ? rows.reduce((sum, row) => sum + Math.abs(row[key] - row.hrBpm), 0) / rows.length : null;
+  return { tests: rows.length, meanError: error("estimatedHr"), baselineError: error("baselineHr"), rows };
 }
 
 export function predictHeartRate(group, key, value) {
@@ -143,7 +152,7 @@ export function predictHeartRate(group, key, value) {
     return { confidence: "Insufficient", reason, matched };
   }
   const outcomes = matched.map(row => row.hrBpm);
-  const validation = chronologicalErrors(days, x);
+  const validation = forwardValidation(chronologicalChecks(days), x);
   const range = [Math.min(...outcomes), Math.max(...outcomes)];
   if (validation.tests >= 4 && validation.meanError >= validation.baselineError) {
     return {
@@ -158,6 +167,60 @@ export function predictHeartRate(group, key, value) {
     reason: validation.tests < 4 ? "Provisional estimate until more later sessions can test it."
       : !confident ? "Later tests show limited accuracy or few comparable days."
         : !group.conditions ? "Tested on later sessions. Route and weather may differ." : "Tested on later sessions under comparable conditions.",
+  };
+}
+
+export function predictEffortAtCeiling(group, key, ceiling) {
+  const unavailable = reason => ({ confidence: "Insufficient", reason });
+  const mode = predictionModes[key];
+  if (!mode || !finiteIn(ceiling, HR_CEILING_MIN, HR_CEILING_MAX)) {
+    return unavailable(`Enter an HR ceiling from ${HR_CEILING_MIN} to ${HR_CEILING_MAX} bpm.`);
+  }
+  const rows = group?.rows || [];
+  const days = groupOn(rows, row => row.date);
+  if (days.size < 2) return unavailable("Two comparable steady sessions on different days are needed.");
+
+  const checks = chronologicalChecks(days).filter(row => row.maxHr <= ceiling);
+  const candidates = [...new Map(rows.map(row => [row.x, row])).values()].sort((a, b) => b.x - a.x);
+  const supported = [];
+  let failed;
+  for (const candidate of candidates) {
+    if (supported.length && distance(supported[0].x, candidate) > supported[0].x * SIMILAR_EFFORT) break;
+    const matched = comparisonDays(days, candidate.x);
+    const outcomes = matched.map(row => row.hrBpm);
+    if (!matched.length || Math.max(...outcomes) > ceiling) {
+      if (supported.length) break;
+      continue;
+    }
+    const later = checks.filter(row => distance(candidate.x, row) <= candidate.x * SIMILAR_EFFORT);
+    const overshoots = later.filter(row => row.hrBpm > ceiling).length;
+    const validation = { tests: later.length, overshoots, rows: later };
+    if (overshoots) {
+      failed ||= { matched, validation, range: [Math.min(...outcomes), Math.max(...outcomes)] };
+      if (supported.length) break;
+      continue;
+    }
+    const high = later.length >= 8 && matched.length >= 5 && Boolean(group.conditions);
+    const medium = later.length >= 4 && matched.length >= 3;
+    supported.push({
+      x: candidate.x, value: candidate.value, matched, validation,
+      range: [Math.min(...outcomes), Math.max(...outcomes)],
+      confidence: high ? "High" : medium ? "Medium" : "Low",
+    });
+  }
+
+  if (!supported.length) return failed
+    ? { ...unavailable("Comparable later sessions went over this ceiling."), ...failed }
+    : unavailable("No comparable efforts stayed at or below this ceiling across the supporting days.");
+  const [highest] = supported;
+  const last = supported.at(-1);
+  // The endpoints come from adjacent supported observations. The time-ordered
+  // checks shown in the result describe the highest intensity in that band.
+  const confidence = ["Low", "Medium", "High"].find(level => supported.some(item => item.confidence === level));
+  return {
+    ...highest, effortRange: [Math.min(highest.value, last.value), Math.max(highest.value, last.value)], confidence,
+    reason: confidence === "Low" ? "Provisional target from recorded efforts. Recheck HR as you settle in."
+      : "Comparable later sessions stayed within this ceiling. Recheck HR as you settle in.",
   };
 }
 

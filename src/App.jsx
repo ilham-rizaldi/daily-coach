@@ -10,6 +10,8 @@ import { Reference } from "./Reference.jsx";
 import { SessionCheckIn } from "./SessionCheckIn.jsx";
 import { RecoveryProgression, TrainingPacing } from "./TrainingTargets.jsx";
 import { HistoryContext } from "./CardDetails.jsx";
+import { WorkoutAdvice } from "./WorkoutAdvice.jsx";
+import { workoutAdvice } from "./workoutAdvice.js";
 
 const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
 const BenchmarkView = lazy(() => import("./BenchmarkView.jsx"));
@@ -157,6 +159,7 @@ export function App() {
 
   const report = reports[reportIndex];
   const today = jakartaDate();
+  const advice = report && workoutAdvice(report, today);
 
   return (
     <>
@@ -190,6 +193,7 @@ export function App() {
           {section === "Daily" && (
             <>
               <ConditionOverview report={report} />
+              <WorkoutAdvice advice={advice} />
               {hasCoachSuggestions(report) ? (
                 <CoachSuggestions key={report.date} report={report} onEvidence={() => changeSection("Reference", true)}>
                   <Session report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
@@ -225,7 +229,7 @@ export function App() {
           )}
           {section === "Predictions" && (
             <ChartBoundary key={`predictions:${report.date}:${report.capturedAt}`}>
-              <Suspense fallback={<p className="quiet" role="status">Loading…</p>}><PerformancePrediction report={report} /></Suspense>
+              <Suspense fallback={<p className="quiet" role="status">Loading…</p>}><PerformancePrediction report={report} advice={advice} /></Suspense>
             </ChartBoundary>
           )}
           {section === "Plan" && (
