@@ -53,7 +53,7 @@ export default function WeekPlanner({ report }) {
     update(index, { sport, minutes: sport === "Rest" ? 0 : numeric(plans[index].minutes) > 0 ? plans[index].minutes : "30" });
   }
   return <section className="week-planner" aria-labelledby="week-plan-title">
-    <div className="week-plan-heading"><div><h1 id="week-plan-title">7-day plan</h1><span>Intervals.icu · EOD · Est.</span></div><div className="week-plan-actions"><span>{plans.length ? `${formatDate(plans[0].date)}–${formatDate(plans.at(-1).date)}` : "—"}</span><button onClick={() => setPlans(restWeek(report))}>Reset rest</button></div></div>
+    <div className="week-plan-heading"><div><h2 id="week-plan-title">7-day plan</h2><span>Intervals.icu · EOD · Est.</span></div><div className="week-plan-actions"><span>{plans.length ? `${formatDate(plans[0].date)}–${formatDate(plans.at(-1).date)}` : "—"}</span><button onClick={() => setPlans(restWeek(report))}>Reset rest</button></div></div>
     <div className="week-plan-grid">{plans.map((plan, index) => {
       const estimate = estimateSessionLoad(report, { sport: plan.sport, minutes: numeric(plan.minutes), effort: plan.effort });
       const valid = plan.sport === "Rest" || (numeric(plan.minutes) > 0 && numeric(plan.minutes) <= 600);

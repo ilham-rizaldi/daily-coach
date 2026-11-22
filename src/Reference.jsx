@@ -252,8 +252,7 @@ export function Reference({ report, researchOpen = false }) {
   ];
   const links = [...new Map([...methodLinks, ...(report.coaching?.references || [])].map(link => [link.url, link])).values()];
 
-  return <section className="reference-page" aria-labelledby="reference-title">
-    <div className="page-title"><h1 id="reference-title">Reference</h1></div>
+  return <section className="reference-page" aria-labelledby="view-title">
     <ThresholdChecks report={report} />
     <SourceHistory capture={report.baseHistory} />
     <CoachingResearch coaching={report.coaching} open={researchOpen} />
@@ -289,7 +288,7 @@ export function Reference({ report, researchOpen = false }) {
           <tr><th scope="row">Garmin load</th><td><ColorKey items={[["Acute", palette.blue], ["Chronic", palette.orange]]} /></td></tr>
           <tr><th scope="row">Recovery trends</th><td><ColorKey items={[["7d HRV", palette.blue], ["Overnight HRV", palette.gray], ["HRV baseline", palette.green], ["RHR Δ", palette.red]]} /></td></tr>
           <tr><th scope="row">Cycling / plan</th><td><ColorKey items={[["Hours / CTL", palette.blue], ["TL / ATL", palette.purple], ["Longest ride / TSB", palette.orange], ["Rest scenario", palette.gray]]} /></td></tr>
-          <tr><th scope="row">Source status</th><td><ColorKey items={[["Green", palette.green], ["Orange", palette.orange], ["Red", palette.red]]} /><small>Recorded metric category. Garmin ratio categories use the source label.</small></td></tr>
+          <tr><th scope="row">Source status</th><td><ColorKey items={[["Favorable", palette.green], ["Attention", palette.orange], ["Review", palette.red]]} /><small>Recorded metric category. Garmin ratio categories use the source label.</small></td></tr>
         </tbody></table></div>
       </details>
       <details><summary>Load estimation & projection</summary>

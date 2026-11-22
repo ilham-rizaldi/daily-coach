@@ -11,6 +11,7 @@ import { SessionCheckIn } from "./SessionCheckIn.jsx";
 import { RecoveryProgression, TrainingPacing } from "./TrainingTargets.jsx";
 import { HistoryContext } from "./CardDetails.jsx";
 import { WorkoutAdvice } from "./WorkoutAdvice.jsx";
+import { DailyLoad } from "./DailyLoad.jsx";
 import { workoutAdvice } from "./workoutAdvice.js";
 
 const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
@@ -190,17 +191,21 @@ export function App() {
           </section>
         )}
         {report && <HistoryContext.Provider value={{ report, reports }}>
+          <div className="section-masthead"><h1 id="view-title">{section === "Predictions" ? "Performance predictions" : section}</h1></div>
           {section === "Daily" && (
             <>
+              <div className="daily-lead">
+                <DailyLoad report={report} />
+                <WorkoutAdvice advice={advice} />
+              </div>
               <ConditionOverview report={report} />
-              <WorkoutAdvice advice={advice} />
               {hasCoachSuggestions(report) ? (
                 <CoachSuggestions key={report.date} report={report} onEvidence={() => changeSection("Reference", true)}>
                   <Session report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
                 </CoachSuggestions>
               ) : (
                 <>
-                  <section className="decision"><h1>{report.coaching.headline.split(";")[0]}</h1></section>
+                  <section className="decision"><h2>{report.coaching.headline.split(";")[0]}</h2></section>
                   <Session key={report.date} report={report} expanded={detail} onExpand={() => setDetail(!detail)} />
                 </>
               )}
@@ -210,7 +215,6 @@ export function App() {
           )}
           {section === "Trends" && (
             <>
-              <h1 className="sr-only">Trends</h1>
               <ChartBoundary key={`insights:${report.date}:${report.capturedAt}`}>
                 <Suspense fallback={<p className="quiet" role="status">Loading…</p>}><PerformanceTrends report={report} /></Suspense>
               </ChartBoundary>
@@ -249,7 +253,6 @@ export function App() {
           {section === "Reference" && <Reference report={report} researchOpen={researchOpen} />}
           {section === "Archive" && (
             <>
-              <div className="page-title"><h1>Archive</h1></div>
               <div className="archive-list">{reports.map((item, index) => <button key={item.date} onClick={() => selectReport(index)} aria-current={index === reportIndex ? "true" : undefined}><time>{formatDate(item.date, { weekday: "short", year: "numeric" })}</time><strong>{item.coaching.headline.split(";")[0]}</strong><span>{index === reportIndex ? "Selected" : "Open"}</span></button>)}</div>
               {!preview && <div className="archive-actions"><button onClick={copyLink}>Copy link</button><button onClick={lockArchive}>Lock</button></div>}
             </>

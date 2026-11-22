@@ -215,7 +215,6 @@ export default function BenchmarkView({ report }) {
   const { data, segmentRecordKeys } = segmentGroups(report, personalRecords(report));
   const workouts = workoutRows(report);
   return <div className="benchmark-view">
-    <h1 className="sr-only">Benchmarks</h1>
     <WorkoutReview key={`${report.date}:${report.capturedAt}`} report={report} />
     <div className="benchmark-grid">
       <SegmentPanel data={data} />

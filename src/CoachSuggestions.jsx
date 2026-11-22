@@ -59,7 +59,7 @@ export default function CoachSuggestions({ report, onEvidence, children }) {
       <header className="coach-suggestions-header">
         <div>
           <p className="coach-suggestions-label">Saved coach plan{plan.plannedDate && <> · <time dateTime={plan.plannedDate}>{formatDate(plan.plannedDate)}</time></>}</p>
-          <h1 id={headingId}>{plan.title}</h1>
+          <h2 id={headingId}>{plan.title}</h2>
         </div>
         {typeof onEvidence === "function" && plan.referenceIds.length > 0 && (
           <button type="button" className="coach-suggestions-evidence" onClick={() => onEvidence(plan.referenceIds)}>

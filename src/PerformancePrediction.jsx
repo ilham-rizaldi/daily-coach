@@ -151,9 +151,8 @@ function SportPrediction({ report, name, modes }) {
 }
 
 export default function PerformancePrediction({ report, advice }) {
-  return <section className="prediction-page" aria-labelledby="prediction-title">
+  return <section className="prediction-page" aria-labelledby="view-title">
     <header className="prediction-heading">
-      <h1 id="prediction-title">Performance predictions</h1>
       <p>Eight-minute steady blocks · {PREDICTION_DAYS}-day evidence window</p>
     </header>
     <WorkoutAdvice advice={advice} />

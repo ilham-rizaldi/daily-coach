@@ -5,6 +5,7 @@ import "./styles.css";
 import "./readability.css";
 import "./console.css";
 import "./card-details.css";
+import "./field.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
