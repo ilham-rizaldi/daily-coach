@@ -17,12 +17,43 @@ export function statusColor(status, metric = "") {
   return palette.gray;
 }
 
-export function ScoreMeter({ value, color = palette.blue, readiness = false, label }) {
-  if (!Number.isFinite(value)) return null;
-  return <div className="score-meter" role="img" aria-label={`${label}: ${decimal(value)} / 100`}>
-    {readiness ? <div className="score-segments">{[[24,palette.red],[25,palette.orange],[25,palette.green],[20,palette.blue],[6,palette.purple]].map(([width,fill], index) => <span key={index} style={{ width: `${width}%`, background: fill }} />)}</div> : <span className="score-fill" style={{ width: `${Math.max(0, Math.min(100, value))}%`, background: color }} />}
-    {readiness && <i className="score-marker" style={{ left: `${Math.max(0, Math.min(100, value))}%` }} />}
+export const isScore = value => Number.isFinite(value) && value >= 0 && value <= 100;
+const fractionFilled = (value, count, index) => Math.max(0, Math.min(1, value / 100 * count - index));
+
+export function ScoreMeter({ value, color = palette.blue, label }) {
+  if (!isScore(value)) return null;
+  const count = 32;
+  return <div className="score-meter" role="img" aria-label={`${label}: ${decimal(value)} / 100`}
+    style={{ "--score-color": color, "--score-count": count }}>
+    {Array.from({ length: count }, (_, i) => <span key={i} aria-hidden="true"
+      style={{ "--filled": `${fractionFilled(value, count, i) * 100}%` }} />)}
   </div>;
+}
+
+export function ScoreRing({ value, color, label, caption = label, className = "" }) {
+  const recorded = isScore(value);
+  return <div className={`score-ring ${className}`} role="img"
+    aria-label={recorded ? `${label} ${decimal(value)} out of 100` : `${label} unavailable`}
+    style={{ "--score-color": color, "--score-progress": `${recorded ? value : 0}%` }}>
+    <div aria-hidden="true"><strong>{recorded ? decimal(value, 0) : "—"}</strong><span>{caption}</span></div>
+  </div>;
+}
+
+export function ScoreArc({ value, color, label }) {
+  if (!isScore(value)) return null;
+  const count = 13;
+  return <svg viewBox="0 0 120 64" className="score-arc" role="img" aria-label={`${label} ${decimal(value)}%`}
+    style={{ "--score-color": color }}>
+    {Array.from({ length: count }, (_, i) => {
+      const rotation = -84 + i * 168 / (count - 1);
+      return <g key={i} transform={`rotate(${rotation} 60 57)`}>
+        <rect x="56.8" y="5" width="6.4" height="15" rx="2" className="score-arc-track" />
+        <rect x="56.8" y="5" width="6.4" height="15" rx="2" className="score-arc-fill"
+          opacity={fractionFilled(value, count, i)} />
+      </g>;
+    })}
+    <text x="60" y="55" textAnchor="middle">{decimal(value, 0)}<tspan className="score-arc-unit">%</tspan></text>
+  </svg>;
 }
 
 export function BaselineMeter({ low, high, value, status }) {
@@ -53,10 +84,10 @@ export function LoadHistory({ rows = [] }) {
   if (data.length < 2) return null;
   const start = Date.parse(data[0].date), end = Date.parse(data.at(-1).date);
   if (end <= start) return null;
-  const baseline = 66;
+  const baseline = 77;
   const max = Math.max(1, ...data.flatMap(row => [row.acute, row.chronic])) * 1.12;
-  const x = date => 5 + (Date.parse(date) - start) / (end - start) * 290;
-  const y = value => baseline - value / max * 60;
+  const x = date => 7 + (Date.parse(date) - start) / (end - start) * 286;
+  const y = value => baseline - value / max * 69;
   const runs = [];
   data.forEach(row => {
     const run = runs.at(-1);
@@ -67,20 +98,22 @@ export function LoadHistory({ rows = [] }) {
   const paths = key => runs.map(run => smoothLinePath(run.map(row => [x(row.date), y(row[key])])));
   const latest = data.at(-1);
   return <div className="load-history">
-    <svg viewBox="0 0 300 72" role="img" aria-label={`Garmin acute and chronic load, ${formatDate(data[0].date)} to ${formatDate(latest.date)}`}>
-      <defs><linearGradient id={fillId} x2="0" y2="1">
-        <stop stopColor={palette.blue} stopOpacity=".35" /><stop offset="1" stopColor={palette.blue} stopOpacity="0" />
+    <svg viewBox="0 0 300 84" role="img" aria-label={`Garmin acute and chronic load, ${formatDate(data[0].date)} to ${formatDate(latest.date)}`}>
+      <defs><linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+        <stop stopColor={palette.blue} stopOpacity=".24" /><stop offset="1" stopColor={palette.blue} stopOpacity="0" />
       </linearGradient></defs>
-      <line x1="5" x2="295" y1={baseline} y2={baseline} stroke="var(--rule)" />
+      {[0, 0.25, 0.5, 0.75, 1].map(step => <line key={step} x1="7" x2="293"
+        y1={y(max * step)} y2={y(max * step)} className="load-history-grid" />)}
       {paths("acute").map((path, index) => {
         const run = runs[index];
         return run.length > 1 && <path key={index} fill={`url(#${fillId})`} d={`${path}L${x(run.at(-1).date)},${baseline}L${x(run[0].date)},${baseline}Z`} />;
       })}
       {[["acute", palette.blue], ["chronic", palette.orange]].map(([key, color]) => <g key={key}>
-        <path d={paths(key).join(" ")} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        <path d={paths(key).join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         {runs.filter(run => run.length === 1 || run.at(-1) === latest).map(run => {
           const point = run.at(-1);
-          return <circle key={point.date} cx={x(point.date)} cy={y(point[key])} r="2.4" fill={color}><title>{`${formatDate(point.date)} · ${key} ${decimal(point[key])}`}</title></circle>;
+          return <circle key={point.date} cx={x(point.date)} cy={y(point[key])} r="3" fill={color}
+            stroke="var(--canvas)" strokeWidth="1.4" vectorEffect="non-scaling-stroke"><title>{`${formatDate(point.date)} · ${key} ${decimal(point[key])}`}</title></circle>;
         })}
       </g>)}
     </svg>

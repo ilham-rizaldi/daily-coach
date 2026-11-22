@@ -36,10 +36,45 @@ body { background: var(--canvas); }
 .forecast-results-compact { border-radius: var(--panel-radius); }
 .body-tile, .body-secondary > section, .body-secondary > section + section,
 .body-secondary > section:nth-child(3) { border-radius: var(--metric-radius); }
-.score-meter .score-marker, .baseline-meter .baseline-marker {
+.baseline-meter .baseline-marker {
   box-shadow: 0 0 12px color-mix(in srgb, currentColor 33%, transparent);
 }
+.body-tile > dt, .body-secondary > section > h3 {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+.score-meter {
+  display: grid; grid-template-columns: repeat(var(--score-count), minmax(0, 1fr));
+  gap: clamp(1px, .18vw, 3px); height: 19px; margin-top: 14px;
+}
+.score-meter > span { position: relative; overflow: hidden; border-radius: 2px; background: var(--rule); }
+.score-meter > span::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: var(--filled);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--score-color) 84%, white), var(--score-color));
+}
+.body-tile-readout { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.body-tile-readout > strong { font-size: clamp(29px, 2.65vw, 42px); font-weight: 650; }
+.score-ring {
+  display: grid; place-items: center; flex: none; width: 54px; aspect-ratio: 1; padding: 4px; border-radius: 50%;
+  background: conic-gradient(var(--score-color) var(--score-progress), var(--rule) 0);
+}
+.score-ring > div {
+  display: grid; place-content: center; gap: 2px; width: 100%; height: 100%;
+  border-radius: 50%; background: var(--surface); text-align: center;
+}
+.score-ring strong { font-size: 17px; font-weight: 680; line-height: 1; font-variant-numeric: tabular-nums; }
+.score-ring span { color: var(--muted); font-size: 9px; line-height: 1.1; }
+.body-stat-row.adaptation-measures { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.adaptation-heat dd { max-width: 140px; }
+.score-arc { display: block; width: 100%; max-width: 140px; }
+.score-arc-track { fill: var(--rule); }
+.score-arc-fill, .score-arc text { fill: var(--score-color); }
+.score-arc text { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.score-arc-unit { font-size: 12px; }
 .load-history svg { height: auto; }
+.load-history-grid {
+  stroke: var(--rule); stroke-dasharray: 2 4; vector-effect: non-scaling-stroke;
+}
 .report-action { border-radius: 9px; }
 .body-overview .condition-heading h2, .performance-trends .performance-heading h2 {
   font-size: var(--panel-heading);

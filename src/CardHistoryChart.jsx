@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { dailyChartRuns, historyChartSeries } from "./cardHistory.js";
 import { smoothLinePath } from "./chart-lines.js";
 import { DAY, decimal, formatDate } from "./report.js";
@@ -11,11 +11,12 @@ function HistoryAxis({ low, high, first, last, label, children }) {
   const dateLabel = date => formatDate(date, expanded ? { month: "short", year: "numeric" } : {});
   return <>
     <svg viewBox={`0 0 ${frame.width} ${frame.height}`} role="img" aria-label={label}>
-      {[high, (high + low) / 2, low].map(value => {
+      {[1, 0.75, 0.5, 0.25, 0].map((step, index) => {
+        const value = low + (high - low) * step;
         const y = yAt(value, low, high);
-        return <g key={value}>
+        return <g key={step}>
           <line x1={frame.left} x2={frame.right} y1={y} y2={y} className="card-history-grid" />
-          <text x={frame.left - 7} y={y + 4} textAnchor="end">{decimal(value, 1)}</text>
+          {index % 2 === 0 && <text x={frame.left - 7} y={y + 4} textAnchor="end">{decimal(value, 1)}</text>}
         </g>;
       })}
       {children}
@@ -30,13 +31,24 @@ function dateAxis(first, last) {
     (frame.left + frame.right) / 2;
 }
 
+function PlotHeading({ label, value, date, monthly = false, children }) {
+  return <figcaption className="card-history-heading">
+    <div className="card-history-label">{children || label}</div>
+    <div className="card-history-reading">
+      <strong>{value}</strong>
+      <time dateTime={date}>{formatDate(date, monthly ? { day: undefined, year: "numeric" } : {})}</time>
+    </div>
+  </figcaption>;
+}
+
 function BatteryHistory({ rows, first, last }) {
   const ranges = rows.filter(({ values: [low, high] }) => Number.isFinite(low) && Number.isFinite(high) && low >= 0 && low <= high && high <= 100);
   if (!ranges.length) return <p>No daily Body Battery ranges in this period.</p>;
   const xAt = dateAxis(first, last);
   const thin = ranges.length > 90;
+  const latest = ranges[0];
   return <figure className="card-history-plot">
-    <figcaption>Daily low–high · Body Battery</figcaption>
+    <PlotHeading label="Daily low–high · Body Battery" value={latest.values.slice(0, 2).join("–")} date={latest.date} />
     <HistoryAxis low={0} high={100} first={first} last={last} label={`Daily Body Battery low and high · ${ranges.length} recorded days`}>
       {ranges.map(({ date, values: [low, high] }, index) => {
         const x = xAt(date), y1 = yAt(low, 0, 100), y2 = yAt(high, 0, 100);
@@ -53,6 +65,7 @@ function BatteryHistory({ rows, first, last }) {
 
 export function CardHistoryChart({ history, rows, first, last, battery }) {
   const [choice, setChoice] = useState("");
+  const fill = useId();
   if (!rows.length) return null;
   if (battery) return <BatteryHistory rows={rows} first={first} last={last} />;
   const series = historyChartSeries(history, rows);
@@ -64,19 +77,36 @@ export function CardHistoryChart({ history, rows, first, last, battery }) {
   const low = min >= 0 ? Math.max(0, min - padding) : min - padding, high = max + padding;
   const xAt = dateAxis(first, last);
   const position = point => [xAt(point.date), yAt(point.value, low, high)];
-  const paths = history.daily ? dailyChartRuns(picked.points).map(run => smoothLinePath(run.map(position))) : [];
+  const runs = history.daily ? dailyChartRuns(picked.points).map(run => run.map(position)) : [];
+  const latest = picked.points.at(-1);
+  const recent = picked.points.filter(point => point.date === latest.date).map(point => point.value);
+  const recentLow = Math.min(...recent), recentHigh = Math.max(...recent);
+  const readout = recentLow === recentHigh ? decimal(recentLow) : [recentLow, recentHigh].map(v => decimal(v)).join("–");
   return <figure className="card-history-plot">
-    {series.length > 1 ? <figcaption><label className="card-history-select">Chart metric
-      <select value={picked.label} onChange={event => setChoice(event.target.value)}>
+    <PlotHeading label={picked.label} value={readout} date={latest.date} monthly={latest.precision === "month"}>
+      {series.length > 1 && <select className="card-history-select" aria-label="Chart metric"
+        value={picked.label} onChange={event => setChoice(event.target.value)}>
         {series.map(item => <option key={item.label}>{item.label}</option>)}
-      </select>
-    </label></figcaption> : <figcaption>{picked.label}</figcaption>}
+      </select>}
+    </PlotHeading>
     <HistoryAxis low={low} high={high} first={first} last={last} label={`${picked.label} · ${picked.points.length} recorded readings`}>
-      {paths.map((path, index) => <path key={index} className="card-history-line" d={path} />)}
+      <defs>
+        <linearGradient id={fill} x1="0" x2="0" y1="0" y2="1" gradientUnits="objectBoundingBox">
+          <stop stopColor="var(--blue)" stopOpacity=".18" /><stop offset="1" stopColor="var(--blue)" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {runs.map((run, index) => {
+        const path = smoothLinePath(run);
+        const firstX = run[0][0], lastX = run.at(-1)[0];
+        return <g key={index}>
+          <path d={`${path}L${lastX},${frame.bottom}L${firstX},${frame.bottom}Z`} fill={`url(#${fill})`} />
+          <path className="card-history-line" d={path} />
+        </g>;
+      })}
       {picked.points.map((point, index) => {
         const [cx, cy] = position(point);
         const dateOptions = point.precision === "month" ? { day: undefined, year: "numeric" } : { year: "numeric" };
-        return <circle key={index} className="card-history-point" cx={cx} cy={cy} r={picked.points.length > 90 ? 1.5 : 3}>
+        return <circle key={index} className="card-history-point" cx={cx} cy={cy} r={point.date === latest.date ? 3.8 : picked.points.length > 90 ? 1.5 : 2.7}>
           <title>{`${formatDate(point.date, dateOptions)} · ${picked.label} ${decimal(point.value, 2)}`}</title>
         </circle>;
       })}

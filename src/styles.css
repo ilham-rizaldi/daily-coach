@@ -1331,10 +1331,6 @@ button:disabled {
 .body-tile dd > strong { font-size: 31px; font-weight: 600; line-height: 1.1; letter-spacing: -.8px; font-variant-numeric: tabular-nums; }
 .body-tile dd > span { font-size: 11px; color: #aab5bf; margin-left: 4px; }
 .body-tile-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 3px 7px; min-height: 13px; margin-top: 8px; color: #aab5bf; font-size: 10px; }
-.score-meter { height: 6px; position: relative; background: var(--rule); border-radius: 3px; margin: 13px 0 0; }
-.score-fill { display: block; height: 100%; border-radius: inherit; }
-.score-segments { display: flex; height: 100%; gap: 2px; overflow: hidden; border-radius: inherit; }
-.score-marker { position: absolute; width: 2px; height: 12px; top: -3px; background: #f7fbff; box-shadow: 0 0 0 1px #14191e; transform: translateX(-1px); }
 .baseline-meter { margin-top: 13px; }
 .baseline-meter > div { position: relative; height: 6px; border-radius: 3px; background: var(--rule); }
 .baseline-meter > div > span { height: 100%; position: absolute; background: #3d705d; border-radius: 2px; }

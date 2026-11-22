@@ -17,7 +17,7 @@ function Plot({ data, label, children, domain = ["auto", "auto"], formatter }) {
   return <div className="performance-plot" role="group" aria-label={label}>
     <ResponsiveContainer width="100%" height="100%">
       <ComposedChart data={data} margin={{ top: 7, right: 8, left: 0, bottom: 0 }} accessibilityLayer>
-        <CartesianGrid vertical={false} stroke="var(--rule)" />
+        <CartesianGrid vertical={false} stroke="var(--rule)" strokeDasharray="3 4" />
         <XAxis dataKey="label" tick={ticks} axisLine={false} tickLine={false} minTickGap={28} interval="preserveStartEnd" />
         <YAxis width={35} domain={domain} tick={ticks} axisLine={false} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} formatter={formatter} />

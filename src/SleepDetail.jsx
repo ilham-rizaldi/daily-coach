@@ -1,5 +1,5 @@
 import { DetailFacts, DetailTable } from "./CardDetails.jsx";
-import { palette } from "./MetricGraphics.jsx";
+import { palette, ScoreRing } from "./MetricGraphics.jsx";
 import { DurationValue } from "./Readout.jsx";
 
 const stages = [
@@ -49,15 +49,12 @@ function StageTimeline({ timeline, date }) {
 
 export function SleepDetail({ wellness, total, readingDate, stamp, source, sourceUrl }) {
   const w = wellness;
-  const score = Number.isFinite(w.sleepScore) && w.sleepScore >= 0 && w.sleepScore <= 100 ? w.sleepScore : null;
   const timing = w.bedTimeLocal && w.wakeTimeLocal ? `${w.bedTimeLocal}–${w.wakeTimeLocal}` : null;
   const measured = stages.filter(stage => Number.isFinite(w[stage.duration]) && w[stage.duration] >= 0);
   const durationSum = measured.reduce((sum, stage) => sum + w[stage.duration], 0);
   return <div className="sleep-detail">
     <div className="sleep-detail-hero">
-      <div className="sleep-detail-score" style={{ "--sleep-score": `${score ?? 0}%` }} role="img" aria-label={score === null ? "Sleep score unavailable" : `Sleep score ${score} out of 100`}>
-        <div><strong>{score ?? "—"}</strong><span>Sleep score</span></div>
-      </div>
+      <ScoreRing value={w.sleepScore} label="Sleep score" color={palette.light} className="sleep-detail-score" />
       <dl className="sleep-detail-key">
         <div><dt>Bedtime · wake time</dt><dd>{timing ? `${timing} WIB` : "Not recorded"}</dd></div>
         <div><dt>Time asleep</dt><dd>{minutes(total) || "Not recorded"}</dd></div>
