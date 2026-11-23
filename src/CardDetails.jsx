@@ -11,9 +11,9 @@ const historyPeriods = [["7 days", 7], ["4 weeks", 28], ["3 months", 90], ["All 
 const historyDate = row => formatDate(row.date, row.precision === "month" ?
   { day: undefined, year: "numeric" } : { year: "numeric" });
 
-function HistoryPanel({ history, end, battery }) {
+function HistoryPanel({ history, end, battery, initialDays = 28 }) {
   const all = filterCardHistory(history?.rows, end, null);
-  const [period, setPeriod] = useState(() => filterCardHistory(all, end, 28).length ? 28 : null);
+  const [period, setPeriod] = useState(() => filterCardHistory(all, end, initialDays).length ? initialDays : null);
   const [limit, setLimit] = useState(30);
   const rows = filterCardHistory(all, end, period);
   const label = history?.caption || "Historical readings";
@@ -38,7 +38,8 @@ function HistoryPanel({ history, end, battery }) {
   </div>;
 }
 
-export function DataCard({ as: Tag = "article", title, detail, detailExpanded = false, history, className = "", definition = false, children, ...attributes }) {
+export function DataCard({ as: Tag = "article", title, detail, detailExpanded = false, detailInline = false, history,
+  initialHistoryDays, className = "", definition = false, children, ...attributes }) {
   const [open, setOpen] = useState(false);
   const archive = useContext(HistoryContext);
   const trigger = useRef(null);
@@ -73,8 +74,8 @@ export function DataCard({ as: Tag = "article", title, detail, detailExpanded = 
       <div className="card-details-content">
         <header><h2 id={heading}>{title}</h2><button type="button" className="report-action" onClick={() => dialog.current.close()}>Close</button></header>
         <div className="card-details-data">
-          <HistoryPanel history={historyData} end={archive?.report.date} battery={history === "battery"} />
-          {detail && (historyData?.rows?.length
+          <HistoryPanel history={historyData} end={archive?.report.date} battery={history === "battery"} initialDays={initialHistoryDays} />
+          {detail && (historyData?.rows?.length && !detailInline
             ? <details className="card-detail-more" open={detailExpanded}><summary>Card details</summary>{detail}</details>
             : detail)}
         </div>

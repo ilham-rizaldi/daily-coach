@@ -12,6 +12,7 @@ import { RecoveryProgression, TrainingPacing } from "./TrainingTargets.jsx";
 import { HistoryContext } from "./CardDetails.jsx";
 import { WorkoutAdvice } from "./WorkoutAdvice.jsx";
 import { DailyLoad } from "./DailyLoad.jsx";
+import { StrengthLift } from "./StrengthLift.jsx";
 import { workoutAdvice } from "./workoutAdvice.js";
 
 const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
@@ -210,6 +211,7 @@ export function App() {
                 </>
               )}
               <TrainingPacing report={report} onThresholds={() => changeSection("Reference")} onPredictions={() => changeSection("Predictions")} />
+              <StrengthLift key={report.date} report={report} />
               <details className="check-in-panel"><summary>Session check-in</summary><SessionCheckIn key={`${report.date}:${accessKey}`} report={report} accessKey={accessKey} preview={preview} /></details>
             </>
           )}
