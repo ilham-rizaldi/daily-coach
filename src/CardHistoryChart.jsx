@@ -64,7 +64,7 @@ function BatteryHistory({ rows, first, last }) {
   </figure>;
 }
 
-export function CardHistoryChart({ history, rows, first, last, battery }) {
+export function CardHistoryChart({ history, rows, first, last, battery, compact = false }) {
   const [choice, setChoice] = useState("");
   const fill = useId();
   if (!rows.length) return null;
@@ -92,12 +92,12 @@ export function CardHistoryChart({ history, rows, first, last, battery }) {
     barsByDate.get(point.date).push(point);
   }
   return <figure className="card-history-plot" data-series-style={history.display}>
-    <PlotHeading label={picked.label} value={readout} date={latest.date} monthly={latest.precision === "month"}>
+    {!compact && <PlotHeading label={picked.label} value={readout} date={latest.date} monthly={latest.precision === "month"}>
       {series.length > 1 && <select className="card-history-select" aria-label="Chart metric"
         value={picked.label} onChange={event => setChoice(event.target.value)}>
         {series.map(item => <option key={item.label}>{item.label}</option>)}
       </select>}
-    </PlotHeading>
+    </PlotHeading>}
     <HistoryAxis low={low} high={high} first={first} last={last} compact={bars} label={`${picked.label} · ${picked.points.length} recorded readings`}>
       <defs>
         <linearGradient id={fill} x1="0" x2="0" y1="0" y2="1" gradientUnits="objectBoundingBox">

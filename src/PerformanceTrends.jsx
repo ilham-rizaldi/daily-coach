@@ -4,6 +4,8 @@ import { Area, Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, Res
 import { decimal, duration, formatDate } from "./report.js";
 import { BatteryRangeChart, palette } from "./MetricGraphics.jsx";
 import { cyclingProgression, recoverySeries, trainingPlacement } from "./performance.js";
+import { activitySpeedSeries, SportSpeedCards } from "./PerformanceProgression.jsx";
+import { StrengthLift } from "./StrengthLift.jsx";
 import "./performance.css";
 import TrainingMix from "./TrainingMix.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
@@ -110,5 +112,16 @@ function Cycling({ report }) {
 }
 
 export default function PerformanceTrends({ report }) {
-  return <div className="performance-trends"><TrainingMix report={report} /><Recovery report={report} /><Cycling report={report} /></div>;
+  return <div className="performance-trends">
+    <TrainingMix report={report} />
+    <Recovery report={report} />
+    <section className="progression" aria-labelledby="sport-progression-title">
+      <div className="performance-heading"><h2 id="sport-progression-title">Progression by sport</h2></div>
+      <div className="progression-grid progression-sport-grid">
+        <SportSpeedCards groups={activitySpeedSeries(report)} />
+        <StrengthLift key={report.date} report={report} />
+      </div>
+    </section>
+    <Cycling report={report} />
+  </div>;
 }

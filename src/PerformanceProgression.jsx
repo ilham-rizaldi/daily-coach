@@ -1,7 +1,7 @@
+import { useState } from "react";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { datedHistory } from "./cardHistory.js";
 import { smoothLinePath } from "./chart-lines.js";
-import { useState } from "react";
 import { palette } from "./MetricGraphics.jsx";
 import { MetricValue } from "./Readout.jsx";
 import { decimal, formatDate } from "./report.js";
@@ -54,10 +54,11 @@ function completed(activity, report) {
   });
 }
 
-const speedMethods = { recorded: "Recorded avg", timer: "Calculated · timer", moving: "Calculated · moving" };
+const speedMethods = { recorded: "Recorded avg", timer: "Calculated · timer", moving: "Calculated · moving", displayed: "Displayed avg" };
 const methodOrder = Object.keys(speedMethods);
 export function activitySpeedSeries(report) {
   const groups = new Map(), unscoped = new Map();
+  let displayedRunPace;
   for (const activity of Array.isArray(report.activities) ? report.activities : []) {
     const sport = sportOf(activity.sport), source = text(activity.source), date = dayOf(activity.date);
     if (!sport || !source || !notFuture(date, report) || !completed(activity, report)) continue;
@@ -68,6 +69,15 @@ export function activitySpeedSeries(report) {
     if (positive(activity.averageSpeedKph)) candidates.push(["recorded", activity.averageSpeedKph]);
     if (distance && positive(activity.timerSeconds)) candidates.push(["timer", distance * 3600 / activity.timerSeconds]);
     else if (distance && positive(activity.providerMovingSeconds)) candidates.push(["moving", distance * 3600 / activity.providerMovingSeconds]);
+
+    if (!candidates.length && sport === "Running") {
+      const match = /^(\d{1,2}):([0-5]\d)\s*(?:min)?\/km$/.exec(text(activity.provenance?.displayedPace));
+      const paceSeconds = match ? Number(match[1]) * 60 + Number(match[2]) : 0;
+      if (paceSeconds > 0 && (!displayedRunPace || at > displayedRunPace.points[0].at)) {
+        displayedRunPace = { key: JSON.stringify([sport, scope, source, "displayed"]), sport, scope, source,
+          basis: "displayed", points: [{ date, at, distance, value: 3600 / paceSeconds }] };
+      }
+    }
 
     for (const [basis, value] of candidates) {
       if (!positive(value)) continue;
@@ -84,6 +94,7 @@ export function activitySpeedSeries(report) {
     }
   }
   const all = [...groups.values(), ...unscoped.values()];
+  if (displayedRunPace) all.push(displayedRunPace);
   for (const group of all) group.points.sort((a, b) => a.at - b.at);
   return all.sort((a, b) => Number(b.points.length > 1) - Number(a.points.length > 1)
     || b.points.at(-1).at - a.points.at(-1).at || methodOrder.indexOf(a.basis) - methodOrder.indexOf(b.basis));
@@ -221,6 +232,13 @@ function SpeedCard({ sport, groups }) {
   </DataCard>;
 }
 
+export function SportSpeedCards({ groups }) {
+  return ["Cycling", "Running"].map(sport => {
+    const matching = groups.filter(row => row.sport === sport);
+    return matching.length ? <SpeedCard key={sport} sport={sport} groups={matching} /> : null;
+  });
+}
+
 function RecordCard({ record }) {
   const { sport, source, label, value, unit, date, url } = record;
   const timed = Number.isFinite(value) && unit === "s";
@@ -253,10 +271,8 @@ export default function PerformanceProgression({ report, segmentRecordKeys, comp
     </div>
     <div className="progression-block">
       <h3>Average speed &amp; pace</h3>
-      {speed.length ? <div className="progression-grid">{["Cycling", "Running"].map(sport => {
-        const groups = speed.filter(row => row.sport === sport);
-        return groups.length ? <SpeedCard key={sport} sport={sport} groups={groups} /> : null;
-      })}</div> : <p className="progression-empty">Speed and pace not captured</p>}
+      {speed.length ? <div className="progression-grid"><SportSpeedCards groups={speed} /></div>
+        : <p className="progression-empty">Speed and pace not captured</p>}
     </div>
     {compactRecords ? <details className="progression-block benchmark-records">
       <summary>Personal records {records.length > 0 && <span>{records.length}</span>}</summary>

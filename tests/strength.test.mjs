@@ -28,9 +28,7 @@ test("strength volume uses each dated Garmin session once and keeps unlogged vol
   assert.equal(summary.volumeKg, 100_000);
   assert.equal(summary.sessions.length, 2);
   assert.equal(summary.measured, 1);
-  assert.equal(summary.unlocked, 250);
-  assert.equal(summary.next, 300);
-  assert.equal(summary.remainingKg, 19_700);
+  assert.equal(summary.best.activityId, "1");
   assert.equal(strengthSummary({ date }).volumeKg, null);
 });
 

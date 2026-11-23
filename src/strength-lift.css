@@ -1,16 +1,6 @@
 .strength-lift {
-  padding: var(--panel-inset);
-  margin-block: 14px;
-  border: 1px solid var(--panel-border);
-  border-radius: var(--panel-radius);
-  background: var(--surface-gradient);
-}
-.strength-hero {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(235px, .8fr);
-  align-items: center;
-  gap: clamp(12px, 2.4vw, 28px);
-  padding-inline-end: clamp(0px, 1vw, 12px);
+  display: flex;
+  flex-direction: column;
 }
 .strength-illustration {
   display: block;
@@ -20,39 +10,21 @@
   background: #10131a url("./assets/strength-equipment.jpg") no-repeat;
   background-size: 400% 300%;
 }
-.strength-aircraft { width: clamp(78px, 10vw, 122px); }
-.strength-stat h2 { font-size: var(--panel-heading); margin: 0 0 4px; letter-spacing: -.027em; }
+.strength-stat h3 { font-size: 13px; margin: 0; font-weight: 550; }
 .strength-total {
   margin: 0;
-  font-size: clamp(28px, 4vw, 46px);
+  font-size: clamp(28px, 3vw, 36px);
   font-weight: 690;
   font-variant-numeric: tabular-nums;
   line-height: 1.06;
   letter-spacing: -.055em;
   color: var(--lime);
-  white-space: nowrap;
 }
+.strength-total span { white-space: nowrap; }
 .strength-total small { font-size: .46em; letter-spacing: -.02em; }
-.strength-stat p, .strength-progress p { margin: 5px 0 0; font-size: 12px; color: var(--muted); }
-.strength-progress-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 5px 12px; }
-.strength-progress-head strong { color: var(--lime); font-variant-numeric: tabular-nums; }
-.strength-progress-head strong span { color: var(--muted); font-size: 12px; font-weight: 550; }
-.strength-unlocked { color: var(--lime); font-size: 11px; padding: 2px 7px; background: var(--accent-surface); border-radius: 5px; }
-.strength-progress progress {
-  display: block;
-  width: 100%;
-  height: 7px;
-  margin-top: 9px;
-  appearance: none;
-  border: 0;
-  border-radius: 6px;
-  background: var(--rule);
-  color: var(--lime);
-}
-.strength-progress progress::-webkit-progress-bar { border-radius: 6px; background: var(--rule); }
-.strength-progress progress::-webkit-progress-value { border-radius: 6px; background: linear-gradient(90deg, var(--green), var(--lime)); }
-.strength-progress progress::-moz-progress-bar { border-radius: 6px; background: var(--lime); }
-.strength-lift .card-details-access { margin-top: 1px; }
+.strength-stat p { margin: 5px 0 0; font-size: 12px; color: var(--muted); }
+.strength-lift .card-history-plot { margin: 8px 0 0; padding: 2px 4px 5px; }
+.strength-lift .card-details-access { margin: auto 0 0; }
 .card-history:has(.card-history-volume-bar) .detail-table a { color: var(--blue); }
 .strength-details h3 { margin: 0 0 6px; color: var(--text); font-size: 16px; }
 .strength-details section, .strength-peak {
@@ -85,9 +57,3 @@
 .card-history-plot[data-series-style="bars"] .card-history-reading strong { color: var(--lime); }
 .card-history-volume-bar { fill: var(--lime); fill-opacity: .74; }
 .card-history-volume-bar[data-latest="true"] { fill-opacity: 1; }
-@media (max-width: 680px) {
-  .strength-hero { grid-template-columns: auto minmax(0, 1fr); padding-inline-end: 0; }
-  .strength-progress { grid-column: 1 / -1; }
-  .strength-total { white-space: normal; }
-  .strength-lift .card-details-access { margin-top: 4px; }
-}

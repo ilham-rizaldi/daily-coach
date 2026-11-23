@@ -1,4 +1,3 @@
-const milestones = [10, 25, 50, 100, 150, 200, 250, 300, 500, 750, 1000];
 const nonnegative = value => Number.isFinite(value) && value >= 0;
 const validDate = date => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date));
 const kg = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 });
@@ -89,14 +88,8 @@ export function strengthSummary(report) {
       }
     }
   }
-  const unit = 399;
-  const equivalents = volumeKg == null ? null : volumeKg / unit;
-  const next = equivalents == null ? null : milestones.find(milestone => milestone > equivalents)
-    ?? (Math.floor(equivalents / 250) + 1) * 250;
-  const unlocked = equivalents == null ? null : milestones.filter(milestone => milestone <= equivalents).at(-1);
   return {
-    sessions, measured: measured.length, volumeKg, best, equivalents, next, unlocked,
-    remainingKg: next == null ? null : next * unit - volumeKg,
+    sessions, measured: measured.length, volumeKg, best,
     records: [...records.values()].sort((a, b) => b.weightKg - a.weightKg || a.exercise.localeCompare(b.exercise)),
     unassigned, unassignedSets, sessionsWithSets, equipment: equipmentTypes.filter(([key]) => equipment.has(key)),
   };
