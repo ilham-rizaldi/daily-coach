@@ -51,3 +51,7 @@ Use equal left and right gutters for the header and report, and reduce spacing b
 Use 12 columns on desktop with 80–120 px gutters or a centered maximum-width container, 8 on tablet with 40–80 px gutters, and 4 on mobile with 16–32 px gutters. Align header and content to the same edges and keep the Garmin load chart beside the recovery suggestion on desktop. Apply the established slate, rounded-panel visual system and semantic metric colors to this structure.
 
 Show Strength progression on Trends alongside cycling and running. Lead with total lifted in kilograms when Garmin strength sessions are available. Open the session-volume chart first, then the session table, the heaviest logged set per exercise, and equipment illustrations. Keep unnamed sets in the volume and show their heaviest load separately.
+
+Use only Indoor and Outdoor options for ride speed and run pace progression. Reconcile Garmin archive sessions by activity ID or verified start, distance and timer, use confirmed environments, and preserve the date and timing basis. Keep speed in km/h and running pace in min/km across charts and tables.
+
+Show dated workout suggestion signals as graphics where available. Use the shared readiness score bar, recorded recovery-time snapshots, the verified HRV baseline and a sleep score ring. Keep historical and missing readings from driving current advice.

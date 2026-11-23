@@ -4,101 +4,15 @@ import { datedHistory } from "./cardHistory.js";
 import { smoothLinePath } from "./chart-lines.js";
 import { palette } from "./MetricGraphics.jsx";
 import { MetricValue } from "./Readout.jsx";
-import { decimal, formatDate } from "./report.js";
+import { decimal, formatDate, shiftDate } from "./report.js";
+import { activityEnvironments, activitySpeedSeries, dayOf, paceSeconds, speedMethods, sportOf } from "./activityProgression.js";
 import "./progression.css";
 
 const text = value => typeof value === "string" ? value.trim() : "";
 const token = value => text(value).toLowerCase().replace(/[ _]+/g, "-");
 const positive = value => Number.isFinite(value) && value > 0;
-function dayOf(value) {
-  const date = text(value).slice(0, 10), timestamp = Date.parse(`${date}T12:00:00Z`);
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(timestamp)
-    && new Date(timestamp).toISOString().slice(0, 10) === date ? date : null;
-}
-
-function sportOf(value) {
-  if (["cycling", "ride", "bike", "biking"].includes(token(value))) return "Cycling";
-  if (["running", "run"].includes(token(value))) return "Running";
-  return null;
-}
-
 const sportColor = sport => sport === "Cycling" ? palette.blue : sport === "Running" ? palette.green : palette.purple;
 const notFuture = (date, report) => date && dayOf(report.date) && date <= report.date;
-const scopes = new Map(Object.entries({
-  outdoor: "Outdoor", "outdoor-ride": "Outdoor", "outdoor-run": "Outdoor",
-  "road-cycling": "Road", "road-biking": "Road", "road-running": "Road",
-  "mountain-biking": "MTB", "gravel-cycling": "Gravel", "gravel-biking": "Gravel",
-  "trail-running": "Trail", "trail-run": "Trail", "track-running": "Track", "track-run": "Track",
-  indoor: "Indoor", "indoor-cycling": "Indoor", "indoor-ride": "Indoor", "indoor-running": "Indoor",
-  treadmill: "Treadmill", "treadmill-running": "Treadmill",
-  "virtual-ride": "Virtual", "virtual-cycling": "Virtual", "virtual-run": "Virtual",
-}));
-const indoorScopes = new Set(["Indoor", "Treadmill", "Virtual"]);
-function scopeOf(activity) {
-  const raw = activity.providerActivityTypes;
-  const types = typeof raw === "string" ? [raw] : Object.values(raw ?? {});
-  const evidence = [activity.environment, activity.courseType, activity.activityType, ...types];
-  const matches = [...new Set(evidence.map(type => scopes.get(token(type?.typeKey ?? type))).filter(Boolean))];
-  const specific = matches.filter(value => value !== "Outdoor" && value !== "Indoor");
-  if (specific.length > 1 || new Set(matches.map(scope => indoorScopes.has(scope))).size > 1) return null;
-  return specific[0] ?? matches[0] ?? null;
-}
-
-function completed(activity, report) {
-  if (activity.classification === "non-training" || activity.planned === true
-    || ["planned", "scheduled", "future", "in-progress", "cancelled", "excluded"].includes(token(activity.status))) return false;
-  const captured = Date.parse(report.capturedAt);
-  return !Number.isFinite(captured) || [activity.startedAt, activity.endedAt].every(value => {
-    const time = Date.parse(value);
-    return !Number.isFinite(time) || time <= captured;
-  });
-}
-
-const speedMethods = { recorded: "Recorded avg", timer: "Calculated · timer", moving: "Calculated · moving", displayed: "Displayed avg" };
-const methodOrder = Object.keys(speedMethods);
-export function activitySpeedSeries(report) {
-  const groups = new Map(), unscoped = new Map();
-  let displayedRunPace;
-  for (const activity of Array.isArray(report.activities) ? report.activities : []) {
-    const sport = sportOf(activity.sport), source = text(activity.source), date = dayOf(activity.date);
-    if (!sport || !source || !notFuture(date, report) || !completed(activity, report)) continue;
-    const scope = scopeOf(activity), started = Date.parse(activity.startedAt);
-    const at = Number.isFinite(started) ? started : Date.parse(`${date}T12:00:00Z`);
-    const distance = token(activity.distanceKind) === "recorded" && positive(activity.distanceKm) ? activity.distanceKm : null;
-    const candidates = [];
-    if (positive(activity.averageSpeedKph)) candidates.push(["recorded", activity.averageSpeedKph]);
-    if (distance && positive(activity.timerSeconds)) candidates.push(["timer", distance * 3600 / activity.timerSeconds]);
-    else if (distance && positive(activity.providerMovingSeconds)) candidates.push(["moving", distance * 3600 / activity.providerMovingSeconds]);
-
-    if (!candidates.length && sport === "Running") {
-      const match = /^(\d{1,2}):([0-5]\d)\s*(?:min)?\/km$/.exec(text(activity.provenance?.displayedPace));
-      const paceSeconds = match ? Number(match[1]) * 60 + Number(match[2]) : 0;
-      if (paceSeconds > 0 && (!displayedRunPace || at > displayedRunPace.points[0].at)) {
-        displayedRunPace = { key: JSON.stringify([sport, scope, source, "displayed"]), sport, scope, source,
-          basis: "displayed", points: [{ date, at, distance, value: 3600 / paceSeconds }] };
-      }
-    }
-
-    for (const [basis, value] of candidates) {
-      if (!positive(value)) continue;
-      const key = JSON.stringify([sport, scope, source, basis]), point = { date, at, distance, value };
-      if (scope) {
-        if (!groups.has(key)) groups.set(key, { key, sport, scope, source, basis, points: [] });
-        groups.get(key).points.push(point);
-      } else {
-        const previous = unscoped.get(sport);
-        if (!previous || at > previous.points[0].at) {
-          unscoped.set(sport, { key, sport, scope, source, basis, points: [point] });
-        }
-      }
-    }
-  }
-  const all = [...groups.values(), ...unscoped.values()];
-  if (displayedRunPace) all.push(displayedRunPace);
-  for (const group of all) group.points.sort((a, b) => a.at - b.at);
-  return all.sort((a, b) => Number(b.points.length > 1) - Number(a.points.length > 1)
-    || b.points.at(-1).at - a.points.at(-1).at || methodOrder.indexOf(a.basis) - methodOrder.indexOf(b.basis));
-}
 
 export function vo2Series(report) {
   const groups = new Map();
@@ -148,7 +62,7 @@ export function effortClock(value) {
   return hours ? `${hours}:${String(minutes).padStart(2, "0")}:${tail}` : `${minutes}:${tail}`;
 }
 
-const pace = speed => effortClock(3600 / speed);
+const pace = speed => effortClock(paceSeconds(speed));
 
 function pointDate(point, year = false) {
   if (point.precision === "month") return formatDate(point.date, { day: undefined, year: "numeric" });
@@ -198,37 +112,40 @@ function Vo2Card({ series }) {
   </DataCard>;
 }
 
-function speedOption(group, groups) {
-  const matches = groups.filter(item => item.scope === group.scope);
-  return [group.scope ?? "Scope unknown", matches.length > 1 ? speedMethods[group.basis] : null,
-    matches.filter(item => item.basis === group.basis).length > 1 ? group.source : null].filter(Boolean).join(" · ");
-}
-
 function SpeedCard({ sport, groups }) {
-  const [selection, setSelection] = useState("");
-  const group = groups.find(row => row.key === selection) ?? groups[0];
-  const { scope, source, basis, points } = group, latest = points.at(-1), color = sportColor(sport);
+  const [selection, setSelection] = useState(() => groups.some(row => row.scope === "Outdoor") ? "Outdoor" : "Indoor");
+  const group = groups.find(row => row.scope === selection);
+  const { source, basis, points = [] } = group ?? {};
+  const latest = points.at(-1), color = sportColor(sport);
   const running = sport === "Running", display = running ? pace : decimal;
   const label = running ? "Run pace" : "Ride speed", unit = running ? "min/km" : "km/h";
-  const recordedGroup = groups.filter(row => row.basis === "recorded" || row.basis === "displayed")
-    .sort((a, b) => b.points.at(-1).at - a.points.at(-1).at)[0];
-  const recorded = recordedGroup?.points.at(-1);
-  return <DataCard className="progression-card" title={label}
-    history={datedHistory(`${scope || label} · ${speedMethods[basis]} · ${source}`, [`${label} · ${unit}`, "Distance · km"], points,
-      row => [display(row.value), Number.isFinite(row.distance) ? decimal(row.distance) : null], {
-        chart: [[`${label} · ${running ? "sec/km" : unit}`, row => row.value], ["Distance · km", row => row.distance]],
-      })} detail={<>
-    <DetailFacts rows={[["Source", source], ["Scope", scope], ["Timing basis", speedMethods[basis]]]} />
-    <DetailTable columns={["Date", `${label} · ${unit}`, "Distance · km"]} rows={[...points].reverse().map(point =>
-      [pointDate(point, true), display(point.value), Number.isFinite(point.distance) ? decimal(point.distance) : null])} />
-  </>}>
-    <div className="progression-readout"><div><h4>{label}</h4><small>{speedMethods[basis]} · {source}</small></div><MetricValue as="strong" value={display(latest.value)} unit={unit} style={{ color }} /></div>
-    <div className="progression-card-meta">{groups.length > 1
-      ? <select aria-label={`${label} comparison scope`} value={group.key} onChange={event => setSelection(event.target.value)}>{groups.map(row => <option key={row.key} value={row.key}>{speedOption(row, groups)}</option>)}</select>
-      : <span>{scope ?? "Scope unknown"}</span>}
-    <span>{latest.distance ? `${decimal(latest.distance)} km · ` : ""}{formatDate(latest.date)}</span></div>
-    {recorded && recordedGroup !== group && (basis !== "recorded" || recordedGroup.basis === "displayed") && <div className="progression-card-meta"><span>{speedMethods[recordedGroup.basis]} · {recordedGroup.scope ?? "Scope unknown"} · {formatDate(recorded.date)}</span><MetricValue as="strong" value={display(recorded.value)} unit={unit} /></div>}
-    <Sparkline label={`${label} · ${scope} · ${speedMethods[basis]} · ${unit}`} points={points} color={color} display={display} connect={false} />
+  const metric = `${label} · ${unit}`;
+  const recent = latest ? points.filter(row => row.date >= shiftDate(latest.date, -89)) : [];
+  const history = datedHistory(`${selection} · ${label}`, [metric, "Distance · km", "Activity"], points,
+    row => [display(row.value), Number.isFinite(row.distance) ? decimal(row.distance, 2) : null, row.name], {
+      chart: [[metric, row => running ? paceSeconds(row.value) : row.value], ["Distance · km", row => row.distance]],
+    });
+  if (running) history.chartFormats = { [metric]: { format: effortClock, reverse: true } };
+  return <DataCard className="progression-card" title={label} history={history} initialHistoryDays={90} detail={<DetailFacts rows={[
+    ["Environment", selection], ["Source", source], ["Timing basis", basis && speedMethods[basis]],
+    ["Records", latest && `${points.length} sessions through ${pointDate(latest, true)}`],
+  ]} />}>
+    <div className="progression-readout">
+      <div><h4>{label}</h4>{group && <small>{source} · {basis === "timer" ? "Distance / timer" : speedMethods[basis]}</small>}</div>
+      {latest && <MetricValue as="strong" value={display(latest.value)} unit={unit} style={{ color }} />}
+    </div>
+    <div className="progression-card-meta">
+      <select aria-label={`${label} environment`} value={selection} onChange={event => setSelection(event.target.value)}>
+        {activityEnvironments.map(scope => <option key={scope}>{scope}</option>)}
+      </select>
+      {latest && <span>{latest.distance ? `${decimal(latest.distance, 2)} km · ` : ""}{pointDate(latest, true)}</span>}
+    </div>
+    {latest ? <>
+      <Sparkline label={`${label} · ${selection} · ${unit}`} points={recent} color={color} display={display} connect={false} />
+      <div className="progression-card-meta">
+        <span>{recent.length} {recent.length === 1 ? "session" : "sessions"}{recent.length < points.length ? " · Last 90 days" : ""}</span>
+      </div>
+    </> : <p className="progression-card-meta">No verified {selection.toLowerCase()} sessions in this report.</p>}
   </DataCard>;
 }
 

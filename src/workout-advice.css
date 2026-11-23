@@ -17,10 +17,24 @@
 .workout-advice-main > span { font-size: 11px; font-weight: 650; color: var(--advice-color); }
 .workout-advice-main h2 { margin: 3px 0; font-size: clamp(16px, 2vw, 20px); letter-spacing: -.025em; }
 .workout-advice-main p, .workout-advice-evidence small { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
-.workout-advice-evidence dl { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 4px; }
-.workout-advice-evidence dl > div { padding: 6px 8px; border: 1px solid var(--rule); border-radius: 7px; background: var(--canvas); }
-.workout-advice-evidence dt { color: var(--muted); font-size: 10px; }
-.workout-advice-evidence dd { margin: 2px 0 0; font-size: 16px; font-weight: 650; }
+.workout-advice-evidence { width: 100%; }
+.workout-advice-evidence dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0 0 7px; }
+.workout-signal { min-width: 0; padding: 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--canvas); }
+.workout-signal dt { color: var(--muted); padding-bottom: 4px; border-bottom: 1px solid var(--rule); font-size: 11px; }
+.workout-signal dd { margin: 4px 0 0; color: var(--signal-color); font-size: clamp(15px, 1.7vw, 22px); font-weight: 650; }
+.workout-signal-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 4px; }
+.workout-signal-meta, .workout-signal .baseline-meter small, .workout-sleep-readout > span { margin-top: 5px; color: var(--muted); font-size: 10px; font-weight: 500; }
+.workout-signal .score-meter { margin-top: 6px; height: 13px; gap: 1px; }
+.workout-signal .baseline-meter { margin-top: 9px; }
+.workout-signal .baseline-meter small { gap: 1px 4px; flex-wrap: wrap; }
+.workout-sleep-readout { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 7px; }
+.workout-sleep-readout .score-ring { width: 43px; padding: 3px; }
+.workout-sleep-readout .score-ring strong { font-size: 13px; }
+.workout-sleep-readout .score-ring span { font-size: 8px; }
+.workout-recovery-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; height: 13px; margin-top: 6px; }
+.workout-recovery-bars > span { display: flex; align-items: flex-end; border-radius: 2px; background: var(--rule); }
+.workout-recovery-bars i { width: 100%; height: max(2px, var(--recovery-height)); background: var(--signal-color); border-radius: 2px; opacity: .65; }
+.workout-recovery-bars > span:last-child i { opacity: 1; }
 .workout-advice > .card-details-access { grid-column: 1 / -1; margin: 0; }
 @media (max-width: 660px) {
   .workout-advice { grid-template-columns: 1fr; }

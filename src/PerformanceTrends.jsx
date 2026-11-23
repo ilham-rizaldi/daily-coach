@@ -4,7 +4,8 @@ import { Area, Bar, CartesianGrid, Cell, ComposedChart, Line, ReferenceLine, Res
 import { decimal, duration, formatDate } from "./report.js";
 import { BatteryRangeChart, palette } from "./MetricGraphics.jsx";
 import { cyclingProgression, recoverySeries, trainingPlacement } from "./performance.js";
-import { activitySpeedSeries, SportSpeedCards } from "./PerformanceProgression.jsx";
+import { SportSpeedCards } from "./PerformanceProgression.jsx";
+import { activitySpeedSeries } from "./activityProgression.js";
 import { StrengthLift } from "./StrengthLift.jsx";
 import "./performance.css";
 import TrainingMix from "./TrainingMix.jsx";

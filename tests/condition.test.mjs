@@ -89,3 +89,16 @@ test("a matching dated history pair dates only load, and status attention is met
   assert.equal(result.primary[0].attention, false);
   assert.equal(result.garminLoad[0].attention, true);
 });
+
+test("workout charts use captured HRV and the current recovery reading with historical gaps", () => {
+  const report = {
+    ...recoveryReport({ hrvStatus: "Balanced", hrv7dMs: 60, hrvBaselineLowMs: 40, hrvBaselineHighMs: 65, recoveryTimeMinutes: 960 }),
+    wellnessHistory: { rows: [{ date: "2026-04-04", recoveryTimeMinutes: 0 }, { date, recoveryTimeMinutes: 1800 }] },
+  };
+  const advice = workoutAdvice(report, date);
+  assert.deepEqual([advice.hrv7d, advice.hrvLow, advice.hrvHigh], [60, 40, 65]);
+  assert.deepEqual(advice.recoveryHistory.slice(-3).map(row => row.minutes), [0, null, 960]);
+  delete report.wellness.provenance.datedRecovery.hrv;
+  assert.equal(workoutAdvice(report, date).hrv7d, null);
+  assert.equal(workoutAdvice(report, "2026-04-07").recoveryHistory, undefined);
+});

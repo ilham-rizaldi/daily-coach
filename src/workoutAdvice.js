@@ -1,4 +1,4 @@
-import { jakartaDate } from "./report.js";
+import { jakartaDate, shiftDate } from "./report.js";
 
 const status = value => typeof value === "string" ? value.trim().toLowerCase() : "";
 
@@ -14,6 +14,15 @@ function datedCapture(reading, date, capturedAt) {
     return { observationWindow: window };
   }
   return null;
+}
+
+function recoverySnapshots(rows, date, current) {
+  const recorded = new Map((rows ?? []).map(row => [row.date, row.recoveryTimeMinutes]));
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = shiftDate(date, index - 6);
+    const minutes = day === date ? current : recorded.get(day);
+    return { date: day, minutes: Number.isFinite(minutes) && minutes >= 0 ? minutes : null };
+  });
 }
 
 export function workoutAdvice(report, today) {
@@ -35,10 +44,19 @@ export function workoutAdvice(report, today) {
   const recoveryMinutes = wellness.recoveryTimeMinutes >= 0 && Number.isFinite(wellness.recoveryTimeMinutes)
     ? wellness.recoveryTimeMinutes : null;
   const readinessStatus = status(wellness.readinessStatus);
-  const hrv = datedCapture(recovery?.hrv, date, report.capturedAt) ? wellness.hrvStatus : null;
+  const hasHrv = datedCapture(recovery?.hrv, date, report.capturedAt);
+  const hrv = hasHrv ? wellness.hrvStatus : null;
   const sleep = datedCapture(recovery?.sleep, date, report.capturedAt) && Number.isFinite(wellness.sleepScore)
     && wellness.sleepScore >= 0 && wellness.sleepScore <= 100 ? wellness.sleepScore : null;
-  const signals = { readiness, readinessStatus: wellness.readinessStatus, recoveryMinutes, hrv, sleep };
+  const signals = {
+    readiness, readinessStatus: wellness.readinessStatus, readinessUpdatedAtLocal: wellness.readinessUpdatedAtLocal,
+    recoveryMinutes, recoveryStatus: wellness.recoveryTimeStatus,
+    recoveryHistory: recoverySnapshots(report.wellnessHistory?.rows, date, recoveryMinutes),
+    hrv, hrv7d: hasHrv ? wellness.hrv7dMs : null,
+    hrvLow: hasHrv ? wellness.hrvBaselineLowMs ?? wellness.hrvBaselineMs?.[0] : null,
+    hrvHigh: hasHrv ? wellness.hrvBaselineHighMs ?? wellness.hrvBaselineMs?.[1] : null,
+    sleep, sleepStatus: sleep == null ? null : wellness.sleepScoreStatus,
+  };
 
   if ((readiness !== null && readiness <= 24) || ["poor", "very low"].includes(readinessStatus)) return {
     ...base, ...signals, state: "rest", title: "Rest and reassess",

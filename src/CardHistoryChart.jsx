@@ -4,20 +4,23 @@ import { smoothLinePath } from "./chart-lines.js";
 import { DAY, decimal, formatDate } from "./report.js";
 
 const frame = { width: 560, height: 160, left: 46, right: 547, top: 13, bottom: 140 };
-const yAt = (value, low, high) => frame.bottom - (value - low) / (high - low) * (frame.bottom - frame.top);
+const yAt = (value, low, high, reverse = false) => {
+  const fraction = (value - low) / (high - low);
+  return frame.bottom - (reverse ? 1 - fraction : fraction) * (frame.bottom - frame.top);
+};
 const compactTick = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });
 
-function HistoryAxis({ low, high, first, last, label, compact = false, children }) {
+function HistoryAxis({ low, high, first, last, label, format = value => decimal(value, 1), reverse, children }) {
   const expanded = Date.parse(last) - Date.parse(first) >= 300 * DAY;
   const dateLabel = date => formatDate(date, expanded ? { month: "short", year: "numeric" } : {});
   return <>
     <svg viewBox={`0 0 ${frame.width} ${frame.height}`} role="img" aria-label={label}>
       {[1, 0.75, 0.5, 0.25, 0].map((step, index) => {
         const value = low + (high - low) * step;
-        const y = yAt(value, low, high);
+        const y = yAt(value, low, high, reverse);
         return <g key={step}>
           <line x1={frame.left} x2={frame.right} y1={y} y2={y} className="card-history-grid" />
-          {index % 2 === 0 && <text x={frame.left - 7} y={y + 4} textAnchor="end">{compact ? compactTick.format(value) : decimal(value, 1)}</text>}
+          {index % 2 === 0 && <text x={frame.left - 7} y={y + 4} textAnchor="end">{format(value)}</text>}
         </g>;
       })}
       {children}
@@ -72,6 +75,7 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
   const series = historyChartSeries(history, rows);
   const picked = series.find(item => item.label === choice) || series[0];
   if (!picked) return <p>No numeric readings to chart in this period.</p>;
+  const { format, reverse } = history.chartFormats?.[picked.label] ?? {};
   const values = picked.points.map(point => point.value);
   const bars = history.display === "bars";
   const min = Math.min(...values), max = Math.max(...values);
@@ -79,12 +83,13 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
   const low = bars ? 0 : min >= 0 ? Math.max(0, min - padding) : min - padding;
   const high = bars ? Math.max(1, max + padding) : max + padding;
   const xAt = dateAxis(first, last);
-  const position = point => [xAt(point.date), yAt(point.value, low, high)];
+  const position = point => [xAt(point.date), yAt(point.value, low, high, reverse)];
   const runs = history.daily ? dailyChartRuns(picked.points).map(run => run.map(position)) : [];
   const latest = picked.points.at(-1);
   const recent = picked.points.filter(point => point.date === latest.date).map(point => point.value);
   const recentLow = Math.min(...recent), recentHigh = Math.max(...recent);
-  const readout = recentLow === recentHigh ? decimal(recentLow) : [recentLow, recentHigh].map(v => decimal(v)).join("–");
+  const display = format ?? decimal;
+  const readout = recentLow === recentHigh ? display(recentLow) : [recentLow, recentHigh].map(v => display(v)).join("–");
   const barWidth = Math.max(2, Math.min(12, (frame.right - frame.left) / picked.points.length / 2));
   const barsByDate = new Map();
   if (bars) for (const point of picked.points) {
@@ -98,7 +103,8 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
         {series.map(item => <option key={item.label}>{item.label}</option>)}
       </select>}
     </PlotHeading>}
-    <HistoryAxis low={low} high={high} first={first} last={last} compact={bars} label={`${picked.label} · ${picked.points.length} recorded readings`}>
+    <HistoryAxis low={low} high={high} first={first} last={last} format={format ?? (bars ? compactTick.format : undefined)} reverse={reverse}
+      label={`${picked.label} · ${picked.points.length} recorded readings`}>
       <defs>
         <linearGradient id={fill} x1="0" x2="0" y1="0" y2="1" gradientUnits="objectBoundingBox">
           <stop stopColor="var(--blue)" stopOpacity=".18" /><stop offset="1" stopColor="var(--blue)" stopOpacity="0" />
@@ -115,7 +121,7 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
       {picked.points.map((point, index) => {
         const [cx, cy] = position(point);
         const dateOptions = point.precision === "month" ? { day: undefined, year: "numeric" } : { year: "numeric" };
-        const detail = `${formatDate(point.date, dateOptions)} · ${picked.label} ${decimal(point.value, 2)}`;
+        const detail = `${formatDate(point.date, dateOptions)} · ${picked.label} ${display(point.value, 2)}`;
         if (bars) {
           const group = barsByDate.get(point.date);
           const offset = (group.indexOf(point) - (group.length - 1) / 2) * (barWidth + 1);
