@@ -6,8 +6,8 @@ import { MetricValue } from "./Readout.jsx";
 import { WorkoutAdvice } from "./WorkoutAdvice.jsx";
 import { decimal, duration, formatDate } from "./report.js";
 import { paceClock } from "./pacing.js";
-import { HR_CEILING_MIN, HR_CEILING_MAX, PREDICTION_DAYS, parseScenarioPace, predictEffortAtCeiling,
-  predictHeartRate, predictionDataset, predictionModes, suggestedEffort } from "./prediction.js";
+import { HR_CEILING_MIN, HR_CEILING_MAX, EXTENDED_PREDICTION_DAYS, parseScenarioPace, automaticCeiling,
+  automaticHeartRate, automaticPredictionDataset, predictionModes, suggestedEffort } from "./prediction.js";
 import "./predictions.css";
 
 const dateText = date => formatDate(date, { year: "numeric" });
@@ -21,18 +21,20 @@ function EvidenceDetails({ result, data, cohort, mode, inverse }) {
   const matches = (result.matched || []).slice().sort((a, b) => b.date.localeCompare(a.date));
   return <>
     <DetailFacts rows={[
-      ["Confidence", result.confidence === "Insufficient" ? "Insufficient data" : result.confidence, result.reason],
-      ["Prediction window", `${dateText(data.first)} – ${dateText(data.last)}`],
-      ["Recording", cohort && `${cohort.source} · ${cohort.device} · ${cohort.environment}`, cohort?.conditions],
+      ["Type", result.method, result.reason],
+      ["Confidence", result.kind === "reference" ? "Recorded reference" : result.confidence === "Insufficient" ? "Insufficient data" : result.confidence],
+      ["Evidence search window", `${dateText(data.first)} – ${dateText(data.last)}`],
+      ["Matched profile", cohort && `${cohort.device} · ${cohort.environment}`, cohort?.conditions],
       ["Eligible days in window", cohort?.dates ?? 0],
       [inverse ? "Later ceiling checks at highest effort" : "Later sessions tested", validation?.tests ?? 0],
       [inverse ? "Later sessions above ceiling" : "Typical test error", inverse ? validation?.overshoots
         : validation?.tests > 0 ? `${decimal(validation.meanError)} bpm` : null],
       ["Recent HR median error", !inverse && validation?.tests > 0 ? `${decimal(validation.baselineError)} bpm` : null],
     ]} />
-    <DetailTable caption={inverse ? "Matched days at highest effort" : "Matched days near target effort"}
-      columns={["Date", "Effort", "Final 5 min · bpm", "Source"]}
-      rows={matches.map(row => [dateText(row.date), withUnit(row.value, mode), decimal(row.hrBpm), row.source])}
+    <DetailTable caption={inverse ? "Evidence for the HR ceiling" : "Matched days near target effort"}
+      columns={["Date", "Effort", inverse ? "Peak HR · bpm" : "HR · bpm", "Evidence", "Source"]}
+      rows={matches.map(row => [dateText(row.date), withUnit(row.value, mode), decimal(inverse ? row.peakHrBpm : row.hrBpm),
+        row.pairedFraction == null ? "Session average" : `${duration(row.durationSeconds)} block`, row.source])}
       empty="Comparable days for this input will appear here." />
     {validation?.tests > 0 && <DetailTable caption="Tests on later dates"
       columns={["Date", "Effort", inverse ? "Earlier high · bpm" : "Earlier estimate · bpm", "Recorded · bpm"]}
@@ -58,9 +60,10 @@ function PredictionEstimate({ name, mode, data, cohort, history, inverse = false
   const profile = predictionModes[mode];
   const metric = paceMode(mode) ? "pace" : "power";
   const title = inverse ? `${metric === "pace" ? "Pace" : "Power"} at HR ceiling` : `HR at target ${metric}`;
-  const value = inverse && result.effortRange
-    ? [...new Set(result.effortRange.map(v => effortText(v, mode)))].join("–")
-    : Number.isFinite(result.bpm) ? decimal(result.bpm, 0) : null;
+  const reference = result.kind === "reference";
+  const efforts = inverse ? result.effortRange ?? (reference && Number.isFinite(result.value) ? [result.value] : null) : null;
+  const value = efforts ? [...new Set(efforts.map(v => effortText(v, mode)))].join("–")
+    : !inverse && Number.isFinite(result.bpm) ? decimal(result.bpm, 0) : null;
   const observed = result.range && value != null ? [...new Set(result.range.map(v => decimal(v, 0)))].join("–") : "";
   return <DataCard className="prediction-estimate" data-axis={inverse ? "effort" : "hr"}
     title={`${name} · ${title}`} history={history} detailExpanded
@@ -70,35 +73,34 @@ function PredictionEstimate({ name, mode, data, cohort, history, inverse = false
     <div className="prediction-output" aria-live="polite">
       {value != null ? <MetricValue as="strong" value={value} unit={inverse ? profile.unit : "bpm"} />
         : <strong className="prediction-unavailable">Unavailable</strong>}
-      <span className="prediction-confidence" data-confidence={result.confidence}>
-        {result.confidence === "Insufficient" ? "Insufficient evidence" : `${result.confidence} confidence`}
+      <span className="prediction-confidence" data-confidence={reference ? "Reference" : result.confidence}>
+        {reference ? "Recorded reference" : result.confidence === "Insufficient" ? "Insufficient evidence" : `${result.confidence} confidence`}
       </span>
-      {observed && <small>{observed} bpm {inverse ? "at top effort" : "recorded"}</small>}
+      {observed && <small>{observed} bpm {inverse ? "peak HR" : "recorded"}</small>}
       <EvidenceSummary result={result} />
     </div>
-    {value == null && <p className="prediction-reason">{result.reason}</p>}
+    {(value == null || reference) && <p className="prediction-reason">{result.reason}</p>}
   </DataCard>;
 }
 
 function SportPrediction({ report, name, modes }) {
   const [mode, setMode] = useState(modes[0]);
-  const [selected, setSelected] = useState("");
   const [entry, setEntry] = useState(null);
   const plan = report.coaching?.pacing?.[name.toLowerCase()];
   const [capEntry, setCapEntry] = useState(() => Number.isFinite(plan?.hrCeiling) ? String(plan.hrCeiling) : "");
-  const data = useMemo(() => predictionDataset(report, mode), [report, mode]);
-  const cohort = data.groups.find(group => group.id === selected) || data.groups[0];
-  const defaultEffort = suggestedEffort(report, mode, cohort);
+  const data = useMemo(() => automaticPredictionDataset(report, mode), [report, mode]);
+  const cohort = data.cohort;
+  const defaultEffort = suggestedEffort(report, mode, cohort && { rows: cohort.recent });
   const text = entry ?? (paceMode(mode) ? paceClock(defaultEffort) : String(Math.round(defaultEffort * 10) / 10));
   const effort = paceMode(mode) ? parseScenarioPace(text) : asNumber(text);
   const ceiling = asNumber(capEntry);
-  const hr = useMemo(() => predictHeartRate(cohort, mode, effort), [cohort, mode, effort]);
-  const target = useMemo(() => predictEffortAtCeiling(cohort, mode, ceiling), [cohort, mode, ceiling]);
+  const hr = useMemo(() => automaticHeartRate(data, mode, effort), [data, mode, effort]);
+  const target = useMemo(() => automaticCeiling(data, mode, ceiling), [data, mode, ceiling]);
   const history = useMemo(() => {
     const effortMetric = [paceMode(mode) ? "Pace · sec/km" : "Power · W", row => row.value];
-    if (cohort?.historyRows.length) return datedHistory("Recorded steady blocks", ["Effort", "Final 5 min HR · bpm", "Device", "Source"],
-      cohort.historyRows, row => [withUnit(row.value, mode), decimal(row.hrBpm), row.device, row.source],
-      { chart: [["Final 5 min HR · bpm", row => row.hrBpm], effortMetric] });
+    if (cohort?.historyRows.length) return datedHistory("Recorded steady blocks", ["Effort", "HR · bpm", "Peak HR · bpm", "Block", "Source"],
+      cohort.historyRows, row => [withUnit(row.value, mode), decimal(row.hrBpm), row.peakHrBpm, duration(row.durationSeconds), row.source],
+      { chart: [["End-block HR · bpm", row => row.hrBpm], ["Peak HR · bpm", row => row.peakHrBpm], effortMetric] });
     return datedHistory("Whole-session averages for context", ["Effort", "Avg HR · bpm", "Source"],
       data.context, row => [withUnit(row.value, mode), decimal(row.hrBpm), row.source],
       { chart: [["Average HR · bpm", row => row.hrBpm], effortMetric] });
@@ -108,20 +110,13 @@ function SportPrediction({ report, name, modes }) {
   return <section className="prediction-sport" data-sport={name} aria-label={`${name} predictions`}>
     <header className="prediction-sport-header">
       <div><h2>{name}</h2>
-        <p>{cohort ? `${cohort.source} · ${cohort.environment} · ${cohort.dates} ${cohort.dates === 1 ? "day" : "days"}` : "No eligible recording context"}</p>
+        <p>{cohort ? `${cohort.dates} ${cohort.dates === 1 ? "day" : "days"} of paired effort and HR` : "No paired steady efforts"}</p>
       </div>
       {modes.length > 1 && <div className="prediction-mode" role="group" aria-label="Running effort metric">
         {modes.map(key => <button type="button" key={key} aria-pressed={key === mode}
-          onClick={() => { setMode(key); setSelected(""); setEntry(null); }}>{paceMode(key) ? "Pace" : "Watch power"}</button>)}
+          onClick={() => { setMode(key); setEntry(null); }}>{paceMode(key) ? "Pace" : "Watch power"}</button>)}
       </div>}
     </header>
-    {data.groups.length > 1 && <label className="prediction-context">Recording context
-      <select value={cohort.id} onChange={event => { setSelected(event.target.value); setEntry(null); }}>
-        {data.groups.map(group => <option key={group.id} value={group.id}>
-          {group.source} · {group.device} · {group.environment}{group.conditions && ` · ${group.conditions}`} · {group.dates}d
-        </option>)}
-      </select>
-    </label>}
     <div className="prediction-calculators">
       <PredictionEstimate name={name} mode={mode} data={data} cohort={cohort} history={history} result={hr}>
         <label className="prediction-input">
@@ -145,7 +140,7 @@ function SportPrediction({ report, name, modes }) {
         </label>
       </PredictionEstimate>
     </div>
-    <PredictionChart rows={cohort?.rows || []} pace={paceMode(mode)} effort={effort} ceiling={ceiling}
+    <PredictionChart rows={cohort?.historyRows || []} pace={paceMode(mode)} effort={effort} ceiling={ceiling}
       target={target.effortRange} forwardMatches={hr.matched} ceilingMatches={target.matched} />
   </section>;
 }
@@ -153,7 +148,7 @@ function SportPrediction({ report, name, modes }) {
 export default function PerformancePrediction({ report, advice }) {
   return <section className="prediction-page" aria-labelledby="view-title">
     <header className="prediction-heading">
-      <p>Eight-minute steady blocks · {PREDICTION_DAYS}-day evidence window</p>
+      <p>Measured steady efforts · up to {EXTENDED_PREDICTION_DAYS} days</p>
     </header>
     <WorkoutAdvice advice={advice} />
     <div className="prediction-grid">

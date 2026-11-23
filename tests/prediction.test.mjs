@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { shiftDate } from "../src/report.js";
-import { parseScenarioPace, predictEffortAtCeiling, predictHeartRate, predictionDataset } from "../src/prediction.js";
+import { automaticCeiling, automaticHeartRate, automaticPredictionDataset, parseScenarioPace, predictEffortAtCeiling, predictHeartRate, predictionDataset } from "../src/prediction.js";
 
 const end = "2026-04-25";
 const ride = (date, watts, hr, extra = {}) => ({
@@ -91,4 +91,38 @@ test("ceiling targets require independent days and are withheld after a later ov
   assert.equal(tested.confidence, "Medium");
   assert.equal(tested.validation.overshoots, 0);
   assert.equal(tested.validation.tests, 7);
+});
+
+test("automatic prediction uses shorter verified blocks without counting linked exports twice", () => {
+  const first = shiftDate(end, -2);
+  const report = { date: end, activities: [{ externalIds: { garmin: "g1", intervals: "i1" } }],
+    predictionEvidence: { blocks: [
+      ride(first, 90, 120, { activityId: "g1", source: "Garmin original FIT" }),
+      ride(first, 91, 120, { activityId: "i1", source: "Intervals.icu FIT" }),
+      ride(end, 98, 140, { durationSeconds: 300, hrWindowSeconds: 180 }),
+      ride(end, 102, 99, { durationSeconds: 300, startSeconds: 900, hrWindowSeconds: 60 }),
+      ride(end, 95, 65, { durationSeconds: 360, hrWindowSeconds: 180, startSeconds: 330, environment: "indoor" }),
+    ] } };
+  const data = automaticPredictionDataset(report, "cycling");
+  assert.equal(data.cohort.historyRows.length, 2);
+  assert.equal(data.cohort.environment, "outdoor");
+  const forecast = automaticHeartRate(data, "cycling", 95);
+  assert.equal(forecast.bpm, 130);
+  assert.equal(forecast.confidence, "Low");
+  assert.equal(forecast.kind, "estimate");
+});
+
+test("an observed ceiling example uses measured peaks and stays a reference on one day", () => {
+  const first = shiftDate(end, -2);
+  const withBlocks = blocks => automaticPredictionDataset({ date: end, predictionEvidence: { blocks } }, "cycling");
+  const firstBlock = ride(first, 90, 115, { peakHrBpm: 128 });
+  const next = ride(end, 90, 118, { peakHrBpm: 152 });
+  const cap = automaticCeiling(withBlocks([firstBlock, next]), "cycling", 140);
+  assert.equal(cap.kind, "reference");
+  assert.equal(cap.value, 90);
+  assert.deepEqual(cap.range, [128, 128]);
+  assert.equal(cap.effortRange, undefined);
+  assert.match(cap.reason, /similar blocks exceeded/);
+  assert.equal(automaticCeiling(withBlocks([ride(end, 90, 115)]), "cycling", 140).value, undefined);
+  assert.equal(automaticCeiling(withBlocks([firstBlock, { ...next, peakHrBpm: 132 }]), "cycling", 140).kind, "estimate");
 });

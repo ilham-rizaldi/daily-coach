@@ -55,3 +55,5 @@ Show Strength progression on Trends alongside cycling and running. Lead with tot
 Use only Indoor and Outdoor options for ride speed and run pace progression. Reconcile Garmin archive sessions by activity ID or verified start, distance and timer, use confirmed environments, and preserve the date and timing basis. Keep speed in km/h and running pace in min/km across charts and tables.
 
 Show dated workout suggestion signals as graphics where available. Use the shared readiness score bar, recorded recovery-time snapshots, the verified HRV baseline and a sleep score ring. Keep historical and missing readings from driving current advice.
+
+Select the prediction recording profile automatically. Prefer verified recent eight-minute efforts and original recordings. Search shorter nonoverlapping efforts and up to 84 days for provisional estimates. Use measured peak HR for ceiling checks. Label observed examples as recorded references and keep confidence, supporting dates and sources in Details.

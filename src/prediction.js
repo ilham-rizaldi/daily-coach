@@ -107,6 +107,8 @@ export function predictionDataset(report, key) {
       runningPowerWatts: activity.averageRunningPowerWatts }[mode.field];
     if (!values[mode.field](value) || !finiteIn(activity.averageHr, 35, 235)) return [];
     return [{ date: activity.date, value, hrBpm: activity.averageHr, source: activity.source,
+      activityId: activity.externalIds?.garmin ?? activity.externalIds?.intervals ?? activity.externalIds?.strava,
+      environment: activity.environment,
       sourceUrl: activity.sourceUrl, durationSeconds: activity.timerSeconds ?? activity.movingSeconds }];
   });
   return { groups, rows, context, first, last: report.date };
@@ -242,4 +244,146 @@ export function suggestedEffort(report, key, group) {
 export function parseScenarioPace(value) {
   const match = /^\s*(\d{1,2}):([0-5]\d)\s*$/.exec(value);
   return match ? Number(match[1]) * 60 + Number(match[2]) : NaN;
+}
+
+export const EXTENDED_PREDICTION_DAYS = 84;
+
+function blockSourceRank(row) {
+  if (row.source === "Garmin original FIT") return 3;
+  if (row.source === "Garmin Connect TCX") return 2;
+  return 1;
+}
+
+export function automaticPredictionDataset(report, key) {
+  const mode = predictionModes[key];
+  const standard = predictionDataset(report, key);
+  if (!mode || !standard.last) return { ...standard, cohort: null };
+  const first = shiftDate(report.date, 1 - EXTENDED_PREDICTION_DAYS);
+  const sessions = new Map();
+  const copies = new Map();
+  for (const activity of report.activities ?? []) {
+    const ids = activity.externalIds ?? {};
+    const key = ids.garmin ?? ids.strava ?? ids.intervals;
+    if (!key) continue;
+    for (const id of Object.values(ids).filter(Boolean)) {
+      copies.set(String(id), String(key));
+      sessions.set(String(id), activity);
+    }
+  }
+  const byActivity = new Map();
+  for (const block of report.predictionEvidence?.blocks ?? []) {
+    const short = finiteIn(block.durationSeconds, 300, MIN_BLOCK_SECONDS - 1) && block.hrWindowSeconds === 180;
+    if (!eligibleBlock(short ? { ...block, durationSeconds: MIN_BLOCK_SECONDS } : block, mode, first, report.date)) continue;
+    const id = String(block.activityId), activity = sessions.get(id);
+    if (activity?.classification === "non-training" || activity?.planned) continue;
+    const keyId = copies.get(id) ?? id;
+    const bucket = JSON.stringify([block.date, keyId]);
+    const sourceRank = blockSourceRank(block);
+    const selection = byActivity.get(bucket);
+    if (!selection || sourceRank > selection.rank) byActivity.set(bucket, { rank: sourceRank, rows: new Map() });
+    const chosen = byActivity.get(bucket);
+    if (chosen.rank === sourceRank && !chosen.rows.has(block.startSeconds ?? 0)) chosen.rows.set(block.startSeconds ?? 0, block);
+  }
+  const history = [...byActivity.values()].flatMap(item => [...item.rows.values()]).map(block => ({
+    ...block, value: block[mode.field], x: effort(mode, block[mode.field]),
+    hrBpm: key === "runningPower" ? block.runningPowerHrBpm : block.hrBpm,
+    peakHrBpm: key === "runningPower" ? block.runningPowerPeakHrBpm : block.peakHrBpm,
+  })).sort((a, b) => a.date.localeCompare(b.date) || a.startSeconds - b.startSeconds);
+  const profiles = groupOn(history, row => JSON.stringify([row.device, row.environment]));
+  const cohorts = [...profiles.values()].map(historyRows => {
+    const { device, environment } = historyRows.at(-1);
+    const recent = historyRows.filter(row => row.date >= standard.first);
+    const recentDays = groupOn(recent, row => row.date).size;
+    const conditions = [...new Set(historyRows.map(row => row.conditions))];
+    return { device, environment, recent, historyRows, recentDays, dates: groupOn(historyRows, row => row.date).size,
+      conditions: conditions.length === 1 ? conditions[0] : null };
+  }).sort((a, b) => Number(b.recentDays > 0) - Number(a.recentDays > 0)
+      || Number(b.environment === "outdoor") - Number(a.environment === "outdoor")
+      || b.recentDays - a.recentDays || b.dates - a.dates);
+  const cohort = cohorts[0] ?? null;
+  const recorders = new Map((report.baseHistory?.garminNativeRecordings?.files ?? [])
+    .map(row => [String(row.activityId), row]));
+  const context = standard.context.filter(row => {
+    if (row.date < first) return false;
+    const recorder = recorders.get(String(row.activityId));
+    const environment = recorder?.date === row.date ? recorder.environment : row.environment;
+    return cohort ? environment === cohort.environment && (!recorder || recorder.device === cohort.device)
+      : environment === "outdoor";
+  });
+  return { ...standard, first, cohort, context };
+}
+
+const isShort = row => row.durationSeconds < MIN_BLOCK_SECONDS;
+const withoutForecast = reason => ({ confidence: "Insufficient", reason });
+
+function evidenceLevels(cohort) {
+  if (!cohort) return [];
+  return [cohort.recent.filter(row => !isShort(row)), cohort.recent, cohort.historyRows];
+}
+
+export function automaticHeartRate(data, key, value) {
+  const mode = predictionModes[key];
+  if (!mode || !values[mode.field](value)) return withoutForecast("Enter a valid effort to see an estimate.");
+  const { cohort } = data;
+  for (const [index, rows] of evidenceLevels(cohort).entries()) {
+    const result = predictHeartRate({ ...cohort, rows }, key, value);
+    if (Number.isFinite(result.bpm)) {
+      if (index === 0) return { ...result, kind: "estimate", method: "Recent steady blocks" };
+      return { ...result, kind: "estimate", confidence: "Low",
+        method: index === 1 ? "Recent steady blocks including shorter efforts" : "Extended steady-block history",
+        reason: "Provisional estimate from a wider set of recorded efforts." };
+    }
+    if (result.validation?.tests >= 4 && result.matched?.length && result.range) {
+      return { ...result, bpm: median(result.matched.map(row => row.hrBpm)), kind: "reference",
+        method: "Matched HR median", reason: "Later tests favored a simple historical reference." };
+    }
+  }
+  const target = effort(mode, value);
+  const nearby = (rows, limit) => rows.filter(row => Math.abs(row.x - target) <= target * limit);
+  const sessionDays = groupOn(nearby(data.context.map(row => ({ ...row, x: effort(mode, row.value) })), SIMILAR_EFFORT),
+    row => row.date);
+  const sessionMatches = [...sessionDays.values()].map(rows => rows.reduce((best, row) =>
+    distance(target, row) < distance(target, best) ? row : best));
+  if (sessionMatches.length >= 2) {
+    const hr = sessionMatches.map(row => row.hrBpm);
+    return { kind: "reference", bpm: median(hr), confidence: "Insufficient", range: [Math.min(...hr), Math.max(...hr)],
+      matched: sessionMatches, method: "Whole-session averages", reason: "Similar session averages show how HR varied over the full workout." };
+  }
+  const raw = nearby(cohort?.historyRows ?? [], 0.1).sort((a, b) =>
+    distance(target, a) - distance(target, b) || b.date.localeCompare(a.date));
+  if (raw[0]) return { kind: "reference", bpm: raw[0].hrBpm, confidence: "Insufficient", matched: [raw[0]],
+    method: "Nearest recorded steady effort", reason: "One similar recording gives a reference for your requested effort." };
+  return withoutForecast("No comparable recorded efforts near this input.");
+}
+
+export function automaticCeiling(data, key, ceiling) {
+  if (!predictionModes[key] || !finiteIn(ceiling, HR_CEILING_MIN, HR_CEILING_MAX)) {
+    return withoutForecast(`Enter an HR ceiling from ${HR_CEILING_MIN} to ${HR_CEILING_MAX} bpm.`);
+  }
+  const { cohort } = data;
+  const peaks = (cohort?.historyRows ?? []).filter(row =>
+    finiteIn(row.peakHrBpm, 35, 235) && row.peakHrBpm >= row.hrBpm);
+  const atSimilarEffort = (candidate, row) => distance(candidate.x, row) <= candidate.x * 0.08;
+  const corroborated = candidate => peaks.every(row => !atSimilarEffort(candidate, row) || row.peakHrBpm <= ceiling);
+  for (const [index, rows] of evidenceLevels(cohort).entries()) {
+    const pool = rows.filter(row => peaks.includes(row)).map(row => ({ ...row, hrBpm: row.peakHrBpm }));
+    const result = predictEffortAtCeiling({ ...cohort, rows: pool }, key, ceiling);
+    if (result.effortRange && result.effortRange.every(value =>
+      corroborated({ x: effort(predictionModes[key], value) }))) {
+      return { ...result, kind: "estimate", method: "Measured peak HR across steady blocks",
+        confidence: index === 0 ? result.confidence : "Low",
+        reason: "A provisional range supported by measured peaks. Check HR as you settle in." };
+    }
+  }
+  const reference = peaks.filter(row => row.peakHrBpm <= ceiling && corroborated(row))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.x - a.x)[0];
+  if (reference) return { kind: "reference", value: reference.value, range: [reference.peakHrBpm, reference.peakHrBpm],
+    confidence: "Insufficient", matched: [reference], method: "Observed effort and peak HR",
+    reason: "A recorded example under this ceiling. More comparable days are needed for a pacing target." };
+  const example = peaks.filter(row => row.peakHrBpm <= ceiling)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.x - a.x)[0];
+  if (example) return { kind: "reference", value: example.value, range: [example.peakHrBpm, example.peakHrBpm],
+    confidence: "Insufficient", matched: [example], method: "Observed effort and peak HR",
+    reason: "This block stayed under the ceiling. Other similar blocks exceeded it." };
+  return withoutForecast("No measured steady-block peaks support this ceiling.");
 }

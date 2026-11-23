@@ -22,13 +22,11 @@
   background: color-mix(in srgb, var(--prediction-accent) 13%, var(--surface));
   color: var(--prediction-accent);
 }
-.prediction-context { display: grid; gap: 4px; margin-bottom: 10px; color: var(--muted); font-size: 11px; }
-.prediction-context select, .prediction-control {
+.prediction-control {
   width: 100%; min-width: 0; min-height: 42px;
   color: var(--text); font-family: inherit; font-variant-numeric: tabular-nums;
   border: 1px solid var(--control-border); border-radius: 8px; background: var(--surface);
 }
-.prediction-context select { padding: 6px 8px; font-size: 14px; }
 .prediction-calculators { flex: 1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .prediction-estimate {
   --result-color: var(--prediction-accent);
@@ -94,3 +92,4 @@
 .prediction-chart-empty { margin: 10px 0 0; padding: 12px; color: var(--muted); background: var(--canvas); border-radius: 9px; font-size: 12px; }
 @media (max-width: 860px) { .prediction-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 400px) { .prediction-calculators { grid-template-columns: minmax(0, 1fr); } }
+.prediction-peak-mark { stroke: currentColor; stroke-opacity: .44; stroke-width: 1; vector-effect: non-scaling-stroke; }

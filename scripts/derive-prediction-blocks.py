@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 
 
 BLOCK_SECONDS = 8 * 60
+SHORT_BLOCK_SECONDS = (6 * 60, 5 * 60)
 WARMUP_SECONDS = 5 * 60
 HR_SECONDS = 5 * 60
 MIN_COVERAGE = 0.90
@@ -66,12 +67,13 @@ def continuous_samples(points):
 
 def effort_variability(window, index, effort):
     means = []
-    for offset in range(0, BLOCK_SECONDS, SCAN_SECONDS):
+    for offset in range(0, len(window), SCAN_SECONDS):
         interval = [sample[index] for sample in window[offset:offset + SCAN_SECONDS]
                     if sample[index] is not None]
         if len(interval) >= 24:
             means.append(statistics.fmean(interval))
-    return statistics.pstdev(means) / effort if len(means) >= 14 and effort > 0 else math.inf
+    required = math.ceil(len(window) / SCAN_SECONDS * 0.875)
+    return statistics.pstdev(means) / effort if len(means) >= required and effort > 0 else math.inf
 
 
 def block_measurements(window, sport):
@@ -79,7 +81,9 @@ def block_measurements(window, sport):
     # carry a watch's running power, distinct from a cycling power meter.
     index = 3 if sport == "Ride" else 1
     paired = [sample for sample in window if sample[index] is not None and sample[2] is not None]
-    coverage = len(paired) / BLOCK_SECONDS
+    seconds = len(window)
+    recent_seconds = HR_SECONDS if seconds == BLOCK_SECONDS else 3 * 60
+    coverage = len(paired) / seconds
     if coverage < MIN_COVERAGE:
         return None
     steady = [sample[index] for sample in paired]
@@ -88,7 +92,7 @@ def block_measurements(window, sport):
         stationary = sum(sample[3] == 0 for sample in paired)
     else:
         stationary = sum(sample[1] < low_speed for sample in paired)
-    if stationary > BLOCK_SECONDS * 0.10:
+    if stationary > seconds * 0.10:
         return None
     effort = statistics.fmean(steady)
     if effort <= 0:
@@ -96,15 +100,17 @@ def block_measurements(window, sport):
     variability = effort_variability(window, index, effort)
     if variability > (0.24 if sport == "Ride" else 0.16):
         return None
-    last = [sample for sample in window[-HR_SECONDS:]
+    last = [sample for sample in window[-recent_seconds:]
             if sample[2] is not None and sample[index] is not None]
-    if len(last) < HR_SECONDS * MIN_COVERAGE:
+    if len(last) < recent_seconds * MIN_COVERAGE:
         return None
     result = {
-        "durationSeconds": BLOCK_SECONDS,
+        "durationSeconds": seconds,
+        "hrWindowSeconds": recent_seconds,
         "pairedFraction": round(coverage, 4),
         "effortVariability": round(variability, 4),
         "hrBpm": round(statistics.fmean(sample[2] for sample in last), 1),
+        "peakHrBpm": max(sample[2] for sample in paired),
     }
     if sport == "Ride":
         result["powerWatts"] = round(effort, 1)
@@ -112,30 +118,35 @@ def block_measurements(window, sport):
         result["paceSecondsPerKm"] = round(1000 / effort, 1)
         run_power = [sample[3] for sample in paired if sample[3] is not None]
         last_power = [sample[2] for sample in last if sample[3] is not None]
-        if len(run_power) >= BLOCK_SECONDS * MIN_COVERAGE and len(last_power) >= HR_SECONDS * MIN_COVERAGE:
+        if len(run_power) >= seconds * MIN_COVERAGE and len(last_power) >= recent_seconds * MIN_COVERAGE:
             run_effort = statistics.fmean(run_power)
             if effort_variability(window, 3, run_effort) <= 0.24:
                 result["runningPowerWatts"] = round(run_effort, 1)
                 result["runningPowerHrBpm"] = round(statistics.fmean(last_power), 1)
+                result["runningPowerPeakHrBpm"] = max(sample[2] for sample in paired if sample[3] is not None)
     return result
 
 
-def steady_blocks(tracks, start, sport, metadata):
+def steady_blocks(tracks, start, sport, metadata, include_short=False):
     rows = []
     for points in tracks:
         for chunk in continuous_samples(points):
             measured = [sample for sample in chunk if sample[0] >= start + WARMUP_SECONDS]
-            offset = 0
-            while offset + BLOCK_SECONDS <= len(measured):
-                window = measured[offset:offset + BLOCK_SECONDS]
-                block = block_measurements(window, sport)
-                if block:
-                    rows.append({
-                        **block, **metadata, "sport": sport,
-                        "startSeconds": int(window[0][0] - start),
-                    })
-                offset += BLOCK_SECONDS if block else SCAN_SECONDS
-    return rows
+            occupied = bytearray(len(measured))
+            for seconds in (BLOCK_SECONDS, *SHORT_BLOCK_SECONDS) if include_short else (BLOCK_SECONDS,):
+                offset = 0
+                while offset + seconds <= len(measured):
+                    end = offset + seconds
+                    window = measured[offset:end]
+                    block = None if any(occupied[offset:end]) else block_measurements(window, sport)
+                    if block:
+                        occupied[offset:end] = b"\x01" * seconds
+                        rows.append({
+                            **block, **metadata, "sport": sport,
+                            "startSeconds": int(window[0][0] - start),
+                        })
+                    offset += seconds if block else SCAN_SECONDS
+    return sorted(rows, key=lambda row: row["startSeconds"])
 
 
 def blocks_from_tcx(path, activity):
@@ -155,7 +166,7 @@ def blocks_from_tcx(path, activity):
         "date": activity["date"], "activityId": key, "device": device, "environment": context,
         "source": "Garmin Connect TCX", "sourceUrl": "https://connect.garmin.com/app/activity/" + key,
     }
-    return steady_blocks(points, start, sport, metadata), {
+    return steady_blocks(points, start, sport, metadata, include_short=True), {
         "device": device, "environment": context,
         "hasRecordedPower": any(row[3] is not None and row[3] > 0 for track in points for row in track),
     }
@@ -179,7 +190,7 @@ def read_intervals_fit(path, report, recorders, zone):
     sport_lookup = {"cycling": "Ride", "running": "Run"}
     selected = {str(row["externalIds"]["intervals"]): row for row in report["activities"]
                 if row.get("externalIds", {}).get("intervals") and row.get("classification") != "non-training"}
-    first = (date.fromisoformat(report["date"]) - timedelta(days=41)).isoformat()
+    first = (date.fromisoformat(report["date"]) - timedelta(days=83)).isoformat()
     blocks, verified, dates = [], set(), []
     counts = {"files": 0, "matchedFiles": 0, "recentRideRun": 0, "verifiedRecorder": 0, "eligibleFiles": 0}
     with zipfile.ZipFile(path) as archive:
@@ -230,7 +241,7 @@ def read_intervals_fit(path, report, recorders, zone):
                 "date": day, "activityId": activity_id, "device": recorder["device"], "environment": environment,
                 "source": "Intervals.icu FIT", "sourceUrl": published["sourceUrl"],
             }
-            rows = steady_blocks([points], start.timestamp(), sport, metadata)
+            rows = steady_blocks([points], start.timestamp(), sport, metadata, include_short=True)
             counts["eligibleFiles"] += bool(rows)
             blocks.extend(rows)
     return blocks, {**counts, "first": min(dates, default=None), "last": max(dates, default=None)}
@@ -314,7 +325,7 @@ def main():
                 captured = ["Activity CSV"] + (["FIT archive"] if counts.get("fit") else []) + (["wellness CSV"] if counts.get("wellness") else [])
                 provider["status"] = "Downloaded " + ", ".join(captured)
     report["predictionEvidence"] = {
-        "method": "Eight-minute blocks after the first five minutes. The first eligible window at each 30-second scan is kept and never reused. HR uses the final five minutes. Garmin TCX and Intervals.icu FIT remain separate.",
+        "method": "After a five-minute warm-up, verified eight-minute steady blocks take priority. Nonoverlapping six- and five-minute blocks fill gaps. End-block mean and measured peak HR are saved separately.",
         "processedAt": datetime.now(timezone.utc).isoformat(),
         "blocks": blocks,
     }
