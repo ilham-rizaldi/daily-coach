@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { filterCardHistory, resolveCardHistory } from "./cardHistory.js";
 import { formatDate, shiftDate } from "./report.js";
 import { CardHistoryChart } from "./CardHistoryChart.jsx";
+import { ConfidenceMark, SourceMark } from "./EvidenceMeta.jsx";
 
 const interactive = "a, button, select, input, textarea, label, summary, [role='button'], [role='link'], [contenteditable], dialog";
 
@@ -85,13 +86,19 @@ export function DataCard({ as: Tag = "article", title, detail, detailExpanded = 
 }
 
 const recorded = value => value != null && value !== "" && value !== false;
+function EvidenceCell({ label, value }) {
+  if (typeof value !== "string") return value;
+  if (label === "Confidence" || label === "Confidence / type") return <ConfidenceMark value={value} preserve />;
+  if (label === "Source" || label === "Provider") return <SourceMark source={value} />;
+  return value;
+}
 
 export function DetailFacts({ rows = [], empty = "No additional data was recorded for this card." }) {
   const available = rows.filter(([, value]) => recorded(value));
   if (!available.length) return <p>{empty}</p>;
   return <dl className="detail-facts">
     {available.map(([label, value, note], index) => <div key={index}>
-      <dt>{label}</dt><dd>{value}{recorded(note) && <small>{note}</small>}</dd>
+      <dt>{label}</dt><dd><EvidenceCell label={label} value={value} />{recorded(note) && <small>{note}</small>}</dd>
     </div>)}
   </dl>;
 }
@@ -102,7 +109,7 @@ export function DetailTable({ columns, rows, empty = "No detailed readings were 
     {caption && <caption>{caption}</caption>}
     <thead><tr>{columns.map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
     <tbody>{rows.map(([first, ...values], row) => <tr key={row}><th scope="row">{first}</th>
-      {values.map((value, column) => <td key={column}>{recorded(value) ? value : "—"}</td>)}
+      {values.map((value, column) => <td key={column}>{recorded(value) ? <EvidenceCell label={columns[column + 1]} value={value} /> : "—"}</td>)}
     </tr>)}</tbody>
   </table></div>;
 }

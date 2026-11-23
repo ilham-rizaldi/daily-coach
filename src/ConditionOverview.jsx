@@ -5,6 +5,7 @@ import { DurationValue, MetricValue } from "./Readout.jsx";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { recoverySeries } from "./performance.js";
 import { SleepDetail } from "./SleepDetail.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 
 const num = value => Number.isFinite(value) ? decimal(value) : null;
 const time = value => Number.isFinite(value) && value >= 0 ? <DurationValue seconds={value * 60} /> : null;
@@ -121,7 +122,7 @@ export function ConditionOverview({ report }) {
     .slice().sort((a, b) => b.date.localeCompare(a.date));
   const readingRows = items => items.map(item => [item.label, item.unit ? `${item.value} ${item.unit}` : item.value, item.status || undefined]);
   return <section className="condition-overview body-overview" aria-labelledby="condition-title">
-    <div className="condition-heading"><h2 id="condition-title">Body metrics</h2><span className="metric-provider">Garmin{report.preview ? " · Demo" : ""}</span></div>
+    <div className="condition-heading"><h2 id="condition-title">Body metrics</h2><EvidenceMeta source={source} /></div>
     <dl className="body-primary">
       <Tile id="readiness" label="Readiness" source={source} value={num(w.readiness)} unit="/100" color={readinessColor} status={w.readinessStatus} detail={w.readinessUpdatedAtLocal} stamp={stamp("readiness")}
         readings={[["Device update", w.readinessUpdatedAtLocal && `${w.readinessUpdatedAtLocal} WIB`], ["Recovery time", time(w.recoveryTimeMinutes)], ["Recent sleep scores", w.recentSleepScoresStatus], ["Recent stress", w.recentStressStatus]]}>
@@ -165,7 +166,7 @@ export function ConditionOverview({ report }) {
         <dl className="body-stat-row"><Stat label="Acute" value={num(w.garminAcuteLoad)} color={palette.blue} /><Stat label="Chronic" value={num(w.garminChronicLoad)} color={palette.orange} /><Stat label="Ratio" value={num(w.garminLoadRatio)} detail={w.provenance?.currentLoadContext?.ratio?.basis?.startsWith("Calculated") ? "Calculated" : null} color={statusColor(w.garminLoadRatioStatus)} /></dl>
       </DataCard>
       <DataCard as="section" aria-labelledby="body-intervals" title="Intervals.icu" history="intervals" detail={<DetailFacts rows={[["Source", report.preview ? "Illustrative Intervals.icu data" : "Intervals.icu"], ["Reading", data.intervalsStamp], ...readingRows(data.intervals)]} />}><h3 id="body-intervals">Intervals.icu</h3><dl className="body-stat-row"><Stat label="CTL" value={num(intervals.fitness)} color={palette.blue} /><Stat label="ATL" value={num(intervals.fatigue)} color={palette.purple} /><Stat label="Form" value={Number.isFinite(intervals.form) ? `${intervals.form>0?"+":""}${decimal(intervals.form)}` : null} color={palette.orange} /></dl></DataCard>
-      <DataCard as="section" aria-labelledby="body-vitals" title="Vitals" history="vitals" detail={<DetailFacts rows={[["Source", source], ["Reading", data.overnightStamp], ...data.overnight.map(item => [item.label, item.value, item.context])]} />}><h3 id="body-vitals">Vitals</h3><dl className="body-stat-row"><Stat label="SpO₂" value={num(w.averageSpo2)} unit="%" detail={Number.isFinite(w.lowestSpo2)?`Min ${w.lowestSpo2}%`:null} color={palette.blue} /><Stat label="RR" value={num(w.averageRespiration)} unit="br/min" detail={Number.isFinite(w.minimumRespiration)?`Min ${w.minimumRespiration}`:null} /><Stat label="Awake" value={num(w.awakeMinutes)} unit="min" detail={Number.isFinite(w.restlessMoments)?`${w.restlessMoments} restless`:null} /></dl></DataCard>
+      <DataCard as="section" className="body-vitals-panel" aria-labelledby="body-vitals" title="Vitals" history="vitals" detail={<DetailFacts rows={[["Source", source], ["Reading", data.overnightStamp], ...data.overnight.map(item => [item.label, item.value, item.context])]} />}><h3 id="body-vitals">Vitals</h3><dl className="body-stat-row"><Stat label="SpO₂" value={num(w.averageSpo2)} unit="%" detail={Number.isFinite(w.lowestSpo2)?`Min ${w.lowestSpo2}%`:null} color={palette.blue} /><Stat label="RR" value={num(w.averageRespiration)} unit="br/min" detail={Number.isFinite(w.minimumRespiration)?`Min ${w.minimumRespiration}`:null} /><Stat label="Awake" value={num(w.awakeMinutes)} unit="min" detail={Number.isFinite(w.restlessMoments)?`${w.restlessMoments} restless`:null} /></dl></DataCard>
       <DataCard as="section" aria-labelledby="body-adaptation" title="Adaptation · Garmin" history="adaptation" detail={<DetailFacts rows={[["Source", source], ["Training status capture", data.fitnessStamp], ...data.fitness.map(item => [item.label, item.value, item.context])]} />}>
         <h3 id="body-adaptation">Adaptation · Garmin</h3>
         <dl className="body-stat-row adaptation-measures">

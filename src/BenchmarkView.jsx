@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PerformanceProgression, { effortClock as clock, personalRecords } from "./PerformanceProgression.jsx";
+import { EvidenceDay, EvidenceMeta } from "./EvidenceMeta.jsx";
 import { MetricValue } from "./Readout.jsx";
 import { decimal, formatDate } from "./report.js";
 import { WorkoutReview } from "./TrainingTargets.jsx";
@@ -78,11 +79,8 @@ function workoutRows(report) {
 }
 
 function Source({ name, href, date }) {
-  const dateLabel = <time dateTime={date}>{formatDate(date)}</time>;
-  return <span className="benchmark-source">
-    {name && (href ? <a href={href} target="_blank" rel="noopener noreferrer">{name}</a> : name)}
-    {name && " · "}{!name && href ? <a href={href} target="_blank" rel="noopener noreferrer">{dateLabel}</a> : dateLabel}
-  </span>;
+  if (name) return <EvidenceMeta source={name} href={href} date={date} />;
+  return href ? <a href={href} target="_blank" rel="noopener noreferrer"><EvidenceDay date={date} /></a> : <EvidenceDay date={date} />;
 }
 
 function Selector({ label, data, active, change }) {

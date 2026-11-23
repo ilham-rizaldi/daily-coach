@@ -4,6 +4,7 @@ import { datedHistory } from "./cardHistory.js";
 import { smoothLinePath } from "./chart-lines.js";
 import { palette } from "./MetricGraphics.jsx";
 import { MetricValue } from "./Readout.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { decimal, formatDate, shiftDate } from "./report.js";
 import { activityEnvironments, activitySpeedSeries, dayOf, paceSeconds, speedMethods, sportOf } from "./activityProgression.js";
 import "./progression.css";
@@ -106,7 +107,8 @@ function Vo2Card({ series }) {
     <DetailTable columns={["Date", "VO₂ max · mL/kg/min", "Date precision"]} rows={[...points].reverse().map(point =>
       [pointDate(point, true), decimal(point.value), point.precision === "month" ? "Monthly" : "Daily"])} />
   </>}>
-    <div className="progression-readout"><div><h4>{sport}</h4><small>{source} · {pointDate(latest)}</small></div><MetricValue as="strong" value={decimal(latest.value)} unit="mL/kg/min" style={{ color }} /></div>
+    <div className="progression-readout"><h4>{sport}</h4><MetricValue as="strong" value={decimal(latest.value)} unit="mL/kg/min" style={{ color }} /></div>
+    <EvidenceMeta source={source} date={latest.date} precision={latest.precision} className="evidence-footer" />
     <Sparkline label={`${sport} VO₂ max · ${source}`} points={points} color={color} />
     {hasMonthly && points.length > 1 && <div className="progression-card-meta"><span>○ Monthly{hasDaily ? " · ● Daily" : ""}</span></div>}
   </DataCard>;
@@ -131,17 +133,20 @@ function SpeedCard({ sport, groups }) {
     ["Records", latest && `${points.length} sessions through ${pointDate(latest, true)}`],
   ]} />}>
     <div className="progression-readout">
-      <div><h4>{label}</h4>{group && <small>{source} · {basis === "timer" ? "Distance / timer" : speedMethods[basis]}</small>}</div>
+      <h4>{label}</h4>
       {latest && <MetricValue as="strong" value={display(latest.value)} unit={unit} style={{ color }} />}
     </div>
     <div className="progression-card-meta">
       <select aria-label={`${label} environment`} value={selection} onChange={event => setSelection(event.target.value)}>
         {activityEnvironments.map(scope => <option key={scope}>{scope}</option>)}
       </select>
-      {latest && <span>{latest.distance ? `${decimal(latest.distance, 2)} km · ` : ""}{pointDate(latest, true)}</span>}
+      {latest && Number.isFinite(latest.distance) && <span>{decimal(latest.distance, 2)} km</span>}
     </div>
     {latest ? <>
       <Sparkline label={`${label} · ${selection} · ${unit}`} points={recent} color={color} display={display} connect={false} />
+      <EvidenceMeta className="evidence-footer" source={source} date={latest.date} year dateLabel="Latest">
+        <span>{basis === "timer" ? "Distance / timer" : speedMethods[basis]}</span>
+      </EvidenceMeta>
       <div className="progression-card-meta">
         <span>{recent.length} {recent.length === 1 ? "session" : "sessions"}{recent.length < points.length ? " · Last 90 days" : ""}</span>
       </div>
@@ -170,7 +175,7 @@ function RecordCard({ record }) {
     <div className="progression-record-sport" style={{ color: sportColor(sport) }}>{sport}</div>
     <h4>{label}</h4>
     <MetricValue as="strong" value={timed ? effortClock(value) : typeof value === "number" ? decimal(value, 2) : value} unit={timed ? undefined : unit} />
-    <div className="progression-card-meta">{url ? <a href={url} target="_blank" rel="noopener noreferrer">{source}</a> : <span>{source}</span>}<time dateTime={date}>{formatDate(date, { year: "numeric" })}</time></div>
+    <EvidenceMeta className="evidence-footer" source={source} href={url} date={date} year />
   </DataCard>;
 }
 

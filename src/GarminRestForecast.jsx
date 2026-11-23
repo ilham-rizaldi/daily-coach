@@ -2,6 +2,7 @@ import { decimal, formatDate, jakartaDate, shiftDate } from "./report.js";
 import { projectGarminRest } from "./garminForecast.js";
 import { ForecastBars, forecastColors } from "./ForecastGraphics.jsx";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 
 export function GarminRestForecast({ report }) {
   const result = projectGarminRest(report);
@@ -20,8 +21,11 @@ export function GarminRestForecast({ report }) {
       : []} empty="A dated Garmin load history is required for this estimate." />
   </>}>
     <div className="forecast-heading">
-      <div><p className="eyebrow">Garmin · no new load</p><h2 id="garmin-rest-heading">Rest projection <span className="quiet">{formatDate(date)}</span></h2></div>
-      <div className="forecast-calibration"><span title="Estimated · low confidence; calibration in Reference">Est.</span>{historical && <span>Snapshot {formatDate(report.date)}</span>}{result.extrapolation && <span>Extrapolated</span>}</div>
+      <div><h2 id="garmin-rest-heading">Rest projection</h2>
+        <EvidenceMeta source="Garmin load history" date={date} dateLabel="Projection" confidence={result.available ? "Low" : null}
+          state={result.extrapolation ? "Extrapolated" : null} />
+        {historical && <EvidenceMeta date={report.date} dateLabel="Snapshot" />}
+      </div>
     </div>
     {result.available ? <div className="garmin-rest-summary">
       <div className="garmin-ratio-shift"><span className="forecast-stat-label">Acute / chronic</span><div><strong>{decimal(ratio, 1)}</strong><span aria-hidden="true">→</span><strong style={{ color: forecastColors.rest }}>≈{decimal(result.estimate.ratio, 2)}</strong></div><small>{decimal(result.range.ratio.low, 2)}–{decimal(result.range.ratio.high, 2)}</small></div>

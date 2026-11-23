@@ -7,6 +7,7 @@ import { cyclingProgression, recoverySeries, trainingPlacement } from "./perform
 import { SportSpeedCards } from "./PerformanceProgression.jsx";
 import { activitySpeedSeries } from "./activityProgression.js";
 import { StrengthLift } from "./StrengthLift.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import "./performance.css";
 import TrainingMix from "./TrainingMix.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
@@ -40,7 +41,9 @@ function Recovery({ report }) {
     <DetailTable columns={["Date", ...columns]} rows={[...data].reverse().map(row => [formatDate(row.date), ...values(row)])} caption={caption} />
   </>;
   return <section className="performance-recovery" aria-labelledby="recovery-trend-title">
-    <div className="performance-heading"><h2 id="recovery-trend-title" title={`Garmin wellness · captured ${report.wellnessHistory?.observedAt || "unrecorded"}`}>Recovery trends</h2><div className="performance-period" aria-label="Recovery period">{[7, 28, 56].map(value => <button key={value} aria-pressed={value === days} onClick={() => setDays(value)}>{value}d</button>)}</div></div>
+    <div className="performance-heading"><div><h2 id="recovery-trend-title">Recovery trends</h2>
+      {available && <EvidenceMeta source={report.preview ? "Illustrative Garmin data" : "Garmin Connect"} observedAt={report.wellnessHistory?.observedAt} />}
+    </div><div className="performance-period" aria-label="Recovery period">{[7, 28, 56].map(value => <button key={value} aria-pressed={value === days} onClick={() => setDays(value)}>{value}d</button>)}</div></div>
     {available ? <>
       <div className="performance-chart-grid">
         <DataCard title="Heart rate variability" history="hrv" detail={dated(["Overnight · ms", "7d · ms", "Baseline · ms"], row => [number(row.hrvMs, 0), number(row.hrv7dMs, 0), row.hrvBand?.join("–")], "Daily HRV readings")}><div className="performance-chart-title"><h3>HRV <small>ms</small></h3><div className="recovery-readout"><MetricValue as="strong" value={number(last.hrvMs, 0)} unit="ms" style={{ color: palette.blue }} /><small className="metric-context">7d {number(last.hrv7dMs, 0)}ms</small></div></div>

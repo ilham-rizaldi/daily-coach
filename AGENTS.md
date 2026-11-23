@@ -57,3 +57,5 @@ Use only Indoor and Outdoor options for ride speed and run pace progression. Rec
 Show dated workout suggestion signals as graphics where available. Use the shared readiness score bar, recorded recovery-time snapshots, the verified HRV baseline and a sleep score ring. Keep historical and missing readings from driving current advice.
 
 Select the prediction recording profile automatically. Prefer verified recent eight-minute efforts and original recordings. Search shorter nonoverlapping efforts and up to 84 days for provisional estimates. Use measured peak HR for ceiling checks. Label observed examples as recorded references and keep confidence, supporting dates and sources in Details.
+
+Integrate source, reading date and capture time with the associated card using shared evidence styling. Show confidence as Low in orange, Medium in blue and High in green. Keep unknown confidence and recorded references neutral. Use available panel space to give the Workout suggestion and Body metrics graphics more room.

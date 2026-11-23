@@ -3,6 +3,7 @@ import { DurationValue, MetricValue } from "./Readout.jsx";
 import { conditionStamp } from "./condition.js";
 import { duration, formatDate } from "./report.js";
 import { BaselineMeter, ScoreMeter, ScoreRing, palette, statusColor } from "./MetricGraphics.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import "./workout-advice.css";
 
 function RecoverySnapshots({ rows = [] }) {
@@ -70,7 +71,8 @@ export function WorkoutAdvice({ advice }) {
           </dd>
         </div>}
       </dl>}
-      {stamp && <small>{source} · {stamp}</small>}
+      {stamp && <EvidenceMeta className="evidence-footer" source={source} date={date} dateLabel="Reading" observedAt={observedAt}
+        observationWindow={observationWindow} />}
     </div>}
   </DataCard>;
 }

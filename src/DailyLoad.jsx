@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { DataCard } from "./CardDetails.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { smoothLinePath } from "./chart-lines.js";
 import { DAY, decimal, formatDate, shiftDate } from "./report.js";
 
@@ -29,7 +30,9 @@ export function DailyLoad({ report }) {
     <header className="daily-load-heading">
       <div>
         <h2 id="daily-load-title">Garmin training load</h2>
-        <p>{latest ? `${rows.length} / 42 days · Latest ${formatDate(latest.date)}` : "Past 42 days"}</p>
+        {latest ? <EvidenceMeta source={report.preview ? "Illustrative Garmin data" : "Garmin Connect"} date={latest.date} dateLabel="Latest">
+          <span>{rows.length} / 42 days</span>
+        </EvidenceMeta> : <p>Past 42 days</p>}
       </div>
       {latest && <dl className="daily-load-key">
         <div><dt>Acute</dt><dd>{decimal(latest.acute, 0)}</dd></div>

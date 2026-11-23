@@ -5,6 +5,7 @@ import { contributionWeights, historicalLoadRate } from "./forecast.js";
 import { projectGarminRest } from "./garminForecast.js";
 import { ThresholdChecks } from "./TrainingTargets.jsx";
 import { SourceHistory } from "./SourceHistory.jsx";
+import { ConfidenceMark, EvidenceMeta, SourceMark } from "./EvidenceMeta.jsx";
 
 const glossary = [
   ["RHR Δ", "Recovery trend", "bpm", "Daily RHR minus the median of the preceding 28 calendar days. At least seven prior readings are required; the current day is excluded from its baseline."],
@@ -107,12 +108,7 @@ function EvidenceDate({ day }) {
 const captureTime = value => value ? timestamp(value) : "Time not recorded";
 
 function EvidenceSource({ row }) {
-  let link;
-  try {
-    const url = new URL(row.sourceUrl || row.url);
-    if (url.protocol === "https:" && !url.username && !url.password) link = url.href;
-  } catch { /* A source can be captured without a direct link. */ }
-  return link ? <a href={link} target="_blank" rel="noreferrer">{row.source}</a> : row.source;
+  return <SourceMark source={row.source} href={row.sourceUrl || row.url} />;
 }
 
 function PerformanceEvidence({ report }) {
@@ -288,6 +284,7 @@ export function Reference({ report, researchOpen = false }) {
           <tr><th scope="row">Garmin load</th><td><ColorKey items={[["Acute", palette.blue], ["Chronic", palette.orange]]} /></td></tr>
           <tr><th scope="row">Recovery trends</th><td><ColorKey items={[["7d HRV", palette.blue], ["Overnight HRV", palette.gray], ["HRV baseline", palette.green], ["RHR Δ", palette.red]]} /></td></tr>
           <tr><th scope="row">Cycling / plan</th><td><ColorKey items={[["Hours / CTL", palette.blue], ["TL / ATL", palette.purple], ["Longest ride / TSB", palette.orange], ["Rest scenario", palette.gray]]} /></td></tr>
+          <tr><th scope="row">Confidence</th><td><div className="evidence-meta">{["Low", "Medium", "High"].map(level => <ConfidenceMark key={level} value={level} />)}</div></td></tr>
           <tr><th scope="row">Source status</th><td><ColorKey items={[["Green", palette.green], ["Orange", palette.orange], ["Red", palette.red]]} /><small>Recorded metric category. Garmin ratio categories use the source label.</small></td></tr>
         </tbody></table></div>
       </details>
@@ -304,7 +301,8 @@ export function Reference({ report, researchOpen = false }) {
       </details>
       <details><summary>Garmin rest projection</summary>
         <p>Paired day-to-day acute/chronic change factors from consecutive completed dates with no recorded activity. Window: previous 56 days; minimum n = 3. The representative pair is closest to the median projected ratio.</p>
-        <p>Acute and chronic factors stay paired. Range = minimum–maximum historical scenarios. Confidence: low. Current partial dates and every recorded activity date are excluded, including locally excluded recordings.</p>
+        <EvidenceMeta source="Garmin load history" confidence="Low" />
+        <p>Acute and chronic factors stay paired. Range = minimum–maximum historical scenarios. Current partial dates and every recorded activity date are excluded, including locally excluded recordings.</p>
         <dl className="reference-metadata"><div><dt>Calibration</dt><dd>{rest.available ? `n = ${rest.n}${rest.extrapolation ? " · Extrapolation" : ""}` : `n = ${rest.n} · Unavailable`}</dd></div><div><dt>History capture</dt><dd>{timestamp(report.garminLoadHistory?.observedAt)}</dd></div><div><dt>Method</dt><dd>Empirical paired transitions</dd></div></dl>
         {!rest.available && <p>{rest.error}</p>}
       </details>
@@ -315,7 +313,7 @@ export function Reference({ report, researchOpen = false }) {
       <PerformanceEvidence report={report} />
       <details><summary>Data & capture</summary>
         <dl className="reference-metadata"><div><dt>Coverage</dt><dd>{date(report.coverage?.start)}–{date(report.coverage?.end)} · {report.coverage?.complete ? "Complete captured window" : "Partial coverage"}</dd></div><div><dt>Report capture</dt><dd>{timestamp(report.capturedAt)}</dd></div>{report.compiledAt && <div><dt>Compiled</dt><dd>{timestamp(report.compiledAt)}</dd></div>}</dl>
-        <div className="table-scroll"><table className="source-table"><caption className="sr-only">Source capture</caption><thead><tr><th scope="col">Source</th><th scope="col">Captured</th><th scope="col">Status</th></tr></thead><tbody>{(report.sources || []).map(source => <tr key={source.name}><th scope="row">{source.name}</th><td>{timestamp(source.observedAt)}</td><td>{source.status}</td></tr>)}</tbody></table></div>
+        <div className="table-scroll"><table className="source-table"><caption className="sr-only">Source capture</caption><thead><tr><th scope="col">Source</th><th scope="col">Capture details</th></tr></thead><tbody>{(report.sources || []).map(source => <tr key={source.name}><th scope="row"><SourceMark source={source.name} /></th><td><EvidenceMeta observedAt={source.observedAt} observationWindow={source.observationWindow} state={source.status} /></td></tr>)}</tbody></table></div>
         <div className="table-scroll"><table className="source-table"><caption>Snapshot provenance · — = unrecorded</caption><thead><tr><th scope="col">Metric</th><th scope="col">Reading date</th><th scope="col">Captured</th><th scope="col">Source update</th></tr></thead><tbody>{readingDates.map(([metric, metricDate, captured, updated]) => <tr key={metric}><th scope="row">{metric}</th><td>{date(metricDate)}</td><td>{timestamp(captured)}</td><td>{updated}</td></tr>)}</tbody></table></div>
         <MetricCoverage availability={report.metricAvailability} />
         <p>Totals use deduplicated canonical session timers. Excluded recordings contribute no local training totals. Missing fields remain null; zero training requires complete captured coverage.</p>

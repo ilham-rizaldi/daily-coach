@@ -7,6 +7,7 @@ import { projectWeek, restWeek } from "./planner.js";
 import "./planner.css";
 import { DurationValue } from "./Readout.jsx";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 
 const sports = [["Rest", "Rest"], ["Ride", "Cycling"], ["Run", "Running"], ["Weight Training", "Strength"]];
 const metrics = { fitness: { label: "CTL", color: palette.blue }, fatigue: { label: "ATL", color: palette.purple }, form: { label: "TSB", color: palette.orange } };
@@ -53,7 +54,9 @@ export default function WeekPlanner({ report }) {
     update(index, { sport, minutes: sport === "Rest" ? 0 : numeric(plans[index].minutes) > 0 ? plans[index].minutes : "30" });
   }
   return <section className="week-planner" aria-labelledby="week-plan-title">
-    <div className="week-plan-heading"><div><h2 id="week-plan-title">7-day plan</h2><span>Intervals.icu · EOD · Est.</span></div><div className="week-plan-actions"><span>{plans.length ? `${formatDate(plans[0].date)}–${formatDate(plans.at(-1).date)}` : "—"}</span><button onClick={() => setPlans(restWeek(report))}>Reset rest</button></div></div>
+    <div className="week-plan-heading"><div><h2 id="week-plan-title">7-day plan</h2>
+      <EvidenceMeta source="Intervals.icu-style model" from={plans[0]?.date} date={plans.at(-1)?.date} state="End-of-day estimate" />
+    </div><div className="week-plan-actions"><button onClick={() => setPlans(restWeek(report))}>Reset rest</button></div></div>
     <div className="week-plan-grid">{plans.map((plan, index) => {
       const estimate = estimateSessionLoad(report, { sport: plan.sport, minutes: numeric(plan.minutes), effort: plan.effort });
       const valid = plan.sport === "Rest" || (numeric(plan.minutes) > 0 && numeric(plan.minutes) <= 600);

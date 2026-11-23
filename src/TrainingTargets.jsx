@@ -3,6 +3,7 @@ import { decimal, duration, formatDate } from "./report.js";
 import { compareWorkBlock, garminPacingWorkout, paceClock, pacingMetrics, pacingSports, rangeFor, reviewMetrics, targetEvidence } from "./pacing.js";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { activityMetrics } from "./components.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 
 const shownDate = date => typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) && Number.isFinite(Date.parse(date))
   ? formatDate(date, { year: "numeric" }) : "Date unavailable";
@@ -15,13 +16,11 @@ function Readout({ value, unit, tone }) {
   </strong>;
 }
 
-function Evidence({ evidence }) {
-  return evidence ? <div className="target-evidence">
-    <span>{evidence.source}</span>
-    <span>{evidence.dateLabel || "Dated"} <time dateTime={evidence.date}>{shownDate(evidence.date)}</time></span>
-    <span className="target-confidence" data-confidence={evidence.confidence}>{evidence.confidence} confidence</span>
-    {evidence.reason && <span>{evidence.reason}</span>}
-  </div> : <p className="target-evidence">Source, date and confidence unavailable for this snapshot.</p>;
+function Evidence({ evidence, expanded = false }) {
+  return evidence ? <EvidenceMeta className="evidence-inset target-evidence" source={evidence.source} date={evidence.date}
+    dateLabel={evidence.dateLabel || "Recorded"} confidence={evidence.confidence} year>
+    {expanded && evidence.reason && <span className="target-evidence-note">{evidence.reason}</span>}
+  </EvidenceMeta> : <p className="target-evidence">Evidence unavailable</p>;
 }
 
 function PacingCard({ definition, plan }) {
@@ -108,7 +107,7 @@ export function ThresholdChecks({ report }) {
     {checks && <div className="threshold-grid">
       {checks.rows.map(row => <DataCard key={row.title} className="training-panel" data-signal={row.tone} title={row.title} history={{ kind: "threshold", title: row.title }}
         detail={<><DetailFacts rows={[["Value", `${row.value} ${row.unit || ""}`], ["Status", row.status], ["Account settings", row.detail], ["Decision", checks.decision]]} />
-          <Evidence evidence={targetEvidence(row.evidence)} /></>}>
+          <Evidence evidence={targetEvidence(row.evidence)} expanded /></>}>
         <h3>{row.title}</h3>
         <Readout value={row.value} unit={row.unit} />
         <p className="threshold-status">{row.status}</p>
@@ -175,7 +174,9 @@ export function WorkoutReview({ report }) {
         empty="No comparable work block is linked to a dated plan for this workout." />
     </>}>
       <header className="training-card-heading">
-        <div><h3>{selected.name || sport}</h3><p>{shownDate(selected.date)} · {selected.source || "Source unavailable"} · {duration(selected.timerSeconds ?? selected.movingSeconds)}</p></div>
+        <div><h3>{selected.name || sport}</h3><EvidenceMeta source={selected.source} date={selected.date} year>
+          <span>{duration(selected.timerSeconds ?? selected.movingSeconds)}</span>
+        </EvidenceMeta></div>
       </header>
       <dl className="review-metrics">{rows.map(([label, value, unit, tone]) => <div key={label}>
         <dt>{label}</dt><dd><Readout value={numericValue(value, unit)} unit={unit} tone={tone} /></dd>
@@ -186,7 +187,9 @@ export function WorkoutReview({ report }) {
       <div className="review-comparison">
         <h4>Planned vs actual</h4>
         {review?.rows.length ? <>
-          <p>Plan {shownDate(review.plan.date)} · {review.workBlock.source} · {duration(review.workBlock.seconds)} steady work</p>
+          <EvidenceMeta source={review.workBlock.source} date={review.plan.date} dateLabel="Plan" year>
+            <span>{duration(review.workBlock.seconds)} steady work</span>
+          </EvidenceMeta>
           <div className="table-scroll"><table className="reference-table"><thead>
             <tr><th scope="col">Metric</th><th scope="col">Target</th><th scope="col">Recorded</th><th scope="col">Result</th></tr>
           </thead><tbody>{review.rows.map(row => <tr key={row.key}>

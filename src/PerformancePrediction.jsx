@@ -6,6 +6,7 @@ import { MetricValue } from "./Readout.jsx";
 import { WorkoutAdvice } from "./WorkoutAdvice.jsx";
 import { decimal, duration, formatDate } from "./report.js";
 import { paceClock } from "./pacing.js";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { HR_CEILING_MIN, HR_CEILING_MAX, EXTENDED_PREDICTION_DAYS, parseScenarioPace, automaticCeiling,
   automaticHeartRate, automaticPredictionDataset, predictionModes, suggestedEffort } from "./prediction.js";
 import "./predictions.css";
@@ -49,13 +50,6 @@ function EvidenceDetails({ result, data, cohort, mode, inverse }) {
   </>;
 }
 
-function EvidenceSummary({ result }) {
-  const dates = (result.matched || []).map(row => row.date).sort();
-  if (!dates.length) return null;
-  const first = formatDate(dates[0]), last = formatDate(dates.at(-1));
-  return <small className="prediction-dates">{dates.length} {dates.length === 1 ? "day" : "days"} · {first === last ? first : `${first} – ${last}`}</small>;
-}
-
 function PredictionEstimate({ name, mode, data, cohort, history, inverse = false, result, children }) {
   const profile = predictionModes[mode];
   const metric = paceMode(mode) ? "pace" : "power";
@@ -65,6 +59,9 @@ function PredictionEstimate({ name, mode, data, cohort, history, inverse = false
   const value = efforts ? [...new Set(efforts.map(v => effortText(v, mode)))].join("–")
     : !inverse && Number.isFinite(result.bpm) ? decimal(result.bpm, 0) : null;
   const observed = result.range && value != null ? [...new Set(result.range.map(v => decimal(v, 0)))].join("–") : "";
+  const matches = result.matched ?? [];
+  const dates = [...new Set(matches.map(row => row.date))].sort();
+  const sources = [...new Set(matches.map(row => row.source).filter(Boolean))];
   return <DataCard className="prediction-estimate" data-axis={inverse ? "effort" : "hr"}
     title={`${name} · ${title}`} history={history} detailExpanded
     detail={<EvidenceDetails result={result} data={data} cohort={cohort} mode={mode} inverse={inverse} />}>
@@ -73,11 +70,10 @@ function PredictionEstimate({ name, mode, data, cohort, history, inverse = false
     <div className="prediction-output" aria-live="polite">
       {value != null ? <MetricValue as="strong" value={value} unit={inverse ? profile.unit : "bpm"} />
         : <strong className="prediction-unavailable">Unavailable</strong>}
-      <span className="prediction-confidence" data-confidence={reference ? "Reference" : result.confidence}>
-        {reference ? "Recorded reference" : result.confidence === "Insufficient" ? "Insufficient evidence" : `${result.confidence} confidence`}
-      </span>
       {observed && <small>{observed} bpm {inverse ? "peak HR" : "recorded"}</small>}
-      <EvidenceSummary result={result} />
+      <EvidenceMeta className="evidence-inset" source={sources.join(" + ")} from={dates[0]} date={dates.at(-1)}
+        dateLabel={dates.length ? `${dates.length} ${dates.length === 1 ? "day" : "days"}` : null}
+        confidence={result.confidence} state={reference ? "Recorded reference" : result.confidence === "Insufficient" ? "Insufficient evidence" : null} />
     </div>
     {(value == null || reference) && <p className="prediction-reason">{result.reason}</p>}
   </DataCard>;

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
-import { formatDate, jakartaDate } from "./report.js";
+import { jakartaDate } from "./report.js";
 import { parseAccessInput, unlockReports } from "./archive.js";
 import { demoReport } from "./demo.js";
 import { ActivityTable, ChartBoundary, Session, TrainingChart, Trends } from "./components.jsx";
@@ -12,6 +12,7 @@ import { RecoveryProgression, TrainingPacing } from "./TrainingTargets.jsx";
 import { HistoryContext } from "./CardDetails.jsx";
 import { WorkoutAdvice } from "./WorkoutAdvice.jsx";
 import { DailyLoad } from "./DailyLoad.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { workoutAdvice } from "./workoutAdvice.js";
 
 const PerformanceTrends = lazy(() => import("./PerformanceTrends.jsx"));
@@ -173,10 +174,8 @@ export function App() {
       <main id="main" ref={mainRef} tabIndex={-1}>
         {copyState && <p className="notice" role="status">{copyState}</p>}
         <div className="report-meta">
-          {report && <>
-            <time dateTime={report.date}>{formatDate(report.date, { weekday: "short", year: "numeric" })}</time>
-            <span>{preview ? "Demo" : `${report.date === today ? "Snapshot" : "Historical"} · ${new Date(report.capturedAt).toLocaleString("en-GB", { timeZone: "Asia/Jakarta", timeStyle: "short" })} WIB`}</span>
-          </>}
+          {report && <EvidenceMeta className="report-evidence" date={report.date} year observedAt={preview ? null : report.capturedAt}
+            dateLabel={preview ? "Demo" : report.date === today ? "Snapshot" : "Historical"} />}
           {reports.length > 1 && <nav className="report-switcher" aria-label="Report dates"><button disabled={reportIndex >= reports.length - 1} onClick={() => selectReport(reportIndex + 1)} aria-label="Older report">←</button><span>{reportIndex + 1} of {reports.length}</span><button disabled={reportIndex === 0} onClick={() => selectReport(reportIndex - 1)} aria-label="Newer report">→</button></nav>}
           <RequestReport />
         </div>
@@ -253,7 +252,9 @@ export function App() {
           {section === "Reference" && <Reference report={report} researchOpen={researchOpen} />}
           {section === "Archive" && (
             <>
-              <div className="archive-list">{reports.map((item, index) => <button key={item.date} onClick={() => selectReport(index)} aria-current={index === reportIndex ? "true" : undefined}><time>{formatDate(item.date, { weekday: "short", year: "numeric" })}</time><strong>{item.coaching.headline.split(";")[0]}</strong><span>{index === reportIndex ? "Selected" : "Open"}</span></button>)}</div>
+              <div className="archive-list">{reports.map((item, index) => <button key={item.date} onClick={() => selectReport(index)} aria-current={index === reportIndex ? "true" : undefined}>
+                <EvidenceMeta as="span" date={item.date} year observedAt={preview ? null : item.capturedAt} />
+                <strong>{item.coaching.headline.split(";")[0]}</strong><span>{index === reportIndex ? "Selected" : "Open"}</span></button>)}</div>
               {!preview && <div className="archive-actions"><button onClick={copyLink}>Copy link</button><button onClick={lockArchive}>Lock</button></div>}
             </>
           )}

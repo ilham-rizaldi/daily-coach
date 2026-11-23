@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { decimal, formatDate, jakartaDate, shiftDate } from "./report.js";
 import { contributionWeights, estimateSessionLoad, projectTomorrow } from "./forecast.js";
 import { GarminRestForecast } from "./GarminRestForecast.jsx";
@@ -60,8 +61,10 @@ export function LoadForecast({ report }) {
     <GarminRestForecast report={report} />
     <section className="load-forecast" aria-labelledby="forecast-heading">
       <div className="forecast-heading">
-        <div><p className="eyebrow">Intervals.icu · EOD</p><h2 id="forecast-heading">Load simulator <span className="quiet">{formatDate(date)}</span></h2></div>
-        <div className="forecast-calibration"><span title="Estimated from relative same-sport historical effort">Est.</span>{historical && <span>Snapshot {formatDate(report.date)}</span>}{estimate.history?.sparse && <span>Sparse</span>}{estimate.available && plan.sport !== "Rest" && estimate.hasVariation === false && <span>No effort separation</span>}{estimate.durationExtrapolated && <span>Extrapolated</span>}</div>
+        <div><h2 id="forecast-heading">Load simulator</h2>
+          <EvidenceMeta source="Intervals.icu-style model" date={date} dateLabel="Projection" state="End-of-day estimate" />
+        </div>
+        <div className="forecast-calibration">{historical && <EvidenceMeta date={report.date} dateLabel="Snapshot" />}{estimate.history?.sparse && <span>Sparse</span>}{estimate.available && plan.sport !== "Rest" && estimate.hasVariation === false && <span>No effort separation</span>}{estimate.durationExtrapolated && <span>Extrapolated</span>}</div>
       </div>
       <div className="forecast-controls">
         <label>Sport<select value={plan.sport} onChange={event => changePlan(event.target.value)}>{sports.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>

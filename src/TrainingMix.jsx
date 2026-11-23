@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { datedHistory } from "./cardHistory.js";
 import { DurationValue, MetricValue } from "./Readout.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { DAY, decimal, formatDate, shiftDate } from "./report.js";
 import "./training-mix.css";
 
@@ -87,7 +88,7 @@ function HeartRateMix({ report }) {
       rows={periods.map(period => [`${period.label}${period.today ? " · Partial day" : ""}`, period.listed == null ? period.tracked : `${period.tracked} / ${period.listed}`,
         ...zones.map(zone => period.zones[zone] == null ? null : decimal(period.zones[zone] / 60))])} />
   </>}>
-    <div className="mix-card-heading"><div><h3>HR time in zone</h3><small>{group?.source || "Intervals.icu"}</small></div>
+    <div className="mix-card-heading"><div><h3>HR time in zone</h3><EvidenceMeta source={group?.source} /></div>
       {groups.length > 1 ? <select aria-label="HR zone sport" value={group.key} onChange={event => setSelection(event.target.value)}>
         {groups.map(item => <option value={item.key} key={item.key}>{sportLabel[item.sport] || item.sport}{groups.some(other => other.sport === item.sport && other.key !== item.key) ? ` · ${item.source}` : ""}</option>)}
       </select> : group && <small className="mix-sport">{sportLabel[group.sport] || group.sport}</small>}
@@ -134,7 +135,10 @@ function GarminFocus({ report }) {
       item.label, decimal(item.points), item.target ? `${item.approximate ? "≈ " : ""}${decimal(item.targetLow)}–${decimal(item.targetHigh)}` : null, focusStatusLabels[item.status],
     ])} />
   </>}>
-    <div className="mix-card-heading"><div><h3>Load Focus</h3><small>{report.preview ? "Illustrative" : url && items.length ? <a href={url} target="_blank" rel="noopener noreferrer">Garmin</a> : "Garmin"}{items.length > 0 && ` · ${labelRange(start, end)}`}</small></div></div>
+    <div className="mix-card-heading"><div><h3>Load Focus</h3>
+      <EvidenceMeta source={report.preview ? "Illustrative Garmin data" : "Garmin Connect"} href={items.length ? url : null}
+        from={items.length ? start : null} date={items.length ? end : null} />
+    </div></div>
     {items.length ? <div className="mix-load-buckets">{items.map(item => <div key={item.key} className="mix-bucket">
       <div className="mix-row"><span>{item.label}</span><MetricValue as="strong" value={decimal(item.points, 0)} unit="pts" /></div>
       <div className="mix-track mix-focus-track" aria-hidden="true">
