@@ -1,9 +1,10 @@
 import { DataCard, DetailFacts } from "./CardDetails.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
 import { conditionStamp } from "./condition.js";
-import { duration, formatDate } from "./report.js";
+import { decimal, duration, formatDate } from "./report.js";
 import { BaselineMeter, ScoreMeter, ScoreRing, palette, statusColor } from "./MetricGraphics.jsx";
-import { EvidenceMeta } from "./EvidenceMeta.jsx";
+import { paceClock } from "./pacing.js";
+import { ConfidenceMark, EvidenceMeta } from "./EvidenceMeta.jsx";
 import "./workout-advice.css";
 
 function RecoverySnapshots({ rows = [] }) {
@@ -22,9 +23,36 @@ function RecoverySnapshots({ rows = [] }) {
   </div>;
 }
 
+function TomorrowOption({ label, option, unit, format = decimal }) {
+  if (!option) return null;
+  return <div className="tomorrow-option">
+    <span>{label} · {option.minutes} min</span>
+    <strong>{option.target.map(value => format(value)).join("–")} <small>{unit}</small></strong>
+    <span>HR ceiling <b>{option.hrCeiling} bpm</b> <ConfidenceMark value={option.confidence} /></span>
+  </div>;
+}
+
+function TomorrowWorkout({ plan, projection }) {
+  if (!plan) return null;
+  return <section className="workout-tomorrow" aria-label={`Plan for ${formatDate(plan.date)}`}>
+    <h3>Tomorrow · {formatDate(plan.date)}</h3>
+    <p>{plan.condition}</p>
+    <div className="tomorrow-options">
+      <TomorrowOption label="Easy cycling" option={plan.cycling} unit="W" />
+      <TomorrowOption label="Run–walk alternative" option={plan.running} unit="/km" format={paceClock} />
+    </div>
+    <p>{plan.adjustment}</p>
+    {projection?.available && <p className="tomorrow-ratio">
+      Garmin ratio if resting <b>≈{decimal(projection.estimate.ratio, 2)}</b>
+      <span> {decimal(projection.range.ratio.low, 2)}–{decimal(projection.range.ratio.high, 2)} historical scenario range · <ConfidenceMark value={projection.confidence} /></span>
+    </p>}
+  </section>;
+}
+
 export function WorkoutAdvice({ advice }) {
   const { title, reason, state, source, date, observedAt, observationWindow, readiness, readinessStatus, readinessUpdatedAtLocal,
-    recoveryMinutes, recoveryStatus, recoveryHistory, hrv, hrv7d, hrvLow, hrvHigh, sleep, sleepStatus } = advice;
+    recoveryMinutes, recoveryStatus, recoveryHistory, hrv, hrv7d, hrvLow, hrvHigh, sleep, sleepStatus,
+    trainingStatus, acuteHigh, performance, tomorrow, restProjection } = advice;
   const stamp = observedAt || observationWindow ? conditionStamp(date, observedAt, observationWindow) : null;
   const readinessColor = statusColor(readinessStatus, "readiness");
   const hasHrv = hrv || Number.isFinite(hrv7d);
@@ -36,11 +64,20 @@ export function WorkoutAdvice({ advice }) {
       ["Readiness", Number.isFinite(readiness) ? `${readiness}/100` : null, readinessStatus],
       ["Remaining recovery", Number.isFinite(recoveryMinutes) ? duration(60 * recoveryMinutes) : null, recoveryStatus],
       ["HRV status", hrv], ["Sleep score", sleep],
+      ["Cycling target evidence", tomorrow?.cycling?.evidence, tomorrow?.cycling?.confidence],
+      ["Run–walk target evidence", tomorrow?.running?.evidence, tomorrow?.running?.confidence],
+      ["Rest ratio estimate", restProjection?.available ? `${restProjection.n} historical rest-day transitions` : null,
+        restProjection?.extrapolation ? "Current load is outside the sampled starting range." : null],
     ]} />}>
     <div className="workout-advice-main">
       <span>Workout suggestion</span>
       <h2>{title}</h2>
       <p>{reason}</p>
+      {performance && <p className="workout-performance">
+        <b>Longest ride today</b> · {duration(performance.seconds)} · {performance.watts} W · {performance.hr} bpm
+      </p>}
+      {trainingStatus && <p className="workout-performance"><b>Garmin status {trainingStatus}</b>
+        {acuteHigh ? " · Acute load is high" : ""}. Readiness guides the next session.</p>}
     </div>
     {(stamp || hasSignals) && <div className="workout-advice-evidence">
       {hasSignals && <dl>
@@ -74,5 +111,6 @@ export function WorkoutAdvice({ advice }) {
       {stamp && <EvidenceMeta className="evidence-footer" source={source} date={date} dateLabel="Reading" observedAt={observedAt}
         observationWindow={observationWindow} />}
     </div>}
+    <TomorrowWorkout plan={tomorrow} projection={restProjection} />
   </DataCard>;
 }

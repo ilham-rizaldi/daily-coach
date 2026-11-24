@@ -1,3 +1,4 @@
+import { projectGarminRest } from "./garminForecast.js";
 import { jakartaDate, shiftDate } from "./report.js";
 
 const status = value => typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -48,7 +49,19 @@ export function workoutAdvice(report, today) {
   const hrv = hasHrv ? wellness.hrvStatus : null;
   const sleep = datedCapture(recovery?.sleep, date, report.capturedAt) && Number.isFinite(wellness.sleepScore)
     && wellness.sleepScore >= 0 && wellness.sleepScore <= 100 ? wellness.sleepScore : null;
+  const nextDate = shiftDate(date, 1);
+  const tomorrow = report.coaching?.tomorrow?.date === nextDate ? report.coaching.tomorrow : null;
+  const restProjection = tomorrow ? projectGarminRest(report) : null;
+  const performance = (report.activities ?? []).filter(row => row.date === date && row.sport === "Ride"
+    && row.classification !== "non-training" && !row.planned && Number.isFinite(row.timerSeconds)
+    && row.timerSeconds > 0 && Number.isFinite(row.measuredPowerWatts) && Number.isFinite(row.averageHr))
+    .sort((a, b) => b.timerSeconds - a.timerSeconds)[0];
   const signals = {
+    tomorrow, restProjection,
+    performance: performance ? { seconds: performance.timerSeconds, watts: performance.measuredPowerWatts, hr: performance.averageHr } : null,
+    trainingStatus: datedCapture(recovery?.fitness, date, report.capturedAt) ? wellness.trainingStatus : null,
+    acuteHigh: datedCapture(wellness.provenance?.currentLoadContext?.acute, date, report.capturedAt)
+      && /^high$|^very high$/.test(status(wellness.garminAcuteLoadStatus)),
     readiness, readinessStatus: wellness.readinessStatus, readinessUpdatedAtLocal: wellness.readinessUpdatedAtLocal,
     recoveryMinutes, recoveryStatus: wellness.recoveryTimeStatus,
     recoveryHistory: recoverySnapshots(report.wellnessHistory?.rows, date, recoveryMinutes),
@@ -71,6 +84,7 @@ export function workoutAdvice(report, today) {
   if (recoveryMinutes > 0) reasons.push("Recovery time remaining");
   if (["low", "poor", "unbalanced"].includes(status(hrv))) reasons.push(`HRV ${status(hrv)}`);
   if (status(wellness.recentSleepScoresStatus) === "poor") reasons.push("Poor recent sleep");
+  if (signals.acuteHigh) reasons.push("High acute load");
   if (reasons.length) return {
     ...base, ...signals, state: "easy", title: "Keep it easy",
     reason: `${reasons.join(" · ")}. Choose a conversational spin or easy run–walk. Take rest if the warm-up feels unusually hard.`,

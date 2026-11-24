@@ -5,6 +5,7 @@ import { DurationValue, MetricValue } from "./Readout.jsx";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { recoverySeries } from "./performance.js";
 import { SleepDetail } from "./SleepDetail.jsx";
+import { connectRatioRange, garminLoadReading, rangeLabel } from "./garminLoad.js";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 
 const num = value => Number.isFinite(value) ? decimal(value) : null;
@@ -117,9 +118,7 @@ export function ConditionOverview({ report }) {
     ["Next sleep need", time(w.nextSleepNeedMinutes)],
     ["Nap", time(w.napMinutes)],
   ].filter(([, value]) => value != null);
-  const garminHistory = (report.garminLoadHistory?.rows || [])
-    .filter(row => row?.date && Number.isFinite(row.acute) && Number.isFinite(row.chronic))
-    .slice().sort((a, b) => b.date.localeCompare(a.date));
+  const garminReading = garminLoadReading(report, report.garminLoadHistory?.rows?.find(row => row.date === report.date));
   const readingRows = items => items.map(item => [item.label, item.unit ? `${item.value} ${item.unit}` : item.value, item.status || undefined]);
   return <section className="condition-overview body-overview" aria-labelledby="condition-title">
     <div className="condition-heading"><h2 id="condition-title">Body metrics</h2><EvidenceMeta source={source} /></div>
@@ -159,11 +158,22 @@ export function ConditionOverview({ report }) {
       <Tile id="recovery" label="Recovery" value={time(w.recoveryTimeMinutes)} color={statusColor(w.recoveryTimeStatus)} status={w.recoveryTimeStatus} detail={w.readinessUpdatedAtLocal ? `@ ${w.readinessUpdatedAtLocal}` : null} stamp={stamp("recovery")} source={source} readings={[["Recent stress", w.recentStressStatus], ["Recent sleep scores", w.recentSleepScoresStatus]]}><div className="recovery-tags">{w.recentStressStatus && <span>Stress <b>{w.recentStressStatus}</b></span>}{w.recentSleepScoresStatus && <span>Sleep <b>{w.recentSleepScoresStatus}</b></span>}</div></Tile>
     </dl>
     <div className="body-secondary">
-      <DataCard as="section" className="body-load-panel" aria-labelledby="body-garmin-load" title="Garmin load" history="garmin-load" detail={<>
-        <DetailFacts rows={[["Source", source], ["Acute load capture", data.garminLoadStamp], ...readingRows(data.garminLoad), ["Chronic and ratio captures", data.garminLoadContext]]} />
-        <DetailTable caption="Recorded Garmin load history" columns={["Date", "Acute", "Chronic"]} rows={garminHistory.map(row => [formatDate(row.date), num(row.acute), num(row.chronic)])} />
-      </>}><h3 id="body-garmin-load">Garmin load <span className="status-dot" style={{color:statusColor(w.garminLoadRatioStatus)}}>{w.garminLoadRatioStatus}</span></h3>
-        <dl className="body-stat-row"><Stat label="Acute" value={num(w.garminAcuteLoad)} color={palette.blue} /><Stat label="Chronic" value={num(w.garminChronicLoad)} color={palette.orange} /><Stat label="Ratio" value={num(w.garminLoadRatio)} detail={w.provenance?.currentLoadContext?.ratio?.basis?.startsWith("Calculated") ? "Calculated" : null} color={statusColor(w.garminLoadRatioStatus)} /></dl>
+      <DataCard as="section" className="body-load-panel" aria-labelledby="body-garmin-load" title="Training Load" history="garmin-load"
+        detail={<DetailFacts rows={[["Source", source], ["Acute load capture", data.garminLoadStamp],
+          ...readingRows(data.garminLoad), ["Chronic and ratio captures", data.garminLoadContext],
+          ["Acute optimal range", rangeLabel(garminReading.range), "Approximate bounds from the dated Garmin chart"],
+          ["Ratio optimal range", rangeLabel(connectRatioRange), "Garmin Connect"],
+        ]} />}>
+        <h3 id="body-garmin-load">Training Load <EvidenceMeta source={source} /></h3>
+        <dl className="body-stat-row">
+          <Stat label="Acute" value={num(w.garminAcuteLoad)} detail={garminReading.acuteStatus} color={palette.blue} />
+          <Stat label="Chronic" value={num(w.garminChronicLoad)} color={palette.orange} />
+          <Stat label="Ratio" value={num(w.garminLoadRatio)} detail={garminReading.ratioStatus} color={statusColor(garminReading.ratioStatus)} />
+        </dl>
+        {(garminReading.acuteNote || garminReading.ratioNote) && <div className="load-attention">
+          <strong>Above optimal</strong><div>{garminReading.acuteNote && <p>{garminReading.acuteNote}</p>}
+            {garminReading.ratioNote && <p>{garminReading.ratioNote}</p>}</div>
+        </div>}
       </DataCard>
       <DataCard as="section" aria-labelledby="body-intervals" title="Intervals.icu" history="intervals" detail={<DetailFacts rows={[["Source", report.preview ? "Illustrative Intervals.icu data" : "Intervals.icu"], ["Reading", data.intervalsStamp], ...readingRows(data.intervals)]} />}><h3 id="body-intervals">Intervals.icu</h3><dl className="body-stat-row"><Stat label="CTL" value={num(intervals.fitness)} color={palette.blue} /><Stat label="ATL" value={num(intervals.fatigue)} color={palette.purple} /><Stat label="Form" value={Number.isFinite(intervals.form) ? `${intervals.form>0?"+":""}${decimal(intervals.form)}` : null} color={palette.orange} /></dl></DataCard>
       <DataCard as="section" className="body-vitals-panel" aria-labelledby="body-vitals" title="Vitals" history="vitals" detail={<DetailFacts rows={[["Source", source], ["Reading", data.overnightStamp], ...data.overnight.map(item => [item.label, item.value, item.context])]} />}><h3 id="body-vitals">Vitals</h3><dl className="body-stat-row"><Stat label="SpO₂" value={num(w.averageSpo2)} unit="%" detail={Number.isFinite(w.lowestSpo2)?`Min ${w.lowestSpo2}%`:null} color={palette.blue} /><Stat label="RR" value={num(w.averageRespiration)} unit="br/min" detail={Number.isFinite(w.minimumRespiration)?`Min ${w.minimumRespiration}`:null} /><Stat label="Awake" value={num(w.awakeMinutes)} unit="min" detail={Number.isFinite(w.restlessMoments)?`${w.restlessMoments} restless`:null} /></dl></DataCard>

@@ -42,3 +42,17 @@
   .workout-advice { grid-template-columns: 1fr; }
   .workout-advice-main p { max-width: 55ch; }
 }
+
+.workout-advice-main .workout-performance { margin-top: 7px; }
+.workout-performance b { color: var(--text); }
+.workout-tomorrow { display: grid; grid-column: 1 / -1; width: 100%; gap: 7px; border-top: 1px solid var(--rule); padding-top: 9px; }
+.workout-tomorrow h3 { margin: 0; font-size: 15px; }
+.workout-tomorrow p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.tomorrow-option { display: grid; gap: 3px; padding: 8px; border: 1px solid var(--rule); border-radius: 8px; background: var(--canvas); }
+.tomorrow-option span { color: var(--muted); font-size: 12px; }
+.tomorrow-option strong { color: var(--blue); font-size: 19px; line-height: 1.1; }
+.tomorrow-option + .tomorrow-option strong { color: var(--green); }
+.tomorrow-option strong small { font-size: 11px; }
+.tomorrow-option b, .tomorrow-ratio b { color: var(--text); }
+.tomorrow-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 380px) { .tomorrow-options { grid-template-columns: 1fr; } }

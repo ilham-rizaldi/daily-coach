@@ -29,3 +29,7 @@ export function smoothLinePath(points) {
   }
   return runs.map(runPath).join(" ");
 }
+
+export function smoothBandPath(upper, lower) {
+  return runPath(upper) + runPath(lower.slice().reverse()).replace(/^M/, "L") + "Z";
+}

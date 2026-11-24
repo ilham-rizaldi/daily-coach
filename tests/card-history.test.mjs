@@ -71,3 +71,22 @@ test("weekly history respects the selected sport and excludes the report day", (
   const history = resolveCardHistory(report, [], { kind: "activity-weeks", sport: "Ride", metric: "activeDays" });
   assert.deepEqual(filterCardHistory(history.rows, report.date, 7).map(row => [row.date, row.values[0]]), [["2026-06-09", 2]]);
 });
+
+test("Garmin load history retains dated bands and provider ratios without backfilling gaps", () => {
+  const report = {
+    date: "2026-11-24",
+    wellness: { date: "2026-11-24", garminAcuteLoad: 630, garminChronicLoad: 390, garminLoadRatio: 1.5 },
+    garminLoadHistory: { rows: [
+      { date: "2026-11-22", acute: 500, chronic: 350 },
+      { date: "2026-11-23", acute: 580, chronic: 365, ratio: null, optimalLow: 300, optimalHigh: 500 },
+      { date: "2026-11-24", acute: 650, chronic: 395, ratio: 1.6, optimalLow: 310, optimalHigh: 580 },
+    ] },
+  };
+  const history = resolveCardHistory(report, [], "garmin-load");
+  const rows = filterCardHistory(history.rows, report.date, 7);
+  assert.deepEqual(rows.map(row => row.values), [
+    [650, 395, 1.6, "≈310–580"], [580, 365, null, "≈300–500"], [500, 350, undefined, null],
+  ]);
+  assert.deepEqual(history.chartBands.Ratio, { low: 0.8, high: 1.5 });
+  assert.deepEqual(history.chartBands.Acute.map(range => range.date).sort(), ["2026-11-23", "2026-11-24"]);
+});

@@ -1,6 +1,6 @@
 import { useId, useState } from "react";
 import { dailyChartRuns, historyChartSeries } from "./cardHistory.js";
-import { smoothLinePath } from "./chart-lines.js";
+import { smoothBandPath, smoothLinePath } from "./chart-lines.js";
 import { DAY, decimal, formatDate } from "./report.js";
 
 const frame = { width: 560, height: 160, left: 46, right: 547, top: 13, bottom: 140 };
@@ -76,7 +76,11 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
   const picked = series.find(item => item.label === choice) || series[0];
   if (!picked) return <p>No numeric readings to chart in this period.</p>;
   const { format, reverse } = history.chartFormats?.[picked.label] ?? {};
-  const values = picked.points.map(point => point.value);
+  const band = history.chartBands?.[picked.label];
+  const datedBand = Array.isArray(band) ? band.filter(row => row.date >= first && row.date <= last) : [];
+  const fixedBand = band && !Array.isArray(band) ? band : null;
+  const ranges = fixedBand ? [fixedBand] : datedBand;
+  const values = [...picked.points.map(point => point.value), ...ranges.flatMap(range => [range.low, range.high])];
   const bars = history.display === "bars";
   const min = Math.min(...values), max = Math.max(...values);
   const padding = Math.max((max - min) * 0.12, 0.5);
@@ -103,6 +107,9 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
         {series.map(item => <option key={item.label}>{item.label}</option>)}
       </select>}
     </PlotHeading>}
+    {ranges.length > 0 && <div className="load-range-readout"><span><i /> {fixedBand
+      ? `Optimal range ${decimal(fixedBand.low)}–${decimal(fixedBand.high)}`
+      : "Personalized optimal range · dated Garmin chart"}</span></div>}
     <HistoryAxis low={low} high={high} first={first} last={last} format={format ?? (bars ? compactTick.format : undefined)} reverse={reverse}
       label={`${picked.label} · ${picked.points.length} recorded readings`}>
       <defs>
@@ -110,6 +117,12 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
           <stop stopColor="var(--blue)" stopOpacity=".18" /><stop offset="1" stopColor="var(--blue)" stopOpacity="0" />
         </linearGradient>
       </defs>
+      {fixedBand && <rect className="load-optimal-band" x={frame.left} width={frame.right - frame.left}
+        y={yAt(fixedBand.high, low, high)} height={yAt(fixedBand.low, low, high) - yAt(fixedBand.high, low, high)} />}
+      {dailyChartRuns(datedBand.slice().sort((a, b) => a.date.localeCompare(b.date))).map(run =>
+        <path key={run[0].date} className="load-optimal-band" d={smoothBandPath(
+          run.map(row => [xAt(row.date), yAt(row.high, low, high)]),
+          run.map(row => [xAt(row.date), yAt(row.low, low, high)]))} />)}
       {runs.map((run, index) => {
         const path = smoothLinePath(run);
         const firstX = run[0][0], lastX = run.at(-1)[0];

@@ -1,4 +1,5 @@
 import { coversWindow, DAY, decimal, duration, shiftDate } from "./report.js";
+import { connectRatioRange, optimalAcuteRange, rangeLabel } from "./garminLoad.js";
 import { paceClock, rangeFor, targetEvidence } from "./pacing.js";
 
 const present = value => value != null && value !== "" && (typeof value !== "number" || Number.isFinite(value));
@@ -223,16 +224,38 @@ export function resolveCardHistory(report, reports, definition) {
     return datedHistory(caption, columns, garminWellness(report, snapshots), read, { chart, daily: true });
   }
   if (kind === "intervals") return intervalHistory(report, snapshots);
+  if (kind === "training-status") {
+    const rows = garminWellness(report, snapshots).filter(row => row.trainingStatus);
+    return datedHistory("Training Status snapshots · Garmin Connect",
+      ["Status", "Load Focus", "VO₂ max", "7-day HRV · ms", "Acute load", "Heat · %"],
+      rows, row => [row.trainingStatus, row.loadFocus, row.vo2Max, row.hrv7dMs, row.garminAcuteLoad, row.heatAcclimationPercent]);
+  }
   if (kind === "garmin-load") {
     const unique = new Map();
     for (const item of [...snapshots].reverse()) {
       const w = item.wellness;
       if (w && Number.isFinite(w.garminAcuteLoad)) unique.set(w.date || item.date,
-        { date: w.date || item.date, acute: w.garminAcuteLoad, chronic: w.garminChronicLoad });
-      for (const row of item.garminLoadHistory?.rows || []) unique.set(row.date, row);
+        { date: w.date || item.date, acute: w.garminAcuteLoad, chronic: w.garminChronicLoad, ratio: w.garminLoadRatio });
+      for (const row of item.garminLoadHistory?.rows || []) {
+        const merged = { ...unique.get(row.date), ...row };
+        if (row.ratio === undefined && unique.get(row.date)?.acute !== row.acute) delete merged.ratio;
+        unique.set(row.date, merged);
+      }
     }
-    return datedHistory("Training Load · Garmin Connect", ["Acute", "Chronic"],
-      [...unique.values()], row => [row.acute, row.chronic], { daily: true });
+    const entries = [...unique.values()];
+    const history = datedHistory("Training Load · Garmin Connect", ["Acute", "Chronic", "Ratio", "Acute optimal range"],
+      entries, row => {
+        const range = rangeLabel(optimalAcuteRange(row));
+        return [row.acute, row.chronic, row.ratio, range ? `≈${range}` : null];
+      }, { daily: true });
+    history.chartBands = {
+      Acute: entries.flatMap(row => {
+        const range = optimalAcuteRange(row);
+        return range ? [{ date: row.date, ...range }] : [];
+      }),
+      Ratio: connectRatioRange,
+    };
+    return history;
   }
   if (kind === "threshold") return datedHistory("Dated threshold checks", ["Value", "Source", "Confidence"],
     snapshots.flatMap(item => (item.thresholdReview?.rows || []).filter(row => row.title === query.title)

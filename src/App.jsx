@@ -11,6 +11,7 @@ import { SessionCheckIn } from "./SessionCheckIn.jsx";
 import { RecoveryProgression, TrainingPacing } from "./TrainingTargets.jsx";
 import { HistoryContext } from "./CardDetails.jsx";
 import { WorkoutAdvice } from "./WorkoutAdvice.jsx";
+import { TrainingStatus } from "./TrainingStatus.jsx";
 import { DailyLoad } from "./DailyLoad.jsx";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { workoutAdvice } from "./workoutAdvice.js";
@@ -197,6 +198,7 @@ export function App() {
                 <DailyLoad report={report} />
                 <WorkoutAdvice advice={advice} />
               </div>
+              <TrainingStatus report={report} />
               <ConditionOverview report={report} />
               {hasCoachSuggestions(report) ? (
                 <CoachSuggestions key={report.date} report={report} onEvidence={() => changeSection("Reference", true)}>
