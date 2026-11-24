@@ -31,3 +31,20 @@
   .progression-records { grid-template-columns: repeat(2,minmax(0,1fr)); }
   .progression-card strong { font-size: 21px; }
 }
+
+.session-progression .progression-readout { align-items: start; }
+.session-progression-latest { display: grid; justify-items: end; gap: 2px; }
+.session-progression-controls { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+.session-progression-controls select { min-width: 0; max-width: 100%; min-height: 35px; padding: 4px 7px; color: var(--text); background: var(--canvas); border: 1px solid var(--control-border); border-radius: 6px; font: inherit; font-size: 12px; }
+.session-comparison { margin: 0; }
+.session-comparison figcaption { display: flex; justify-content: space-between; flex-wrap: wrap; column-gap: 8px; color: var(--muted); font-size: 12px; }
+.session-comparison figcaption b { color: var(--text); font-variant-numeric: tabular-nums; }
+.session-comparison ol { padding: 0; margin: 5px 0 0; list-style: none; }
+.session-comparison li { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(28px, 1fr) minmax(70px, max-content); gap: 8px; align-items: center; min-height: 39px; padding: 4px 0; border-top: 1px solid var(--rule); }
+.session-comparison-label { min-width: 0; display: flex; flex-wrap: wrap; gap: 1px 6px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.session-comparison-label span, .session-comparison-key { color: var(--muted); }
+.session-comparison-track { height: 6px; border-radius: 3px; background: var(--rule); }
+.session-comparison-track span { display: block; height: 100%; border-radius: inherit; background: var(--comparison-color); opacity: .65; }
+.session-comparison li:first-child .session-comparison-track span { opacity: 1; }
+.session-comparison li > b { justify-self: end; font-size: 13px; font-variant-numeric: tabular-nums; }
+.session-comparison-key { margin: 4px 0 0; font-size: 11px; }

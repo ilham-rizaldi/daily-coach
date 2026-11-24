@@ -126,3 +126,25 @@ test("an observed ceiling example uses measured peaks and stays a reference on o
   assert.equal(automaticCeiling(withBlocks([ride(end, 90, 115)]), "cycling", 140).value, undefined);
   assert.equal(automaticCeiling(withBlocks([firstBlock, { ...next, peakHrBpm: 132 }]), "cycling", 140).kind, "estimate");
 });
+
+test("duration selects independent efforts and an unobserved ceiling provides a dated reference only", () => {
+  const short = { id: "short", min: 300, max: 480 };
+  const longer = { id: "long", min: 720, max: 1200 };
+  const first = shiftDate(end, -3);
+  const data = automaticPredictionDataset({ date: end, predictionEvidence: { blocks: [
+    ride(first, 100, 120, { durationSeconds: 360, hrWindowSeconds: 180, peakHrBpm: 130 }),
+    ride(end, 100, 140, { durationSeconds: 360, hrWindowSeconds: 180, peakHrBpm: 150 }),
+    ride(first, 100, 146, { durationSeconds: 720, hrWindowSeconds: 300, peakHrBpm: 160 }),
+    ride(end, 100, 156, { durationSeconds: 720, hrWindowSeconds: 300, peakHrBpm: 166 }),
+  ] } }, "cycling");
+  assert.equal(data.cohort.historyRows.length, 4);
+  assert.equal(automaticHeartRate(data, "cycling", 100, short).bpm, 130);
+  assert.equal(automaticHeartRate(data, "cycling", 100, longer).bpm, 151);
+  const noCap = automaticCeiling(data, "cycling", 100, longer);
+  assert.equal(noCap.effortRange, undefined);
+  assert.equal(noCap.value, undefined);
+  assert.deepEqual([noCap.closest.date, noCap.closest.peakHrBpm, noCap.closest.durationSeconds], [first, 160, 720]);
+  const noEffort = automaticHeartRate(data, "cycling", 150, longer);
+  assert.equal(noEffort.bpm, undefined);
+  assert.equal(noEffort.closest.value, 100);
+});

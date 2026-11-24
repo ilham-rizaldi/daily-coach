@@ -82,7 +82,7 @@ def block_measurements(window, sport):
     index = 3 if sport == "Ride" else 1
     paired = [sample for sample in window if sample[index] is not None and sample[2] is not None]
     seconds = len(window)
-    recent_seconds = HR_SECONDS if seconds == BLOCK_SECONDS else 3 * 60
+    recent_seconds = HR_SECONDS if seconds >= BLOCK_SECONDS else 3 * 60
     coverage = len(paired) / seconds
     if coverage < MIN_COVERAGE:
         return None
@@ -127,13 +127,14 @@ def block_measurements(window, sport):
     return result
 
 
-def steady_blocks(tracks, start, sport, metadata, include_short=False):
+def steady_blocks(tracks, start, sport, metadata, include_short=False, durations=None):
     rows = []
+    durations = durations or ((BLOCK_SECONDS, *SHORT_BLOCK_SECONDS) if include_short else (BLOCK_SECONDS,))
     for points in tracks:
         for chunk in continuous_samples(points):
             measured = [sample for sample in chunk if sample[0] >= start + WARMUP_SECONDS]
             occupied = bytearray(len(measured))
-            for seconds in (BLOCK_SECONDS, *SHORT_BLOCK_SECONDS) if include_short else (BLOCK_SECONDS,):
+            for seconds in durations:
                 offset = 0
                 while offset + seconds <= len(measured):
                     end = offset + seconds

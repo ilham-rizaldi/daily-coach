@@ -8,7 +8,7 @@ import { decimal, duration, formatDate } from "./report.js";
 import { paceClock } from "./pacing.js";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { HR_CEILING_MIN, HR_CEILING_MAX, EXTENDED_PREDICTION_DAYS, parseScenarioPace, automaticCeiling,
-  automaticHeartRate, automaticPredictionDataset, predictionModes, suggestedEffort } from "./prediction.js";
+  automaticHeartRate, automaticPredictionDataset, inPredictionDuration, predictionDurations, predictionModes, suggestedEffort } from "./prediction.js";
 import "./predictions.css";
 
 const dateText = date => formatDate(date, { year: "numeric" });
@@ -19,7 +19,7 @@ const asNumber = text => text.trim() ? Number(text) : NaN;
 
 function EvidenceDetails({ result, data, cohort, mode, inverse }) {
   const validation = result.validation;
-  const matches = (result.matched || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  const matches = (result.matched || (result.closest ? [result.closest] : [])).slice().sort((a, b) => b.date.localeCompare(a.date));
   return <>
     <DetailFacts rows={[
       ["Method", result.method, result.reason],
@@ -30,8 +30,10 @@ function EvidenceDetails({ result, data, cohort, mode, inverse }) {
       [inverse ? "Later sessions above ceiling" : "Typical test error", inverse ? validation?.overshoots
         : validation?.tests > 0 ? `${decimal(validation.meanError)} bpm` : null],
       ["Recent HR median error", !inverse && validation?.tests > 0 ? `${decimal(validation.baselineError)} bpm` : null],
+      ["Matched-effort median error", !inverse && validation?.tests > 0 ? `${decimal(validation.medianError)} bpm` : null],
+      ["Effort-weighted error", !inverse && validation?.tests > 0 ? `${decimal(validation.weightedError)} bpm` : null],
     ]} />
-    <DetailTable caption={inverse ? "Evidence for the HR ceiling" : "Matched days near target effort"}
+    <DetailTable caption={result.closest ? "Closest recorded effort" : inverse ? "Evidence for the HR ceiling" : "Matched days near target effort"}
       columns={["Date", "Effort", inverse ? "Peak HR · bpm" : "HR · bpm", "Evidence", "Source"]}
       rows={matches.map(row => [dateText(row.date), withUnit(row.value, mode), decimal(inverse ? row.peakHrBpm : row.hrBpm),
         row.pairedFraction == null ? "Session average" : `${duration(row.durationSeconds)} block`, row.source])}
@@ -75,43 +77,60 @@ function PredictionEstimate({ name, mode, data, cohort, history, inverse = false
         dateLabel={dates.length ? `${dates.length} comparable ${dates.length === 1 ? "day" : "days"}` : null} />
     </div>
     {result.reason && <p className="prediction-reason">{result.reason}</p>}
+    {result.closest && <div className="prediction-closest">
+      <strong>Closest recorded effort</strong>
+      <span>{withUnit(result.closest.value, mode)} · {decimal(inverse ? result.closest.peakHrBpm : result.closest.hrBpm, 0)} bpm{inverse ? " peak" : ""}</span>
+      <EvidenceMeta source={result.closest.source} date={result.closest.date}><span>{duration(result.closest.durationSeconds)}</span></EvidenceMeta>
+    </div>}
   </DataCard>;
 }
 
 function SportPrediction({ report, name, modes }) {
   const [mode, setMode] = useState(modes[0]);
   const [entry, setEntry] = useState(null);
+  const [durationId, setDurationId] = useState("");
   const plan = report.coaching?.pacing?.[name.toLowerCase()];
   const [capEntry, setCapEntry] = useState(() => Number.isFinite(plan?.hrCeiling) ? String(plan.hrCeiling) : "");
   const data = useMemo(() => automaticPredictionDataset(report, mode), [report, mode]);
   const cohort = data.cohort;
-  const defaultEffort = suggestedEffort(report, mode, cohort && { rows: cohort.recent });
+  const band = predictionDurations.find(row => row.id === durationId);
+  const shownBlocks = useMemo(() => (cohort?.historyRows ?? []).filter(row => inPredictionDuration(row, band)), [cohort, band]);
+  const shownContext = useMemo(() => data.context.filter(row => inPredictionDuration(row, band)), [data.context, band]);
+  const days = new Set(shownBlocks.map(row => row.date)).size;
+  const defaultEffort = suggestedEffort(report, mode, { rows: shownBlocks.filter(row => row.date >= data.first) });
   const text = entry ?? (paceMode(mode) ? paceClock(defaultEffort) : String(Math.round(defaultEffort * 10) / 10));
   const effort = paceMode(mode) ? parseScenarioPace(text) : asNumber(text);
   const ceiling = asNumber(capEntry);
-  const hr = useMemo(() => automaticHeartRate(data, mode, effort), [data, mode, effort]);
-  const target = useMemo(() => automaticCeiling(data, mode, ceiling), [data, mode, ceiling]);
+  const hr = useMemo(() => automaticHeartRate(data, mode, effort, band), [data, mode, effort, band]);
+  const target = useMemo(() => automaticCeiling(data, mode, ceiling, band), [data, mode, ceiling, band]);
   const history = useMemo(() => {
     const effortMetric = [paceMode(mode) ? "Pace · sec/km" : "Power · W", row => row.value];
-    if (cohort?.historyRows.length) return datedHistory("Recorded steady blocks", ["Effort", "HR · bpm", "Peak HR · bpm", "Block", "Source"],
-      cohort.historyRows, row => [withUnit(row.value, mode), decimal(row.hrBpm), row.peakHrBpm, duration(row.durationSeconds), row.source],
+    if (shownBlocks.length) return datedHistory("Recorded steady blocks", ["Effort", "HR · bpm", "Peak HR · bpm", "Block", "Source"],
+      shownBlocks, row => [withUnit(row.value, mode), decimal(row.hrBpm), row.peakHrBpm, duration(row.durationSeconds), row.source],
       { chart: [["End-block HR · bpm", row => row.hrBpm], ["Peak HR · bpm", row => row.peakHrBpm], effortMetric] });
     return datedHistory("Whole-session averages for context", ["Effort", "Avg HR · bpm", "Source"],
-      data.context, row => [withUnit(row.value, mode), decimal(row.hrBpm), row.source],
+      shownContext, row => [withUnit(row.value, mode), decimal(row.hrBpm), row.source],
       { chart: [["Average HR · bpm", row => row.hrBpm], effortMetric] });
-  }, [cohort, data.context, mode]);
+  }, [shownBlocks, shownContext, mode]);
   const profile = predictionModes[mode];
 
   return <section className="prediction-sport" data-sport={name} aria-label={`${name} predictions`}>
     <header className="prediction-sport-header">
       <div><h2>{name}</h2>
-        <p>{cohort ? `${cohort.dates} ${cohort.dates === 1 ? "day" : "days"} of paired effort and HR` : "No paired steady efforts"}</p>
+        <p>{`${days} ${days === 1 ? "day" : "days"} of paired effort and HR`}</p>
       </div>
       {modes.length > 1 && <div className="prediction-mode" role="group" aria-label="Running effort metric">
         {modes.map(key => <button type="button" key={key} aria-pressed={key === mode}
           onClick={() => { setMode(key); setEntry(null); }}>{paceMode(key) ? "Pace" : "Watch power"}</button>)}
       </div>}
     </header>
+    <label className="prediction-duration-filter">
+      <span>Steady effort duration</span>
+      <select aria-label={`${name} steady effort duration`} value={durationId} onChange={event => setDurationId(event.target.value)}>
+        <option value="">Auto · match recorded efforts</option>
+        {predictionDurations.map(range => <option key={range.id} value={range.id}>{range.label}</option>)}
+      </select>
+    </label>
     <div className="prediction-calculators">
       <PredictionEstimate name={name} mode={mode} data={data} cohort={cohort} history={history} result={hr}>
         <label className="prediction-input">
@@ -135,7 +154,7 @@ function SportPrediction({ report, name, modes }) {
         </label>
       </PredictionEstimate>
     </div>
-    <PredictionChart rows={cohort?.historyRows || []} pace={paceMode(mode)} effort={effort} ceiling={ceiling}
+    <PredictionChart rows={shownBlocks} pace={paceMode(mode)} effort={effort} ceiling={ceiling}
       target={target.effortRange} forwardMatches={hr.matched} ceilingMatches={target.matched} />
   </section>;
 }

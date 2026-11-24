@@ -78,7 +78,7 @@ function archiveMatch(activity, byId, byDate) {
 function garminReading(activity) {
   const distance = activity.distanceKm, timer = activity.timerSeconds;
   if (positive(distance) && positive(timer)) {
-    return { source: garmin, basis: "timer", distance, value: distance * 3600 / timer };
+    return { source: garmin, basis: "timer", distance, seconds: timer, value: distance * 3600 / timer };
   }
 }
 
@@ -92,7 +92,7 @@ function activityReading(row, sport) {
   }
   if (positive(row.averageSpeedKph)) return { source, basis: "recorded", distance, value: row.averageSpeedKph };
   if (distance && positive(row.providerMovingSeconds)) {
-    return { source, basis: "moving", distance, value: distance * 3600 / row.providerMovingSeconds };
+    return { source, basis: "moving", distance, seconds: row.providerMovingSeconds, value: distance * 3600 / row.providerMovingSeconds };
   }
   if (sport === "Running") {
     const match = /^(\d{1,2}):([0-5]\d)\s*(?:min)?\/km$/.exec(text(row.provenance?.displayedPace));
@@ -129,10 +129,10 @@ export function activitySpeedSeries(report) {
     if (!scope) return;
     const start = startAt(row);
     const at = Number.isFinite(start) ? start : Date.parse(`${row.date}T12:00:00Z`);
-    const { basis, source, value, distance } = reading;
+    const { basis, source, value, distance, seconds } = reading;
     const key = JSON.stringify([sport, scope, source, basis]);
     if (!groups.has(key)) groups.set(key, { key, sport, scope, source, basis, points: [] });
-    groups.get(key).points.push({ date: row.date, at, distance, value, activityId: id || null, name: text(row.name) });
+    groups.get(key).points.push({ date: row.date, at, distance, seconds, value, activityId: id || null, name: text(row.name) });
   }
   for (const [row, match] of paired) {
     if (!belongsToReport(row, report, cutoff)) continue;
@@ -156,4 +156,31 @@ export function activitySpeedSeries(report) {
     seen.add(key);
     return true;
   });
+}
+
+const rideDistances = [
+  [0, "Under 10 km"], [10, "10 to <20 km"], [20, "20 to <30 km"], [30, "30 to <40 km"],
+  [40, "40 to <50 km"], [50, "50 to <80 km"], [80, "80 to <100 km"],
+  [100, "100 to <180 km"], [180, "180 km and over"],
+];
+const runDistances = [
+  [0, "Under 5 km"], [5, "5 to <10 km"], [10, "10 to <15 km"], [15, "15 to <21.1 km"],
+  [21.0975, "21.1 to <42.2 km"], [42.195, "42.2 km and over"],
+];
+const rideDurations = [[0, "Under 30 min"], [1800, "30 to <60 min"], [3600, "1 to <2 h"], [7200, "2 h and over"]];
+
+export function activityComparisons(points, sport, grouping = "distance", fromDate, selection) {
+  const byTime = grouping === "duration";
+  const definitions = byTime ? rideDurations : sport === "Running" ? runDistances : rideDistances;
+  const bins = definitions.map(([min, label], index) => ({ min, label, max: definitions[index + 1]?.[0] ?? Infinity, points: [] }));
+  for (const point of points) {
+    const amount = byTime ? point.seconds : point.distance;
+    if (!positive(amount)) continue;
+    bins.find(({ min, max }) => amount >= min && amount < max)?.points.push(point);
+  }
+  const recent = bin => bin.points.filter(point => !fromDate || point.date >= fromDate).length;
+  const withPoints = bins.filter(bin => bin.points.length);
+  const fallback = withPoints.reduce((best, bin) => !best || recent(bin) > recent(best) ||
+    recent(bin) === recent(best) && bin.points.at(-1).at > best.points.at(-1).at ? bin : best, null);
+  return { bins, selected: withPoints.find(bin => String(bin.min) === selection) ?? fallback };
 }

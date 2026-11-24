@@ -87,3 +87,7 @@
 @media (max-width: 860px) { .prediction-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 400px) { .prediction-calculators { grid-template-columns: minmax(0, 1fr); } }
 .prediction-peak-mark { stroke: currentColor; stroke-opacity: .44; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.prediction-duration-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; margin-bottom: 9px; color: var(--muted); font-size: 12px; }
+.prediction-duration-filter select { max-width: 100%; min-height: 36px; padding: 4px 8px; border: 1px solid var(--control-border); border-radius: 6px; background: var(--canvas); color: var(--text); font: inherit; }
+.prediction-closest { display: grid; gap: 4px; margin-top: 8px; padding: 7px; border: 1px solid var(--rule); border-radius: 7px; font-size: 12px; }
+.prediction-closest > span { color: var(--muted); }

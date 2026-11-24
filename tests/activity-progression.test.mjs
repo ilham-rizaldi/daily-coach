@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { activitySpeedSeries, paceSeconds } from "../src/activityProgression.js";
+import { activityComparisons, activitySpeedSeries, paceSeconds } from "../src/activityProgression.js";
 
 const date = "2026-11-23";
 const garmin = "Garmin Connect";
@@ -61,4 +61,26 @@ test("recognizes an ID-less archive match without duplicating it or restoring an
   ];
   const groups = activitySpeedSeries(reportWith(rows, archive));
   assert.deepEqual(groups.flatMap(group => group.points.map(row => row.activityId)), ["1"]);
+});
+
+test("a distance belongs to one whole-session group and keeps exact marathon boundaries", () => {
+  const points = [4.99, 5, 9.99, 10, 21.0975, 42.195, null].map(distance => ({ distance, date, at: 1 }));
+  const { bins, selected } = activityComparisons(points, "Running", "distance", date);
+  assert.deepEqual(bins.map(bin => bin.points.map(row => row.distance)), [[4.99], [5, 9.99], [10], [], [21.0975], [42.195]]);
+  assert.equal(selected.min, 5);
+});
+
+test("ride duration uses recorded time and switches independently of the distance range", () => {
+  const points = [
+    { distance: 20, seconds: 1799, at: 1, date },
+    { distance: 30, seconds: 1800, at: 2, date },
+    { distance: 40, seconds: 3600, at: 3, date },
+    { distance: 100, seconds: 7200, at: 4, date },
+    { distance: 20, at: 5, date },
+  ];
+  const byTime = activityComparisons(points, "Cycling", "duration", date, "1800");
+  const byDistance = activityComparisons(points, "Cycling", "distance", date, "20");
+  assert.deepEqual(byTime.bins.map(bin => bin.points.length), [1, 1, 1, 1]);
+  assert.equal(byTime.selected.points[0].distance, 30);
+  assert.equal(byDistance.selected.points.length, 2);
 });

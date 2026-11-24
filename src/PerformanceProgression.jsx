@@ -5,8 +5,8 @@ import { smoothLinePath } from "./chart-lines.js";
 import { palette } from "./MetricGraphics.jsx";
 import { MetricValue } from "./Readout.jsx";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
-import { decimal, formatDate, shiftDate } from "./report.js";
-import { activityEnvironments, activitySpeedSeries, dayOf, paceSeconds, speedMethods, sportOf } from "./activityProgression.js";
+import { decimal, duration, formatDate, shiftDate } from "./report.js";
+import { activityComparisons, activityEnvironments, activitySpeedSeries, dayOf, paceSeconds, speedMethods, sportOf } from "./activityProgression.js";
 import "./progression.css";
 
 const text = value => typeof value === "string" ? value.trim() : "";
@@ -72,7 +72,7 @@ function pointDate(point, year = false) {
 
 const pointDateTime = point => point.precision === "month" ? point.date.slice(0, 7) : point.date;
 
-function Sparkline({ label, points, color, display = decimal, connect = true }) {
+function Sparkline({ label, points, color, display = decimal }) {
   if (points.length < 2) return null;
   const values = points.map(point => point.value);
   const min = Math.min(...values), max = Math.max(...values);
@@ -90,7 +90,7 @@ function Sparkline({ label, points, color, display = decimal, connect = true }) 
         {min === max
           ? <line x1="5" x2="295" y1="31" y2="31" className="progression-guide" />
           : <><line x1="5" x2="295" y1="11" y2="11" className="progression-guide" /><line x1="5" x2="295" y1="51" y2="51" className="progression-guide" /></>}
-        {connect && <path d={smoothLinePath(coords)} fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+        <path d={smoothLinePath(coords)} fill="none" stroke={color} strokeWidth="1.7" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         {points.map((point, i) => <circle key={i} cx={coords[i][0]} cy={coords[i][1]} r={i === points.length - 1 ? 3 : 2} fill={point.precision === "month" ? "#20262c" : color} stroke={color} strokeWidth={point.precision === "month" ? 1 : 0}><title>{[pointDate(point, true), display(point.value), point.distance ? `${decimal(point.distance)} km` : null].filter(Boolean).join(" · ")}</title></circle>)}
       </svg>
       <div className="progression-axis"><time dateTime={pointDateTime(start)}>{pointDate(start, acrossYears)}</time><time dateTime={pointDateTime(end)}>{pointDate(end, acrossYears)}</time></div>
@@ -114,50 +114,103 @@ function Vo2Card({ series }) {
   </DataCard>;
 }
 
-function SpeedCard({ sport, groups }) {
-  const [selection, setSelection] = useState(() => groups.some(row => row.scope === "Outdoor") ? "Outdoor" : "Indoor");
-  const group = groups.find(row => row.scope === selection);
-  const { source, basis, points = [] } = group ?? {};
-  const latest = points.at(-1), color = sportColor(sport);
+const benchmarkPages = {
+  Running: "https://support.strava.com/en-us/articles/15401661-how-do-best-efforts-work-for-running-on-strava",
+  Cycling: "https://support.strava.com/en-us/articles/15401645-how-do-best-efforts-work-for-cycling-on-strava",
+};
+
+function RecentSessions({ points, display, unit, label, color, running }) {
+  const latestFirst = points.slice(-5).reverse();
+  const fastest = Math.max(...latestFirst.map(point => point.value));
+  const sorted = latestFirst.map(point => running ? paceSeconds(point.value) : point.value).sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const typical = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  return <figure className="session-comparison" style={{ "--comparison-color": color }}>
+    <figcaption>
+      <span>{latestFirst.length === 1 ? "Latest session" : `${latestFirst.length} latest sessions`}</span>
+      {latestFirst.length > 1 && <span>Median <b>{running ? effortClock(typical) : decimal(typical)} {unit}</b></span>}
+    </figcaption>
+    <ol aria-label={`${label} by session, latest first`}>
+      {latestFirst.map((row, index) => <li key={row.activityId ?? `${row.at}-${index}`}>
+        <div className="session-comparison-label">
+          <time dateTime={row.date}>{pointDate(row)}</time>
+          <span>{decimal(row.distance, 2)} km{positive(row.seconds) && ` · ${duration(row.seconds)}`}</span>
+        </div>
+        <div className="session-comparison-track" aria-hidden="true">
+          <span style={{ width: `${100 * row.value / fastest}%` }} />
+        </div>
+        <MetricValue as="b" value={display(row.value)} unit={unit} />
+      </li>)}
+    </ol>
+    {latestFirst.length > 1 && <p className="session-comparison-key">Longer bar means faster.</p>}
+  </figure>;
+}
+
+function SpeedCard({ sport, groups, reportDate }) {
+  const [environment, setEnvironment] = useState(() => groups.some(row => row.scope === "Outdoor") ? "Outdoor" : "Indoor");
+  const [grouping, setGrouping] = useState("distance");
+  const [bucket, setBucket] = useState(null);
+  const group = groups.find(row => row.scope === environment);
+  const { source, basis, points: all = [] } = group ?? {};
   const running = sport === "Running", display = running ? pace : decimal;
   const label = running ? "Run pace" : "Ride speed", unit = running ? "min/km" : "km/h";
-  const metric = `${label} · ${unit}`;
-  const recent = latest ? points.filter(row => row.date >= shiftDate(latest.date, -89)) : [];
-  const history = datedHistory(`${selection} · ${label}`, [metric, "Distance · km", "Activity"], points,
-    row => [display(row.value), Number.isFinite(row.distance) ? decimal(row.distance, 2) : null, row.name], {
+  const metric = `Avg ${running ? "pace" : "speed"} · ${unit}`;
+  const supportsDuration = !running && groups.some(row => row.points.some(point => positive(point.seconds)));
+  const byTime = grouping === "duration";
+  const { bins, selected } = activityComparisons(all, sport, grouping, shiftDate(reportDate, -89), bucket);
+  const points = selected?.points ?? [];
+  const latest = points.at(-1);
+  const color = sportColor(sport);
+  const history = datedHistory(`${environment} · ${selected?.label ?? label} · whole sessions`,
+    ["Distance · km", "Time", metric, "Activity"], points,
+    row => [decimal(row.distance, 2), positive(row.seconds) ? duration(row.seconds) : null, display(row.value), row.name], {
       chart: [[metric, row => running ? paceSeconds(row.value) : row.value], ["Distance · km", row => row.distance]],
     });
   if (running) history.chartFormats = { [metric]: { format: effortClock, reverse: true } };
-  return <DataCard className="progression-card" title={label} history={history} initialHistoryDays={90} detail={<DetailFacts rows={[
-    ["Environment", selection], ["Source", source], ["Timing basis", basis && speedMethods[basis]],
-    ["Records", latest && `${points.length} sessions through ${pointDate(latest, true)}`],
-  ]} />}>
+  return <DataCard className="progression-card session-progression" title={label} history={history} initialHistoryDays={90}
+    detail={<DetailFacts rows={[
+      ["Environment", environment], ["Session range", selected?.label], ["Source", source],
+      ["Timing basis", basis && speedMethods[basis]],
+      ["Comparison method", "Whole-session averages within the selected range. Cycling speed also varies with route and conditions."],
+      ["Distance cutoffs", <a href={benchmarkPages[sport]} target="_blank" rel="noreferrer">Strava benchmark distances</a>],
+    ]} />}>
     <div className="progression-readout">
       <h4>{label}</h4>
-      {latest && <MetricValue as="strong" value={display(latest.value)} unit={unit} style={{ color }} />}
+      {latest && <div className="session-progression-latest">
+        <MetricValue as="strong" value={display(latest.value)} unit={unit} style={{ color }} />
+        <small>Latest in range</small>
+      </div>}
     </div>
-    <div className="progression-card-meta">
-      <select aria-label={`${label} environment`} value={selection} onChange={event => setSelection(event.target.value)}>
+    <div className="session-progression-controls">
+      <select aria-label={`${label} environment`} value={environment} onChange={event => { setEnvironment(event.target.value); setBucket(null); }}>
         {activityEnvironments.map(scope => <option key={scope}>{scope}</option>)}
       </select>
-      {latest && Number.isFinite(latest.distance) && <span>{decimal(latest.distance, 2)} km</span>}
+      {supportsDuration && <select aria-label="Ride comparison by" value={grouping}
+        onChange={event => { setGrouping(event.target.value); setBucket(null); }}>
+        <option value="distance">Distance</option><option value="duration">Duration</option>
+      </select>}
+      <select aria-label={`${label} ${byTime ? "duration" : "distance"} range`} value={selected ? String(selected.min) : ""}
+        onChange={event => setBucket(event.target.value)} disabled={!selected}>
+        {!selected && <option value="">No matching range</option>}
+        {bins.map(bin => <option value={bin.min} key={bin.min} disabled={!bin.points.length}>
+          {bin.label}{bin.points.length ? ` (${bin.points.length})` : ""}
+        </option>)}
+      </select>
     </div>
     {latest ? <>
-      <Sparkline label={`${label} · ${selection} · ${unit}`} points={recent} color={color} display={display} connect={false} />
-      <EvidenceMeta className="evidence-footer" source={source} date={latest.date} year dateLabel="Latest">
-        <span>{basis === "timer" ? "Distance / timer" : speedMethods[basis]}</span>
+      <RecentSessions points={points} display={display} unit={unit} label={label} color={color} running={running} />
+      <EvidenceMeta className="evidence-footer" source={source}>
+        <span>{points.length} {points.length === 1 ? "session" : "sessions"} in range</span>
+        <span>{speedMethods[basis]} · Whole-session average</span>
       </EvidenceMeta>
-      <div className="progression-card-meta">
-        <span>{recent.length} {recent.length === 1 ? "session" : "sessions"}{recent.length < points.length ? " · Last 90 days" : ""}</span>
-      </div>
-    </> : <p className="progression-card-meta">No verified {selection.toLowerCase()} sessions in this report.</p>}
+    </> : <p className="progression-empty">No verified {environment.toLowerCase()} sessions with {byTime ? "comparable duration" : "recorded distance"}.</p>}
   </DataCard>;
 }
 
-export function SportSpeedCards({ groups }) {
+export function SportSpeedCards({ groups, reportDate }) {
   return ["Cycling", "Running"].map(sport => {
     const matching = groups.filter(row => row.sport === sport);
-    return matching.length ? <SpeedCard key={sport} sport={sport} groups={matching} /> : null;
+    return matching.length ? <SpeedCard key={`${sport}:${reportDate}`} sport={sport} groups={matching} reportDate={reportDate} /> : null;
   });
 }
 
@@ -193,7 +246,7 @@ export default function PerformanceProgression({ report, segmentRecordKeys, comp
     </div>
     <div className="progression-block">
       <h3>Average speed &amp; pace</h3>
-      {speed.length ? <div className="progression-grid"><SportSpeedCards groups={speed} /></div>
+      {speed.length ? <div className="progression-grid"><SportSpeedCards groups={speed} reportDate={report.date} /></div>
         : <p className="progression-empty">Speed and pace not captured</p>}
     </div>
     {compactRecords ? <details className="progression-block benchmark-records">

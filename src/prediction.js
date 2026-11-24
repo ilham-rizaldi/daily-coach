@@ -7,6 +7,16 @@ export const HR_CEILING_MAX = 235;
 const SIMILAR_EFFORT = 0.15;
 const MIN_PAIRED_FRACTION = 0.9;
 const MIN_BLOCK_SECONDS = 8 * 60;
+export const predictionDurations = [
+  { id: "short", label: "5 to <8 min", min: 300, max: 480 },
+  { id: "steady", label: "8 to <12 min", min: 480, max: 720 },
+  { id: "long", label: "12 to <20 min", min: 720, max: 1200 },
+  { id: "extended", label: "20 min and over", min: 1200, max: Infinity },
+];
+
+export function inPredictionDuration(row, band) {
+  return !band || Number.isFinite(row.durationSeconds) && row.durationSeconds >= band.min && row.durationSeconds < band.max;
+}
 
 export const predictionModes = {
   cycling: { sport: "Ride", label: "Cycling power", field: "powerWatts", unit: "W", defaultValue: 100 },
@@ -85,7 +95,7 @@ export function predictionDataset(report, key) {
   const seen = new Set();
   const history = seed.filter(block => {
     if (!eligibleBlock(block, mode, "", report.date)) return false;
-    const id = JSON.stringify([block.date, block.activityId, block.startSeconds ?? 0]);
+    const id = JSON.stringify([block.date, block.activityId, block.startSeconds ?? 0, block.durationSeconds]);
     if (seen.has(id)) return false;
     seen.add(id);
     return true;
@@ -114,17 +124,31 @@ export function predictionDataset(report, key) {
   return { groups, rows, context, first, last: report.date };
 }
 
+function weightedHeartRate(rows, target) {
+  let total = 0, weights = 0;
+  for (const row of rows) {
+    const weight = 1 - distance(target, row) / (2 * target * SIMILAR_EFFORT);
+    total += row.hrBpm * weight;
+    weights += weight;
+  }
+  return total / weights;
+}
+
 function chronologicalChecks(days) {
   const earlier = new Map(), checks = [];
   for (const [date, rows] of days) {
     const test = dayRepresentative(rows);
     if (earlier.size >= 3) {
-      const matched = comparisonDays(earlier, test.x);
+      const band = predictionDurations.find(band => inPredictionDuration(test, band));
+      const comparable = new Map([...earlier].map(([day, items]) => [day, items.filter(row => inPredictionDuration(row, band))])
+        .filter(([, items]) => items.length));
+      const matched = comparable.size >= 3 ? comparisonDays(comparable, test.x) : [];
       if (matched.length) {
-        const reference = [...earlier.values()].slice(-7).map(day => dayRepresentative(day).hrBpm);
+        const reference = [...comparable.values()].slice(-7).map(day => dayRepresentative(day).hrBpm);
         const outcomes = matched.map(row => row.hrBpm);
         checks.push({
-          ...test, estimatedHr: median(outcomes), maxHr: Math.max(...outcomes), baselineHr: median(reference),
+          ...test, estimatedHr: median(outcomes), weightedHr: weightedHeartRate(matched, test.x),
+          maxHr: Math.max(...outcomes), baselineHr: median(reference),
         });
       }
     }
@@ -136,7 +160,14 @@ function chronologicalChecks(days) {
 function forwardValidation(checks, target) {
   const rows = checks.filter(row => distance(target, row) <= target * SIMILAR_EFFORT);
   const error = key => rows.length ? rows.reduce((sum, row) => sum + Math.abs(row[key] - row.hrBpm), 0) / rows.length : null;
-  return { tests: rows.length, meanError: error("estimatedHr"), baselineError: error("baselineHr"), rows };
+  const medianError = error("estimatedHr"), weightedError = error("weightedHr"), baselineError = error("baselineHr");
+  const useWeighted = rows.length >= 4 && weightedError < medianError && weightedError < baselineError;
+  return {
+    tests: rows.length, medianError, weightedError, baselineError,
+    method: useWeighted ? "Effort-weighted HR" : "Median of comparable efforts",
+    meanError: useWeighted ? weightedError : medianError,
+    rows: useWeighted ? rows.map(row => ({ ...row, estimatedHr: row.weightedHr })) : rows,
+  };
 }
 
 export function predictHeartRate(group, key, value) {
@@ -165,7 +196,7 @@ export function predictHeartRate(group, key, value) {
   const confident = validation.tests >= 4 && matched.length >= 3 && validation.meanError <= 8;
   const high = confident && validation.tests >= 8 && matched.length >= 5 && validation.meanError <= 5 && Boolean(group.conditions);
   return {
-    bpm: median(outcomes), range, matched, validation, confidence: high ? "High" : confident ? "Medium" : "Low",
+    bpm: validation.method === "Effort-weighted HR" ? weightedHeartRate(matched, x) : median(outcomes), range, matched, validation, confidence: high ? "High" : confident ? "Medium" : "Low",
     reason: validation.tests < 4 ? "Repeat this effort on a similar route to see how heart rate responds."
       : !confident ? "Check the later-session errors in Details and use your live heart rate to adjust."
         : !group.conditions ? "Tested on later sessions. Route and weather may differ." : "Tested on later sessions under comparable conditions.",
@@ -282,7 +313,8 @@ export function automaticPredictionDataset(report, key) {
     const selection = byActivity.get(bucket);
     if (!selection || sourceRank > selection.rank) byActivity.set(bucket, { rank: sourceRank, rows: new Map() });
     const chosen = byActivity.get(bucket);
-    if (chosen.rank === sourceRank && !chosen.rows.has(block.startSeconds ?? 0)) chosen.rows.set(block.startSeconds ?? 0, block);
+    const effortId = `${block.startSeconds ?? 0}:${block.durationSeconds}`;
+    if (chosen.rank === sourceRank && !chosen.rows.has(effortId)) chosen.rows.set(effortId, block);
   }
   const history = [...byActivity.values()].flatMap(item => [...item.rows.values()]).map(block => ({
     ...block, value: block[mode.field], x: effort(mode, block[mode.field]),
@@ -313,25 +345,31 @@ export function automaticPredictionDataset(report, key) {
   return { ...standard, first, cohort, context };
 }
 
-const isShort = row => row.durationSeconds < MIN_BLOCK_SECONDS;
 const withoutForecast = reason => ({ confidence: "Insufficient", reason });
 
-function evidenceLevels(cohort) {
+function evidenceLevels(cohort, band) {
   if (!cohort) return [];
-  return [cohort.recent.filter(row => !isShort(row)), cohort.recent, cohort.historyRows];
+  const recent = cohort.recent.filter(row => inPredictionDuration(row, band));
+  const history = cohort.historyRows.filter(row => inPredictionDuration(row, band));
+  if (band) return [recent, history];
+  const standard = recent.filter(row => row.durationSeconds >= MIN_BLOCK_SECONDS && row.durationSeconds < 720);
+  return [standard, recent.filter(row => row.durationSeconds < 720), history.filter(row => row.durationSeconds < 720),
+    ...predictionDurations.slice(2).map(range => history.filter(row => inPredictionDuration(row, range)))];
 }
 
-export function automaticHeartRate(data, key, value) {
+export function automaticHeartRate(data, key, value, band) {
   const mode = predictionModes[key];
   if (!mode || !values[mode.field](value)) return withoutForecast("Enter a pace or wattage to check it against your recorded efforts.");
   const { cohort } = data;
-  for (const [index, rows] of evidenceLevels(cohort).entries()) {
+  for (const [index, rows] of evidenceLevels(cohort, band).entries()) {
     const result = predictHeartRate({ ...cohort, rows }, key, value);
     if (Number.isFinite(result.bpm)) {
-      if (index === 0) return { ...result, kind: "estimate", method: "Recent steady blocks" };
+      if (index === 0) return { ...result, kind: "estimate", method: result.validation.method };
       return { ...result, kind: "estimate", confidence: "Low",
-        method: index === 1 ? "Recent steady blocks including shorter efforts" : "Extended steady-block history",
-        reason: index === 1 ? "Includes shorter steady blocks. Check heart rate on a longer repeat." : "Uses older sessions. Recheck at this effort on your next comparable workout." };
+        method: band || index >= 3 ? `${result.validation.method} · same-duration blocks`
+          : index === 1 ? "Recent steady blocks including shorter efforts" : "Extended steady-block history",
+        reason: !band && index === 1 ? "Includes shorter steady blocks. Check heart rate on a longer repeat."
+          : "Recheck at this effort on your next comparable workout." };
     }
     if (result.validation?.tests >= 4 && result.matched?.length && result.range) {
       return { ...result, bpm: median(result.matched.map(row => row.hrBpm)), kind: "reference",
@@ -340,7 +378,7 @@ export function automaticHeartRate(data, key, value) {
   }
   const target = effort(mode, value);
   const nearby = (rows, limit) => rows.filter(row => Math.abs(row.x - target) <= target * limit);
-  const sessionDays = groupOn(nearby(data.context.map(row => ({ ...row, x: effort(mode, row.value) })), SIMILAR_EFFORT),
+  const sessionDays = groupOn(nearby(data.context.filter(row => inPredictionDuration(row, band)).map(row => ({ ...row, x: effort(mode, row.value) })), SIMILAR_EFFORT),
     row => row.date);
   const sessionMatches = [...sessionDays.values()].map(rows => rows.reduce((best, row) =>
     distance(target, row) < distance(target, best) ? row : best));
@@ -349,23 +387,32 @@ export function automaticHeartRate(data, key, value) {
     return { kind: "reference", bpm: median(hr), confidence: "Insufficient", range: [Math.min(...hr), Math.max(...hr)],
       matched: sessionMatches, method: "Whole-session averages", reason: "Similar session averages show how HR varied over the full workout." };
   }
-  const raw = nearby(cohort?.historyRows ?? [], 0.1).sort((a, b) =>
+  const raw = nearby((cohort?.historyRows ?? []).filter(row => inPredictionDuration(row, band)), 0.1).sort((a, b) =>
     distance(target, a) - distance(target, b) || b.date.localeCompare(a.date));
   if (raw[0]) return { kind: "reference", bpm: raw[0].hrBpm, confidence: "Insufficient", matched: [raw[0]],
     method: "Nearest recorded steady effort", reason: "One similar effort was recorded. Repeat it on another day before using it as a target." };
-  return withoutForecast("No comparable recorded efforts near this input.");
+  const recorded = cohort?.historyRows ?? [];
+  const comparable = recorded.filter(row => inPredictionDuration(row, band));
+  const closest = (comparable.length ? comparable : recorded)
+    .reduce((best, row) => !best || distance(target, row) < distance(target, best)
+      || distance(target, row) === distance(target, best) && row.date > best.date ? row : best, null);
+  return {
+    ...withoutForecast(band ? "No comparable efforts at this pace or power for the selected duration."
+      : "No comparable recorded efforts near this input."),
+    closest,
+  };
 }
 
-export function automaticCeiling(data, key, ceiling) {
+export function automaticCeiling(data, key, ceiling, band) {
   if (!predictionModes[key] || !finiteIn(ceiling, HR_CEILING_MIN, HR_CEILING_MAX)) {
     return withoutForecast(`Enter an HR ceiling from ${HR_CEILING_MIN} to ${HR_CEILING_MAX} bpm.`);
   }
   const { cohort } = data;
   const peaks = (cohort?.historyRows ?? []).filter(row =>
-    finiteIn(row.peakHrBpm, 35, 235) && row.peakHrBpm >= row.hrBpm);
+    inPredictionDuration(row, band) && finiteIn(row.peakHrBpm, 35, 235) && row.peakHrBpm >= row.hrBpm);
   const atSimilarEffort = (candidate, row) => distance(candidate.x, row) <= candidate.x * 0.08;
   const corroborated = candidate => peaks.every(row => !atSimilarEffort(candidate, row) || row.peakHrBpm <= ceiling);
-  for (const [index, rows] of evidenceLevels(cohort).entries()) {
+  for (const [index, rows] of evidenceLevels(cohort, band).entries()) {
     const pool = rows.filter(row => peaks.includes(row)).map(row => ({ ...row, hrBpm: row.peakHrBpm }));
     const result = predictEffortAtCeiling({ ...cohort, rows: pool }, key, ceiling);
     if (result.effortRange && result.effortRange.every(value =>
@@ -373,6 +420,25 @@ export function automaticCeiling(data, key, ceiling) {
       return { ...result, kind: "estimate", method: "Measured peak HR across steady blocks",
         confidence: index === 0 ? result.confidence : "Low",
         reason: "Start at the easier end and check your heart rate after it settles." };
+    }
+  }
+  for (const rows of evidenceLevels(cohort, band)) {
+    const pool = rows.filter(row => peaks.includes(row));
+    for (const anchor of pool.slice().sort((a, b) => b.x - a.x)) {
+      if (anchor.peakHrBpm > ceiling || !corroborated(anchor)) continue;
+      const neighbors = groupOn(pool.filter(row => atSimilarEffort(anchor, row)), row => row.date);
+      if (neighbors.size < 2) continue;
+      const matched = [...neighbors.values()].map(items => items.reduce((best, row) =>
+        row.peakHrBpm > best.peakHrBpm ? row : best));
+      // Anchor the suggestion to the easier measured effort across the matching days.
+      const tested = matched.reduce((best, row) => row.x < best.x ? row : best);
+      if (!corroborated(tested)) continue;
+      const measured = matched.map(row => row.peakHrBpm);
+      return {
+        kind: "estimate", confidence: "Low", value: tested.value, effortRange: [tested.value, tested.value],
+        range: [Math.min(...measured), Math.max(...measured)], matched, method: "Repeatable measured peaks",
+        reason: "Start at the easier measured effort and check heart rate once it settles.",
+      };
     }
   }
   const reference = peaks.filter(row => row.peakHrBpm <= ceiling && corroborated(row))
@@ -385,5 +451,11 @@ export function automaticCeiling(data, key, ceiling) {
   if (example) return { kind: "reference", value: example.value, range: [example.peakHrBpm, example.peakHrBpm],
     confidence: "Insufficient", matched: [example], method: "Observed effort and peak HR",
     reason: "One block stayed under the ceiling. Other similar blocks exceeded it. Ease off if heart rate rises toward your cap." };
-  return withoutForecast("No measured steady-block peaks support this ceiling.");
+  const closest = peaks.reduce((best, row) => !best || row.peakHrBpm < best.peakHrBpm
+    || row.peakHrBpm === best.peakHrBpm && row.date > best.date ? row : best, null);
+  return {
+    ...withoutForecast(closest ? "Your ceiling is below the lowest measured peak for these efforts."
+      : band ? "There are no steady efforts of this duration with a measured peak HR." : "No measured steady-block peaks support this ceiling."),
+    closest,
+  };
 }

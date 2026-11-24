@@ -122,7 +122,7 @@ export default function PerformanceTrends({ report }) {
     <section className="progression" aria-labelledby="sport-progression-title">
       <div className="performance-heading"><h2 id="sport-progression-title">Progression by sport</h2></div>
       <div className="progression-grid progression-sport-grid">
-        <SportSpeedCards groups={activitySpeedSeries(report)} />
+        <SportSpeedCards groups={activitySpeedSeries(report)} reportDate={report.date} />
         <StrengthLift key={report.date} report={report} />
       </div>
     </section>
