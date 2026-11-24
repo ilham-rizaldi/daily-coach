@@ -1,17 +1,10 @@
 import { formatDate, jakartaDate } from "./report.js";
 import "./evidence-meta.css";
 
-const confidenceLabels = new Map([["low", "Low"], ["medium", "Medium"], ["high", "High"]]);
 const clock = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" });
 const dated = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value))
   && new Date(value).toISOString().slice(0, 10) === value;
 const timestamp = value => typeof value === "string" && /T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value));
-
-export function ConfidenceMark({ value, preserve = false }) {
-  const label = typeof value === "string" ? confidenceLabels.get(value.trim().toLowerCase().replace(/ confidence$/, "")) : undefined;
-  if (!label) return preserve ? value : null;
-  return <span className="evidence-confidence" data-confidence={label}><span className="sr-only">Confidence </span>{label}</span>;
-}
 
 export function SourceMark({ source, href }) {
   if (!source) return null;
@@ -60,14 +53,13 @@ function CaptureTime({ date, observedAt, window }) {
 }
 
 export function EvidenceMeta({ as: Tag = "div", source, href, date, from, dateLabel, year, precision, observedAt, observationWindow,
-  confidence, state, children, className = "" }) {
-  if (!source && !dated(date) && !timestamp(observedAt) && !observationWindow && !children && !confidence && !state) return null;
+  state, children, className = "" }) {
+  if (!source && !dated(date) && !timestamp(observedAt) && !observationWindow && !children && !state) return null;
   return <Tag className={`evidence-meta ${className}`}>
     <SourceMark source={source} href={href} />
     <EvidencePeriod date={date} from={from} label={dateLabel} year={year} precision={precision} />
     <CaptureTime date={date} observedAt={observedAt} window={observationWindow} />
     {state && <span className="evidence-state">{state}</span>}
-    <ConfidenceMark value={confidence} />
     {children}
   </Tag>;
 }

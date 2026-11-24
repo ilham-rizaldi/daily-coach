@@ -2,7 +2,7 @@
 
 ## Trigger and scope
 
-Run when the owner commands it. There is no recurring schedule, automatic email, background refresh or report-generation hook on repository updates. Do not create or re-enable one without a new request.
+Generate reports on the owner's command. The separately authorized recurring task captures source data only. Repository updates and scheduled captures never trigger report generation or email.
 
 Use the current command and established authorization to determine the requested output. A command to run the full report-and-email protocol includes delivery to the configured owner recipient. Do not request the same permission again. A request to verify access, inspect data, preview the dashboard or edit code does not by itself authorize email. Keep the recipient and account identifiers in private configuration.
 
@@ -11,16 +11,24 @@ The code repository and viewer remain public. Source captures, activity and well
 ## 1. Verify access and collect evidence
 
 1. Establish the report date and local timezone from the owner's context. The existing report calculations use `Asia/Jakarta`. Record the capture timestamp separately from the date of each measurement.
-2. Inspect the owner's authorized Chrome sessions for Garmin Connect, Strava and Intervals.icu. For any additional browser or extraction tool requested by the owner, verify that tool's actual session separately. An installed tool or successful page load does not prove access to private data. Use only authorized browser controls, connectors, provider APIs or native export actions. Do not extract cookies, reuse session credentials in another service, or use shell requests to bypass browser access controls.
+2. Use the owner's connected Chrome session for Garmin Connect, Strava and Intervals.icu. Verify the browser family and each account's actual signed-in pages. If Chrome is unavailable or an account is signed out, request that specific connection or sign-in. Use native exports from the authorized session when a panel does not expose a required value. Do not extract cookies, reuse session credentials in another service, or use shell requests to bypass browser access controls.
 3. For each source, record whether access worked, the latest visible activity, the date range retrieved, pagination/export completeness and any missing fields. Use native exports where available to retain exact values and units. Retain captures and their file hashes privately so another run can audit the extraction.
 4. Keep browser observations and each extraction service's output distinguishable. Accept an extracted value only when its source, athlete identity, date, label and unit are supported. Quarantine sign-in pages, incomplete results and unverified tool output rather than merging them into the report.
-5. Preserve historical captures as historical evidence. If current access fails, label the last verified capture and the missing refresh. Do not silently reuse it as a current reading. Keep partial captures as private diagnostics. Do not use them as current report data.
+5. Preserve historical captures as historical evidence. If current access fails, preserve the last verified capture date and collect any remaining evidence privately. Never substitute the historical value for a required current reading.
 
 ## Completeness gate
 
-Run `captureReadinessIssues(report)` before preparing coaching. The gate checks dated Garmin recovery and load, Intervals.icu actual load and settings, three-provider activity coverage, and current verification of performance history. Recheck the native detail, settings, sync or export when a required metric is unavailable. Preserve optional sensor gaps and verified nonmeasurements separately from access or retrieval failures.
+Run `captureReadinessIssues(report)` from `src/report-readiness.js` before coaching. A missing, stale, ambiguous or unverified required metric blocks the report. Keep partial captures as private diagnostics. The publishing script also enforces the gate before changing the private archive or preparing email.
 
-If a required metric remains unavailable or unverified, report `BLOCKED` with the source, missing evidence and exact next step. The report command enforces the gate before writing the private archive, dashboard link or email payload.
+| Source | Required capture |
+| --- | --- |
+| Garmin Connect | Dated sleep and recorded overnight vitals, numeric readiness and recovery time, HRV and baseline, RHR, Body Battery, training status, acute and chronic load with ratio, and points with lower and upper targets for all three Load Focus categories. Verify the latest available Garmin VO₂ max, thresholds and PR history on the native panels. |
+| Intervals.icu | Dated actual CTL, ATL and TSB, activity load and HR zones, and verified simulator settings. Record the fitness and fatigue time constants and sport contribution weights separately from activity metrics. |
+| Strava and activity sources | Exact-day activity coverage from the unfiltered log, native detail and supported streams for recorded sessions, matched provider IDs or a documented cross-source match, and verified benchmark efforts, PRs and speed or pace trends. Verify 42 completed days and today's partial coverage separately. |
+
+When a field is absent, inspect the dated detail, chart tooltip, source settings or native export and check sync. Retry via an authorized connected source when it can supply the same measurement. Keep provider nonmeasurement separate from a retrieval or access gap. Any required value remains blocking even if the device did not record it. Optional sensor measurements outside the framework must have documented coverage, with no inferred values. Verify the latest dated historical value without requiring a new PR or VO₂ max result that day.
+
+If any required value remains unresolved, stop at a short `BLOCKED` status. List the affected metrics and source, then request the specific sign-in, permission, device sync or export needed. No report, dashboard update or email is prepared from an incomplete capture.
 
 ## 2. Reconcile activities and metrics
 
@@ -45,7 +53,7 @@ Write `coaching.actionPlan` for Daily with a short decision, two or three dated 
 | Fitness and durability | Identify supported changes in repeatable performance and sustained work; distinguish a model estimate from measured performance and avoid causal claims from coincident trends. |
 | Next session | State purpose, sport, total duration, warm-up, work, recovery and cool-down. Step durations must equal the total. Give supported intensity targets, an easier alternative and a practical adjustment or stop rule. |
 | Upcoming training | Relate the next session to verified planned workouts and recovery needs. Treat a longer progression as provisional when goals, availability or upcoming events are unknown. |
-| Confidence and gaps | Explain the evidence behind consequential decisions, confidence, conflicting thresholds, missing streams, incomplete coverage and the next measurement that would change the decision. |
+| Evidence and gaps | Explain what supports the recommendation, sample coverage, conflicting thresholds, missing streams and the next measurement that could change the plan. |
 
 Use the available history for depth. A longer report cannot substitute for missing data. Do not invent power records, training zones, fitness gains, race targets, symptoms or causal explanations. Training advice is an interpretation of the captured evidence, not a medical diagnosis.
 

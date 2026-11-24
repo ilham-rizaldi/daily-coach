@@ -337,15 +337,6 @@ main {
 .coach-note h2 {
   margin-bottom: 14px;
 }
-.confidence {
-  display: inline-block;
-  font-size: 15px;
-  font-weight: 700;
-  background: #241c17;
-  color: var(--amber);
-  padding: 7px 11px;
-  border-radius: 4px;
-}
 .coach-note p {
   font-size: 18px;
   line-height: 1.55;
@@ -1432,6 +1423,7 @@ h2 { font-size: 20px; }
 .forecast-state-values { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 15px; }
 .forecast-state-values strong { display: block; }
 .forecast-compact-status, .forecast-config-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; color: #aab5bf; font-size: 11px; margin: 10px 0 0; }
+.garmin-rest-summary > .forecast-compact-status { grid-column: 1 / -1; margin-top: 0; }
 .forecast-compact-status > span:first-child { color: var(--amber); }
 .forecast-details { padding: 11px 0; }
 .forecast-details summary { font-size: 12px; }

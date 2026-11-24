@@ -22,8 +22,7 @@ function EvidenceDetails({ result, data, cohort, mode, inverse }) {
   const matches = (result.matched || []).slice().sort((a, b) => b.date.localeCompare(a.date));
   return <>
     <DetailFacts rows={[
-      ["Type", result.method, result.reason],
-      ["Confidence", result.kind === "reference" ? "Recorded reference" : result.confidence === "Insufficient" ? "Insufficient data" : result.confidence],
+      ["Method", result.method, result.reason],
       ["Evidence search window", `${dateText(data.first)} – ${dateText(data.last)}`],
       ["Matched profile", cohort && `${cohort.device} · ${cohort.environment}`, cohort?.conditions],
       ["Eligible days in window", cohort?.dates ?? 0],
@@ -68,14 +67,14 @@ function PredictionEstimate({ name, mode, data, cohort, history, inverse = false
     <h3>{title}</h3>
     {children}
     <div className="prediction-output" aria-live="polite">
+      {value != null && <small className="prediction-reading-type">{reference ? "Recorded reference" : "Estimate"}</small>}
       {value != null ? <MetricValue as="strong" value={value} unit={inverse ? profile.unit : "bpm"} />
-        : <strong className="prediction-unavailable">Unavailable</strong>}
+        : <strong className="prediction-unavailable">No estimate</strong>}
       {observed && <small>{observed} bpm {inverse ? "peak HR" : "recorded"}</small>}
       <EvidenceMeta className="evidence-inset" source={sources.join(" + ")} from={dates[0]} date={dates.at(-1)}
-        dateLabel={dates.length ? `${dates.length} ${dates.length === 1 ? "day" : "days"}` : null}
-        confidence={result.confidence} state={reference ? "Recorded reference" : result.confidence === "Insufficient" ? "Insufficient evidence" : null} />
+        dateLabel={dates.length ? `${dates.length} comparable ${dates.length === 1 ? "day" : "days"}` : null} />
     </div>
-    {(value == null || reference) && <p className="prediction-reason">{result.reason}</p>}
+    {result.reason && <p className="prediction-reason">{result.reason}</p>}
   </DataCard>;
 }
 

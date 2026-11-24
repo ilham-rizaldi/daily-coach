@@ -22,7 +22,7 @@ export function rangeFor(value) {
 }
 
 export function targetEvidence(target) {
-  if (!target?.source || !usableDate(target.date) || !["Low", "Medium", "High"].includes(target.confidence)) return null;
+  if (!target?.source || !usableDate(target.date)) return null;
   return target;
 }
 

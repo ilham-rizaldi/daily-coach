@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { filterCardHistory, resolveCardHistory } from "./cardHistory.js";
 import { formatDate, shiftDate } from "./report.js";
 import { CardHistoryChart } from "./CardHistoryChart.jsx";
-import { ConfidenceMark, SourceMark } from "./EvidenceMeta.jsx";
+import { SourceMark } from "./EvidenceMeta.jsx";
 
 const interactive = "a, button, select, input, textarea, label, summary, [role='button'], [role='link'], [contenteditable], dialog";
 
@@ -88,7 +88,6 @@ export function DataCard({ as: Tag = "article", title, detail, detailExpanded = 
 const recorded = value => value != null && value !== "" && value !== false;
 function EvidenceCell({ label, value }) {
   if (typeof value !== "string") return value;
-  if (label === "Confidence" || label === "Confidence / type") return <ConfidenceMark value={value} preserve />;
   if (label === "Source" || label === "Provider") return <SourceMark source={value} />;
   return value;
 }

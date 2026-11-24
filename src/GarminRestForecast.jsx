@@ -13,7 +13,7 @@ export function GarminRestForecast({ report }) {
   const chronic = result.baseline?.chronic ?? report.wellness.garminChronicLoad;
   return <DataCard as="section" className="garmin-rest garmin-rest-compact" aria-labelledby="garmin-rest-heading" title="Garmin rest projection" history="garmin-load" detail={<>
     <DetailFacts rows={[["Projection date", formatDate(date)], ["Model", "Paired historical Garmin load changes on days with no recorded activity"],
-      ["Calibration days", result.n], ["Confidence", result.available ? "Low" : null], ["Status", result.error],
+      ["Comparable rest days", result.n], ["Data availability", result.error],
       ["Applicability", result.extrapolation ? "Extrapolated beyond the captured baseline range" : null]]} />
     <DetailTable columns={["Metric", "Current", "Rest estimate", "Historical range"]} rows={result.available
       ? [["Acute load", acute, result.estimate.acute, result.range.acute], ["Chronic load", chronic, result.estimate.chronic, result.range.chronic], ["Ratio", ratio, result.estimate.ratio, result.range.ratio]]
@@ -22,8 +22,7 @@ export function GarminRestForecast({ report }) {
   </>}>
     <div className="forecast-heading">
       <div><h2 id="garmin-rest-heading">Rest projection</h2>
-        <EvidenceMeta source="Garmin load history" date={date} dateLabel="Projection" confidence={result.available ? "Low" : null}
-          state={result.extrapolation ? "Extrapolated" : null} />
+        <EvidenceMeta source="Garmin load history" date={date} dateLabel="Projection" />
         {historical && <EvidenceMeta date={report.date} dateLabel="Snapshot" />}
       </div>
     </div>
@@ -31,6 +30,7 @@ export function GarminRestForecast({ report }) {
       <div className="garmin-ratio-shift"><span className="forecast-stat-label">Acute / chronic</span><div><strong>{decimal(ratio, 1)}</strong><span aria-hidden="true">→</span><strong style={{ color: forecastColors.rest }}>≈{decimal(result.estimate.ratio, 2)}</strong></div><small>{decimal(result.range.ratio.low, 2)}–{decimal(result.range.ratio.high, 2)}</small></div>
       <ForecastBars title="Garmin acute to chronic load ratio" rows={[{ label: "Current", value: ratio, color: forecastColors.current }, { label: "Rest", value: result.estimate.ratio, low: result.range.ratio.low, high: result.range.ratio.high, color: forecastColors.rest }]} />
       <dl className="forecast-load-deltas"><div><dt>Acute</dt><dd>{decimal(acute, 0)} <span>→</span> <strong>{decimal(result.estimate.acute, 0)}</strong></dd></div><div><dt>Chronic</dt><dd>{decimal(chronic, 0)} <span>→</span> <strong>{decimal(result.estimate.chronic, 0)}</strong></dd></div></dl>
+      <p className="forecast-compact-status">Based on {result.n} rest days.{result.extrapolation && " Current load falls outside the range of those starting loads."}</p>
     </div> : <div className="garmin-rest-summary">
       <div className="garmin-ratio-shift"><span className="forecast-stat-label">Acute / chronic</span><strong>{decimal(ratio, 1)}</strong><small>Acute {decimal(acute, 0)} · chronic {decimal(chronic, 0)}</small></div>
       <p className="forecast-compact-status" role="status">Projection unavailable · dated load history required</p>

@@ -1,5 +1,5 @@
 import { projectGarminRest } from "./garminForecast.js";
-import { jakartaDate, shiftDate } from "./report.js";
+import { duration, jakartaDate, shiftDate } from "./report.js";
 
 const status = value => typeof value === "string" ? value.trim().toLowerCase() : "";
 
@@ -35,10 +35,10 @@ export function workoutAdvice(report, today) {
   const source = report?.preview ? "Illustrative recovery" : "Garmin Connect";
   const base = { date, ...capture, source };
   if (!report?.preview && date !== today) return {
-    ...base, state: "recheck", title: "Recheck recovery", reason: "This is a historical snapshot. Check today’s recovery before choosing your session.",
+    ...base, state: "recheck", title: "Recheck recovery", reason: "Check your latest sleep and readiness before choosing a session. This report shows an earlier reading.",
   };
   if (!capture) return {
-    ...base, state: "recheck", title: "Recheck recovery", reason: "A dated readiness capture is needed to suggest a workout from recovery.",
+    ...base, state: "recheck", title: "Recheck recovery", reason: "Sync your device and check today’s readiness before picking a workout.",
   };
 
   const readiness = wellness.readiness >= 1 && wellness.readiness <= 100 && Number.isFinite(wellness.readiness) ? wellness.readiness : null;
@@ -56,6 +56,13 @@ export function workoutAdvice(report, today) {
     && row.classification !== "non-training" && !row.planned && Number.isFinite(row.timerSeconds)
     && row.timerSeconds > 0 && Number.isFinite(row.measuredPowerWatts) && Number.isFinite(row.averageHr))
     .sort((a, b) => b.timerSeconds - a.timerSeconds)[0];
+  const sleepMinutes = sleep != null && Number.isFinite(wellness.sleepMinutes) && wellness.sleepMinutes > 0
+    ? wellness.sleepMinutes : null;
+  const sleepNeed = datedCapture(wellness.provenance?.fields?.sleepNeedMinutes, date, report.capturedAt)
+    && Number.isFinite(wellness.sleepNeedMinutes) && wellness.sleepNeedMinutes > 0 ? wellness.sleepNeedMinutes : null;
+  const restReason = sleepMinutes != null && sleepNeed != null && sleepMinutes < sleepNeed
+    ? `You slept ${duration(sleepMinutes * 60)} against a ${duration(sleepNeed * 60)} Garmin sleep need.`
+    : readiness != null ? `Garmin recorded readiness at ${readiness}/100.` : "Garmin flagged poor recovery.";
   const signals = {
     tomorrow, restProjection,
     performance: performance ? { seconds: performance.timerSeconds, watts: performance.measuredPowerWatts, hr: performance.averageHr } : null,
@@ -73,10 +80,10 @@ export function workoutAdvice(report, today) {
 
   if ((readiness !== null && readiness <= 24) || ["poor", "very low"].includes(readinessStatus)) return {
     ...base, ...signals, state: "rest", title: "Rest and reassess",
-    reason: "Readiness was poor at capture. Pause structured cycling and running and check recovery again before the next session.",
+    reason: `${restReason} Skip structured training and reassess after a fresh recovery check.`,
   };
   if (readiness === null || recoveryMinutes === null) return {
-    ...base, ...signals, state: "recheck", title: "Recheck recovery", reason: "Readiness and remaining recovery time are needed for a workout suggestion.",
+    ...base, ...signals, state: "recheck", title: "Recheck recovery", reason: "Check both readiness and remaining recovery time before choosing your effort.",
   };
 
   const reasons = [];
@@ -87,10 +94,10 @@ export function workoutAdvice(report, today) {
   if (signals.acuteHigh) reasons.push("High acute load");
   if (reasons.length) return {
     ...base, ...signals, state: "easy", title: "Keep it easy",
-    reason: `${reasons.join(" · ")}. Choose a conversational spin or easy run–walk. Take rest if the warm-up feels unusually hard.`,
+    reason: `Choose a conversational spin or run–walk. Rest if the warm-up feels unusually hard. Recovery signals include ${reasons.map(reason => reason.toLowerCase()).join(", ")}.`,
   };
   return {
     ...base, ...signals, state: "planned", title: "Review your planned session",
-    reason: "Readiness was at least moderate and the recovery timer was clear at capture. Start gradually and check effort as you warm up.",
+    reason: "Readiness was at least Moderate and the recovery timer was clear. Start gradually and adjust if the warm-up feels harder than usual.",
   };
 }

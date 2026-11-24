@@ -21,7 +21,7 @@
   padding-top: 8px;
   border-top: 1px solid var(--rule);
 }
-.evidence-source, .evidence-state, .evidence-confidence {
+.evidence-source, .evidence-state {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -51,17 +51,6 @@ a.evidence-source:hover { border-color: var(--control-border); color: var(--blue
 .evidence-item time { color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .evidence-key { color: var(--muted); }
 .evidence-state { color: var(--muted); background: var(--surface); }
-.evidence-confidence {
-  --confidence-ink: var(--quiet);
-  color: var(--confidence-ink);
-  border-color: color-mix(in srgb, var(--confidence-ink) 38%, var(--rule));
-  background: color-mix(in srgb, var(--confidence-ink) 10%, var(--canvas));
-  font-weight: 680;
-  white-space: nowrap;
-}
-.evidence-confidence[data-confidence="Low"] { --confidence-ink: #ffab66; }
-.evidence-confidence[data-confidence="Medium"] { --confidence-ink: #79b8ff; }
-.evidence-confidence[data-confidence="High"] { --confidence-ink: var(--green); }
 .report-meta .report-evidence { min-height: 32px; }
 .report-meta .report-evidence time { color: var(--text); }
 .detail-facts .evidence-source, .detail-table .evidence-source { background: var(--surface-raised); }

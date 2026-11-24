@@ -42,7 +42,8 @@ test("activity identity, sport, date, pre-existing plan and work scope are requi
 
 test("historical targets and activities do not gain missing provenance or substitute estimated watts", () => {
   assert.equal(rangeFor([100, 70]), null);
-  assert.equal(targetEvidence({ source: "Garmin", date }), null);
+  assert.equal(targetEvidence({ source: "Garmin", date }).date, date);
+  assert.equal(targetEvidence({ source: "Garmin", date: "undated" }), null);
   assert.equal(targetEvidence({ source: "Garmin", date, confidence: "Low" }).date, date);
   assert.deepEqual(reviewMetrics({ sport: "Ride", measuredPowerWatts: 84, stravaEstimatedPowerWatts: 90 }), [["Average power", 84, "W", "power"]]);
   assert.deepEqual(reviewMetrics({ sport: "Run", measuredPowerWatts: 84, averageRunningPowerWatts: 157 }), [["Average run power (est.)", 157, "W", "power"]]);

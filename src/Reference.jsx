@@ -5,7 +5,7 @@ import { contributionWeights, historicalLoadRate } from "./forecast.js";
 import { projectGarminRest } from "./garminForecast.js";
 import { ThresholdChecks } from "./TrainingTargets.jsx";
 import { SourceHistory } from "./SourceHistory.jsx";
-import { ConfidenceMark, EvidenceMeta, SourceMark } from "./EvidenceMeta.jsx";
+import { EvidenceMeta, SourceMark } from "./EvidenceMeta.jsx";
 
 const glossary = [
   ["RHR Δ", "Recovery trend", "bpm", "Daily RHR minus the median of the preceding 28 calendar days. At least seven prior readings are required; the current day is excluded from its baseline."],
@@ -60,9 +60,18 @@ const glossary = [
   ["Effort at HR ceiling", "Predictions", "W / min/km", "A pacing range requires measured peak HR within the ceiling on comparable days. The model checks later overshoots and nearby contrary observations. A single recorded example shows what happened at that effort on its date."],
   ["Recovery and workout suggestion", "Daily / Predictions", "Dated snapshot", "Uses same-day captured Garmin readiness and remaining recovery time. Poor readiness suggests rest. Low readiness, remaining recovery time, flagged HRV or poor recent sleep favor easy effort. Older or incomplete captures prompt a recovery recheck. Session intensity still depends on the saved plan and the warm-up."],
   ["Garmin TCX / Intervals FIT", "Predictions", "Recording source", "Linked copies count once and original Garmin files take priority. The model keeps recording devices and indoor or outdoor evidence separate. Sources remain visible in Details."],
-  ["Prediction confidence", "Predictions", "Low / Medium / High", "Medium requires three supporting dates and four later tests. High requires five dates, eight tests and matching recorded conditions. The HR forecast must improve on a recent median and meet the error limits. Shorter or extended evidence is limited to Low. One-day examples and whole-session averages appear as recorded references."],
+  ["Prediction checks", "Predictions", "bpm / sessions", "Details shows the matched dates, recorded HR and later test results. Heart-rate estimates are checked against the recent median. A single comparable effort or a whole-session average can serve as a recorded reference."],
   ["Extrapolation", "Forecast", "Status", "A planned duration or current load state outside the captured calibration range."],
 ];
+
+function coachingImplication(value) {
+  // Older reports also stored the rating in free text.
+  if (typeof value !== "string") return value;
+  return value
+    .replace(/^(?:low|medium|high)[ -]confidence (?:coaching )?(?:recommendation|priority): ([a-z])/i, (_, first) => first.toUpperCase())
+    .replace(/ Confidence is low to medium until meter setup and FTP are checked\./i, " Check your meter setup and FTP before raising the power target.")
+    .replace(/ Confidence is low to medium\./i, "");
+}
 
 const methodLinks = [
   { title: "Intervals daily calculation", url: "https://forum.intervals.icu/t/change-fatigue-atl-and-fitness-ctl-factors/300?page=2" },
@@ -275,7 +284,7 @@ export function Reference({ report, researchOpen = false }) {
       </details>
       <details><summary>Coaching analysis</summary>
         <p>{report.coaching.rationale}</p>
-        <div className="findings">{report.coaching.findings.map(finding => <article key={finding.title}><h3>{finding.title}</h3><p>{finding.evidence}</p><p className="quiet">{finding.implication}</p></article>)}</div>
+        <div className="findings">{report.coaching.findings.map(finding => <article key={finding.title}><h3>{finding.title}</h3><p>{finding.evidence}</p><p className="quiet">{coachingImplication(finding.implication)}</p></article>)}</div>
       </details>
       <details><summary>Color key</summary>
         <div className="table-scroll"><table className="reference-table"><caption className="sr-only">Metric color key</caption><thead><tr><th scope="col">Metric</th><th scope="col">Colors</th></tr></thead><tbody>
@@ -284,7 +293,6 @@ export function Reference({ report, researchOpen = false }) {
           <tr><th scope="row">Garmin load</th><td><ColorKey items={[["Acute", palette.blue], ["Chronic", palette.orange]]} /></td></tr>
           <tr><th scope="row">Recovery trends</th><td><ColorKey items={[["7d HRV", palette.blue], ["Overnight HRV", palette.gray], ["HRV baseline", palette.green], ["RHR Δ", palette.red]]} /></td></tr>
           <tr><th scope="row">Cycling / plan</th><td><ColorKey items={[["Hours / CTL", palette.blue], ["TL / ATL", palette.purple], ["Longest ride / TSB", palette.orange], ["Rest scenario", palette.gray]]} /></td></tr>
-          <tr><th scope="row">Confidence</th><td><div className="evidence-meta">{["Low", "Medium", "High"].map(level => <ConfidenceMark key={level} value={level} />)}</div></td></tr>
           <tr><th scope="row">Source status</th><td><ColorKey items={[["Green", palette.green], ["Orange", palette.orange], ["Red", palette.red]]} /><small>Recorded metric category. Garmin ratio categories use the source label.</small></td></tr>
         </tbody></table></div>
       </details>
@@ -301,7 +309,7 @@ export function Reference({ report, researchOpen = false }) {
       </details>
       <details><summary>Garmin rest projection</summary>
         <p>Paired day-to-day acute/chronic change factors from consecutive completed dates with no recorded activity. Window: previous 56 days; minimum n = 3. The representative pair is closest to the median projected ratio.</p>
-        <EvidenceMeta source="Garmin load history" confidence="Low" />
+        <EvidenceMeta source="Garmin load history" />
         <p>Acute and chronic factors stay paired. Range = minimum–maximum historical scenarios. Current partial dates and every recorded activity date are excluded, including locally excluded recordings.</p>
         <dl className="reference-metadata"><div><dt>Calibration</dt><dd>{rest.available ? `n = ${rest.n}${rest.extrapolation ? " · Extrapolation" : ""}` : `n = ${rest.n} · Unavailable`}</dd></div><div><dt>History capture</dt><dd>{timestamp(report.garminLoadHistory?.observedAt)}</dd></div><div><dt>Method</dt><dd>Empirical paired transitions</dd></div></dl>
         {!rest.available && <p>{rest.error}</p>}

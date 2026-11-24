@@ -4,7 +4,7 @@ import { conditionStamp } from "./condition.js";
 import { decimal, duration, formatDate } from "./report.js";
 import { BaselineMeter, ScoreMeter, ScoreRing, palette, statusColor } from "./MetricGraphics.jsx";
 import { paceClock } from "./pacing.js";
-import { ConfidenceMark, EvidenceMeta } from "./EvidenceMeta.jsx";
+import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import "./workout-advice.css";
 
 function RecoverySnapshots({ rows = [] }) {
@@ -28,7 +28,7 @@ function TomorrowOption({ label, option, unit, format = decimal }) {
   return <div className="tomorrow-option">
     <span>{label} · {option.minutes} min</span>
     <strong>{option.target.map(value => format(value)).join("–")} <small>{unit}</small></strong>
-    <span>HR ceiling <b>{option.hrCeiling} bpm</b> <ConfidenceMark value={option.confidence} /></span>
+    <span>HR ceiling <b>{option.hrCeiling} bpm</b></span>
   </div>;
 }
 
@@ -44,7 +44,7 @@ function TomorrowWorkout({ plan, projection }) {
     <p>{plan.adjustment}</p>
     {projection?.available && <p className="tomorrow-ratio">
       Garmin ratio if resting <b>≈{decimal(projection.estimate.ratio, 2)}</b>
-      <span> {decimal(projection.range.ratio.low, 2)}–{decimal(projection.range.ratio.high, 2)} historical scenario range · <ConfidenceMark value={projection.confidence} /></span>
+      <span> · {decimal(projection.range.ratio.low, 2)}–{decimal(projection.range.ratio.high, 2)} across {projection.n} past rest-day scenarios.</span>
     </p>}
   </section>;
 }
@@ -64,8 +64,8 @@ export function WorkoutAdvice({ advice }) {
       ["Readiness", Number.isFinite(readiness) ? `${readiness}/100` : null, readinessStatus],
       ["Remaining recovery", Number.isFinite(recoveryMinutes) ? duration(60 * recoveryMinutes) : null, recoveryStatus],
       ["HRV status", hrv], ["Sleep score", sleep],
-      ["Cycling target evidence", tomorrow?.cycling?.evidence, tomorrow?.cycling?.confidence],
-      ["Run–walk target evidence", tomorrow?.running?.evidence, tomorrow?.running?.confidence],
+      ["Cycling target evidence", tomorrow?.cycling?.evidence],
+      ["Run–walk target evidence", tomorrow?.running?.evidence],
       ["Rest ratio estimate", restProjection?.available ? `${restProjection.n} historical rest-day transitions` : null,
         restProjection?.extrapolation ? "Current load is outside the sampled starting range." : null],
     ]} />}>
@@ -76,8 +76,8 @@ export function WorkoutAdvice({ advice }) {
       {performance && <p className="workout-performance">
         <b>Longest ride today</b> · {duration(performance.seconds)} · {performance.watts} W · {performance.hr} bpm
       </p>}
-      {trainingStatus && <p className="workout-performance"><b>Garmin status {trainingStatus}</b>
-        {acuteHigh ? " · Acute load is high" : ""}. Readiness guides the next session.</p>}
+      {trainingStatus && <p className="workout-performance">Garmin rates your training trend <b>{trainingStatus}</b>.
+        {acuteHigh && " Recent load is above its usual range."}</p>}
     </div>
     {(stamp || hasSignals) && <div className="workout-advice-evidence">
       {hasSignals && <dl>

@@ -257,13 +257,13 @@ export function resolveCardHistory(report, reports, definition) {
     };
     return history;
   }
-  if (kind === "threshold") return datedHistory("Dated threshold checks", ["Value", "Source", "Confidence"],
+  if (kind === "threshold") return datedHistory("Dated threshold checks", ["Value", "Source", "Basis"],
     snapshots.flatMap(item => (item.thresholdReview?.rows || []).filter(row => row.title === query.title)
       .map(row => ({ ...row, date: row.evidence?.date || item.thresholdReview.date }))),
-    row => [[row.value, row.unit].filter(present).join(" "), row.evidence?.source, row.evidence?.confidence],
+    row => [[row.value, row.unit].filter(present).join(" "), row.evidence?.source, row.evidence?.reason],
     { chart: [["Threshold reading", row => row.value]] });
-  if (kind === "coach") return datedHistory("Saved coaching decisions", ["Decision", "Confidence"],
-    snapshots.filter(item => item.coaching?.headline), row => [row.coaching.headline, row.coaching.confidence]);
+  if (kind === "coach") return datedHistory("Saved coaching decisions", ["Decision", "Why"],
+    snapshots.filter(item => item.coaching?.headline), row => [row.coaching.headline, row.coaching.actionPlan?.why?.join(" · ")]);
   if (kind === "pacing") {
     const key = sport === "Ride" ? "cycling" : "running";
     if (!metric) return activityHistory(report, sport);
@@ -275,14 +275,13 @@ export function resolveCardHistory(report, reports, definition) {
       const value = metric === "paceSecondsPerKm" ? limits.map(clockText).join("–") : rangeText(limits);
       return [{ ...evidence, value: `${value} ${fields[metric]}` }];
     });
-    const history = datedHistory("Pacing targets and recorded sessions", ["Reading", "Source", "Confidence"], captured,
-      row => [row.value, row.source, row.confidence]);
+    const history = datedHistory("Pacing targets and recorded sessions", ["Reading", "Source", "Type"], captured,
+      row => [row.value, row.source, "Suggested target"]);
     const sessions = activityHistory(report, sport, metric);
     history.chart = sessions.chart;
     for (const row of sessions.rows) {
       history.rows.push({ ...row, values: [`${row.values[1]} ${fields[metric]}`, row.values[2], "Recorded session average"] });
     }
-    history.columns[2] = "Confidence / type";
     return history;
   }
   if (kind === "load-focus") return datedHistory("Dated Load Focus windows · Garmin Connect",

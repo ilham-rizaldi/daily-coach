@@ -18,7 +18,7 @@ function Readout({ value, unit, tone }) {
 
 function Evidence({ evidence, expanded = false }) {
   return evidence ? <EvidenceMeta className="evidence-inset target-evidence" source={evidence.source} date={evidence.date}
-    dateLabel={evidence.dateLabel || "Recorded"} confidence={evidence.confidence} year>
+    dateLabel={evidence.dateLabel || "Recorded"} year>
     {expanded && evidence.reason && <span className="target-evidence-note">{evidence.reason}</span>}
   </EvidenceMeta> : <p className="target-evidence">Evidence unavailable</p>;
 }
@@ -37,9 +37,9 @@ function PacingCard({ definition, plan }) {
       ["RPE", rangeFor(plan.rpe) ? `${rangeLabel(plan.rpe)} / 10` : null], ["Adjustment", plan.adjustment],
       ["Garmin workout", garmin && <a href={garmin.url} target="_blank" rel="noopener noreferrer">{garmin.name}</a>],
     ]} />
-    <DetailTable columns={["Target", "Range", "Source", "Date", "Confidence"]} rows={targets.map(metric =>
+    <DetailTable columns={["Target", "Range", "Source", "Date", "Basis"]} rows={targets.map(metric =>
       [metric.label, metric.range ? `${rangeLabel(metric.range, metric.unit)} ${metric.unit}` : null,
-        metric.evidence?.source, metric.evidence ? shownDate(metric.evidence.date) : null, metric.evidence?.confidence])} />
+        metric.evidence?.source, metric.evidence ? shownDate(metric.evidence.date) : null, metric.evidence?.reason])} />
   </>}>
     <header className="training-card-heading">
       <div><h3>{definition.label}</h3>{plan && <p>{plan.format === "run-walk" ? "Easy run–walk" : "Easy endurance"}</p>}</div>
@@ -57,7 +57,7 @@ function PacingCard({ definition, plan }) {
           detail={<DetailFacts rows={[
             ["Steady-work range", range ? `${rangeLabel(range, metric.unit)} ${metric.unit}` : "Target unavailable"],
             ["Source", evidence?.source], [evidence?.dateLabel || "Evidence date", evidence ? shownDate(evidence.date) : null],
-            ["Confidence", evidence?.confidence], ["Evidence", evidence?.reason],
+            ["Basis", evidence?.reason],
             ["HR ceiling", metric.key === "hrBpm" && Number.isFinite(plan?.hrCeiling) ? `${plan.hrCeiling} bpm` : null],
           ]} />}>
           <dt>{metric.label}</dt>
@@ -83,7 +83,7 @@ export function TrainingPacing({ report, onThresholds, onPredictions }) {
   const pacing = report.coaching?.pacing;
   return <section className="training-section" aria-labelledby="pacing-heading">
     <div className="training-heading">
-      <div><h2 id="pacing-heading">Pacing cards</h2><p>{pacing?.status || "Pacing guidance for this report."}</p></div>
+      <div><h2 id="pacing-heading">Pacing cards</h2><p>{pacing && "Use these easy-session targets once recovery improves. Ease off when heart rate or breathing rises."}</p></div>
       <div className="pacing-heading-actions">
         <button className="report-action" onClick={onThresholds}>Threshold & data checks</button>
         <button className="report-action" onClick={onPredictions}>View predictions</button>

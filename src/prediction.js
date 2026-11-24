@@ -142,7 +142,7 @@ function forwardValidation(checks, target) {
 export function predictHeartRate(group, key, value) {
   const mode = predictionModes[key];
   if (!mode || !values[mode.field](value)) {
-    return { confidence: "Insufficient", reason: "Enter a valid effort to see an estimate." };
+    return { confidence: "Insufficient", reason: "Enter a pace or wattage to check it against your recorded efforts." };
   }
   const days = groupOn(group?.rows || [], row => row.date);
   const x = effort(mode, value);
@@ -150,7 +150,7 @@ export function predictHeartRate(group, key, value) {
   if (!matched.length) {
     const reason = days.size < 2
       ? "Two comparable steady sessions on different days are needed."
-      : "No two nearby days bracket this effort. Try one of the observed efforts.";
+      : "Try a pace or power closer to an effort in your recorded history.";
     return { confidence: "Insufficient", reason, matched };
   }
   const outcomes = matched.map(row => row.hrBpm);
@@ -166,8 +166,8 @@ export function predictHeartRate(group, key, value) {
   const high = confident && validation.tests >= 8 && matched.length >= 5 && validation.meanError <= 5 && Boolean(group.conditions);
   return {
     bpm: median(outcomes), range, matched, validation, confidence: high ? "High" : confident ? "Medium" : "Low",
-    reason: validation.tests < 4 ? "Provisional estimate until more later sessions can test it."
-      : !confident ? "Later tests show limited accuracy or few comparable days."
+    reason: validation.tests < 4 ? "Repeat this effort on a similar route to see how heart rate responds."
+      : !confident ? "Check the later-session errors in Details and use your live heart rate to adjust."
         : !group.conditions ? "Tested on later sessions. Route and weather may differ." : "Tested on later sessions under comparable conditions.",
   };
 }
@@ -323,7 +323,7 @@ function evidenceLevels(cohort) {
 
 export function automaticHeartRate(data, key, value) {
   const mode = predictionModes[key];
-  if (!mode || !values[mode.field](value)) return withoutForecast("Enter a valid effort to see an estimate.");
+  if (!mode || !values[mode.field](value)) return withoutForecast("Enter a pace or wattage to check it against your recorded efforts.");
   const { cohort } = data;
   for (const [index, rows] of evidenceLevels(cohort).entries()) {
     const result = predictHeartRate({ ...cohort, rows }, key, value);
@@ -331,7 +331,7 @@ export function automaticHeartRate(data, key, value) {
       if (index === 0) return { ...result, kind: "estimate", method: "Recent steady blocks" };
       return { ...result, kind: "estimate", confidence: "Low",
         method: index === 1 ? "Recent steady blocks including shorter efforts" : "Extended steady-block history",
-        reason: "Provisional estimate from a wider set of recorded efforts." };
+        reason: index === 1 ? "Includes shorter steady blocks. Check heart rate on a longer repeat." : "Uses older sessions. Recheck at this effort on your next comparable workout." };
     }
     if (result.validation?.tests >= 4 && result.matched?.length && result.range) {
       return { ...result, bpm: median(result.matched.map(row => row.hrBpm)), kind: "reference",
@@ -352,7 +352,7 @@ export function automaticHeartRate(data, key, value) {
   const raw = nearby(cohort?.historyRows ?? [], 0.1).sort((a, b) =>
     distance(target, a) - distance(target, b) || b.date.localeCompare(a.date));
   if (raw[0]) return { kind: "reference", bpm: raw[0].hrBpm, confidence: "Insufficient", matched: [raw[0]],
-    method: "Nearest recorded steady effort", reason: "One similar recording gives a reference for your requested effort." };
+    method: "Nearest recorded steady effort", reason: "One similar effort was recorded. Repeat it on another day before using it as a target." };
   return withoutForecast("No comparable recorded efforts near this input.");
 }
 
@@ -372,18 +372,18 @@ export function automaticCeiling(data, key, ceiling) {
       corroborated({ x: effort(predictionModes[key], value) }))) {
       return { ...result, kind: "estimate", method: "Measured peak HR across steady blocks",
         confidence: index === 0 ? result.confidence : "Low",
-        reason: "A provisional range supported by measured peaks. Check HR as you settle in." };
+        reason: "Start at the easier end and check your heart rate after it settles." };
     }
   }
   const reference = peaks.filter(row => row.peakHrBpm <= ceiling && corroborated(row))
     .sort((a, b) => b.date.localeCompare(a.date) || b.x - a.x)[0];
   if (reference) return { kind: "reference", value: reference.value, range: [reference.peakHrBpm, reference.peakHrBpm],
     confidence: "Insufficient", matched: [reference], method: "Observed effort and peak HR",
-    reason: "A recorded example under this ceiling. More comparable days are needed for a pacing target." };
+    reason: "This effort stayed under the ceiling in one recording. Repeat it on another day before using it as a target." };
   const example = peaks.filter(row => row.peakHrBpm <= ceiling)
     .sort((a, b) => b.date.localeCompare(a.date) || b.x - a.x)[0];
   if (example) return { kind: "reference", value: example.value, range: [example.peakHrBpm, example.peakHrBpm],
     confidence: "Insufficient", matched: [example], method: "Observed effort and peak HR",
-    reason: "This block stayed under the ceiling. Other similar blocks exceeded it." };
+    reason: "One block stayed under the ceiling. Other similar blocks exceeded it. Ease off if heart rate rises toward your cap." };
   return withoutForecast("No measured steady-block peaks support this ceiling.");
 }
