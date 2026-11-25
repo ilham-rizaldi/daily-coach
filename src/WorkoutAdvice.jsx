@@ -7,16 +7,19 @@ import { paceClock } from "./pacing.js";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import "./workout-advice.css";
 
+// Garmin's recovery timer ranges from zero to four days.
+const maxRecoveryMinutes = 4 * 24 * 60;
+
 function RecoverySnapshots({ rows = [] }) {
   const captured = rows.filter(row => Number.isFinite(row.minutes));
   if (!captured.length) return null;
-  const high = Math.max(1, ...captured.map(row => row.minutes));
   return <div className="workout-recovery-plot">
-    <div className="workout-recovery-bars" role="img" aria-label={`Remaining recovery over seven days. ${captured.map(row =>
+    <div className="workout-recovery-bars" role="img" aria-label={`Remaining recovery over seven days. The bar fills as time runs down and is full at zero. ${captured.map(row =>
       `${formatDate(row.date)}: ${duration(row.minutes * 60)}`).join(", ")}`}>
       {rows.map(row => <span key={row.date} aria-hidden="true"
         title={Number.isFinite(row.minutes) ? `${formatDate(row.date)} · ${duration(row.minutes * 60)}` : `${formatDate(row.date)} · no reading`}>
-        {Number.isFinite(row.minutes) && <i style={{ "--recovery-height": `${row.minutes / high * 100}%` }} />}
+        {Number.isFinite(row.minutes) && <i data-cleared={row.minutes === 0}
+          style={{ "--recovery-height": `${Math.max(0, 1 - row.minutes / maxRecoveryMinutes) * 100}%` }} />}
       </span>)}
     </div>
     <div className="workout-signal-meta"><span>{formatDate(rows[0].date)}</span><span>{formatDate(rows.at(-1).date)}</span></div>

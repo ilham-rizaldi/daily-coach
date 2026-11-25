@@ -21,7 +21,7 @@ const glossary = [
   ["HRV baseline", "Recovery", "ms", "Personal reference range used for HRV status."],
   ["RHR", "Recovery", "bpm", "Resting heart rate. Daily value and seven-day average remain separate."],
   ["Overnight HR", "Recovery", "bpm", "Average heart rate during the recorded sleep period."],
-  ["Recovery time", "Garmin", "h", "Remaining recovery time at the source update; displayed as a snapshot."],
+  ["Recovery time", "Garmin", "h", "Remaining recovery time at capture. The Workout suggestion bar fills as the timer approaches zero on Garmin’s 0–96 h scale."],
   ["Sleep duration / score", "Sleep", "h / 0–100", "Recorded sleep time and Garmin sleep-quality score."],
   ["Sleep stages", "Sleep", "min", "Deep, light and REM sleep. Awake time is separate from total sleep time."],
   ["SpO₂", "Vitals", "%", "Recorded oxygen saturation; mean and minimum are separate watch readings."],

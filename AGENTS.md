@@ -63,3 +63,5 @@ Integrate source, reading date and capture time with the associated card using s
 Name the Daily Intervals.icu panel Fitness. Show its dated Fitness and Fatigue together, and absolute Form on its own scale using its own model bands. Use the captured Form when available and calculate it from the same day's pair when the export omits it. Show measured resting heart rate in bpm as the Trends card's primary readout and compare it with the preceding 28-day median.
 
 Show a 42-day Garmin load graphic inside the Body metrics Training Load card. Plot the recorded ratio on its own scale alongside coverage for the load, ratio, and dated acute range. Leave unrecorded ratios and range dates blank.
+
+Fill the Workout suggestion Recovery time bar as the Garmin countdown approaches zero. A recorded zero is full-height bright cyan. Leave days without a reading unfilled and keep the displayed hours as remaining time.

@@ -35,8 +35,9 @@
 .workout-sleep-readout .score-ring span { font-size: 9px; }
 .workout-recovery-bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; height: 24px; margin-top: 8px; }
 .workout-recovery-bars > span { display: flex; align-items: flex-end; border-radius: 2px; background: var(--rule); }
-.workout-recovery-bars i { width: 100%; height: max(2px, var(--recovery-height)); background: var(--signal-color); border-radius: 2px; opacity: .65; }
-.workout-recovery-bars > span:last-child i { opacity: 1; }
+.workout-recovery-bars i { width: 100%; height: var(--recovery-height); background: var(--signal-color); border-radius: 2px; opacity: .65; }
+.workout-recovery-bars > span:last-child i { opacity: .82; }
+.workout-recovery-bars i[data-cleared="true"] { opacity: 1; box-shadow: 0 0 6px color-mix(in srgb, var(--signal-color) 45%, transparent); }
 .workout-advice > .card-details-access { grid-column: 1 / -1; margin: 0; }
 @media (max-width: 660px) {
   .workout-advice { grid-template-columns: 1fr; }
