@@ -10,18 +10,19 @@ const yAt = (value, low, high, reverse = false) => {
 };
 const compactTick = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });
 
-function HistoryAxis({ low, high, first, last, label, format = value => decimal(value, 1), reverse, dates = true, background, children }) {
+function HistoryAxis({ low, high, first, last, label, format = value => decimal(value, 1), reverse, dates = true, mini, background, interaction, children }) {
   const expanded = Date.parse(last) - Date.parse(first) >= 300 * DAY;
   const dateLabel = date => formatDate(date, expanded ? { month: "short", year: "numeric" } : {});
   return <>
-    <svg viewBox={`0 0 ${frame.width} ${frame.height}`} role="img" aria-label={label}>
+    <svg viewBox={`0 0 ${frame.width} ${frame.height}`} preserveAspectRatio={mini ? "none" : undefined} role="img" aria-label={label}
+      {...interaction}>
       {background}
       {[1, 0.75, 0.5, 0.25, 0].map((step, index) => {
         const value = low + (high - low) * step;
         const y = yAt(value, low, high, reverse);
         return <g key={step}>
           <line x1={frame.left} x2={frame.right} y1={y} y2={y} className="card-history-grid" />
-          {index % 2 === 0 && <text x={frame.left - 7} y={y + 4} textAnchor="end">{format(value)}</text>}
+          {!mini && index % 2 === 0 && <text x={frame.left - 7} y={y + 4} textAnchor="end">{format(value)}</text>}
         </g>;
       })}
       {children}
@@ -127,8 +128,9 @@ function BatteryHistory({ rows, first, last }) {
   </figure>;
 }
 
-export function CardHistoryChart({ history, rows, first, last, battery, compact = false }) {
+export function CardHistoryChart({ history, rows, first, last, battery, compact = false, mini = false }) {
   const [choice, setChoice] = useState("");
+  const [selectedPoint, setSelectedPoint] = useState(null);
   const fill = useId();
   if (!rows.length) return null;
   if (battery) return <BatteryHistory rows={rows} first={first} last={last} />;
@@ -154,27 +156,58 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
   const recentLow = Math.min(...recent), recentHigh = Math.max(...recent);
   const display = format ?? decimal;
   const readout = recentLow === recentHigh ? display(recentLow) : [recentLow, recentHigh].map(v => display(v)).join("–");
+  const overlay = history.overlay;
+  const highlighted = selectedPoint?.label === picked.label ? picked.points.find(point => point.date === selectedPoint.date) : null;
+  const highlight = point => setSelectedPoint(previous => previous?.date === point.date && previous.label === picked.label
+    ? previous : { date: point.date, label: picked.label });
+  const pointer = event => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width * frame.width;
+    const nearest = picked.points.reduce((closest, point) =>
+      Math.abs(xAt(point.date) - x) < Math.abs(xAt(closest.date) - x) ? point : closest, picked.points[0]);
+    if (Math.abs(xAt(nearest.date) - x) <= 32) highlight(nearest);
+    else setSelectedPoint(null);
+  };
+  const interaction = overlay && {
+    tabIndex: 0,
+    onPointerMove: pointer,
+    onPointerDown: pointer,
+    onPointerLeave: () => setSelectedPoint(null),
+    onFocus: () => { if (!highlighted) highlight(latest); },
+    onBlur: () => setSelectedPoint(null),
+    onKeyDown: event => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const index = highlighted ? picked.points.indexOf(highlighted) : picked.points.length - 1;
+      const next = { ArrowLeft: index - 1, ArrowRight: index + 1, Home: 0, End: picked.points.length - 1 }[event.key];
+      highlight(picked.points[Math.max(0, Math.min(picked.points.length - 1, next))]);
+    },
+  };
+  const activeRange = highlighted && (fixedBand || datedBand.find(row => row.date === highlighted.date));
   const barWidth = Math.max(2, Math.min(12, (frame.right - frame.left) / picked.points.length / 2));
   const barsByDate = new Map();
   if (bars) for (const point of picked.points) {
     if (!barsByDate.has(point.date)) barsByDate.set(point.date, []);
     barsByDate.get(point.date).push(point);
   }
-  return <figure className="card-history-plot" data-series-style={history.display}>
-    {!compact && <PlotHeading label={picked.label} value={readout} date={latest.date} monthly={latest.precision === "month"}>
+  return <figure className={`card-history-plot${mini ? " card-history-mini" : ""}`} data-series-style={history.display}
+    style={{ "--history-color": history.color }}>
+    {!compact && !mini && <PlotHeading label={picked.label} value={readout} date={latest.date} monthly={latest.precision === "month"}>
       {series.length > 1 && <select className="card-history-select" aria-label="Chart metric"
         value={picked.label} onChange={event => setChoice(event.target.value)}>
         {series.map(item => <option key={item.label}>{item.label}</option>)}
       </select>}
     </PlotHeading>}
-    {ranges.length > 0 && <div className="load-range-readout"><span><i /> {fixedBand
+    {!mini && ranges.length > 0 && <div className="load-range-readout"><span><i /> {fixedBand
       ? `Optimal range ${decimal(fixedBand.low)}–${decimal(fixedBand.high)}`
-      : "Personalized optimal range · dated Garmin chart"}</span></div>}
-    <HistoryAxis low={low} high={high} first={first} last={last} format={format ?? (bars ? compactTick.format : undefined)} reverse={reverse}
-      label={`${picked.label} · ${picked.points.length} recorded readings`}>
+      : history.bandLabel || "Personalized optimal range · dated Garmin chart"}</span></div>}
+    <div className={overlay ? "card-history-interactive" : undefined}>
+    <HistoryAxis low={low} high={high} first={first} last={last} format={format ?? (bars ? compactTick.format : undefined)} reverse={reverse} mini={mini}
+      label={`${picked.label} · ${picked.points.length} recorded readings${overlay ? ". Use arrow keys to inspect readings." : ""}`}
+      interaction={interaction || undefined}>
       <defs>
         <linearGradient id={fill} x1="0" x2="0" y1="0" y2="1" gradientUnits="objectBoundingBox">
-          <stop stopColor="var(--blue)" stopOpacity=".18" /><stop offset="1" stopColor="var(--blue)" stopOpacity="0" />
+          <stop stopColor="var(--history-color, var(--blue))" stopOpacity=".18" /><stop offset="1" stopColor="var(--history-color, var(--blue))" stopOpacity="0" />
         </linearGradient>
       </defs>
       {fixedBand && <rect className="load-optimal-band" x={frame.left} width={frame.right - frame.left}
@@ -201,10 +234,25 @@ export function CardHistoryChart({ history, rows, first, last, battery, compact 
           return <rect key={index} className="card-history-volume-bar" x={cx + offset - barWidth / 2} y={Math.min(cy, frame.bottom - 1)}
             width={barWidth} height={Math.max(1, frame.bottom - cy)} rx={2} data-latest={point === latest}><title>{detail}</title></rect>;
         }
-        return <circle key={index} className="card-history-point" cx={cx} cy={cy} r={point.date === latest.date ? 3.8 : picked.points.length > 90 ? 1.5 : 2.7}>
-          <title>{detail}</title>
+        const radius = mini ? (point === latest ? 8 : 5) : point.date === latest.date ? 3.8 : picked.points.length > 90 ? 1.5 : 2.7;
+        return <circle key={index} className="card-history-point" cx={cx} cy={cy} r={radius}>
+          {!overlay && <title>{detail}</title>}
         </circle>;
       })}
+      {highlighted && <g className="card-history-crosshair" aria-hidden="true" pointerEvents="none">
+        <line x1={position(highlighted)[0]} x2={position(highlighted)[0]} y1={frame.top} y2={frame.bottom} />
+        <circle cx={position(highlighted)[0]} cy={position(highlighted)[1]} r={mini ? 8 : 5} />
+      </g>}
     </HistoryAxis>
+    {overlay && <div className="card-history-hover" role="status" data-side={highlighted && xAt(highlighted.date) > frame.width / 2 ? "left" : "right"}>
+      {highlighted && <>
+        <time dateTime={highlighted.precision === "month" ? highlighted.date.slice(0, 7) : highlighted.date}>
+          {formatDate(highlighted.date, highlighted.precision === "month" ? { day: undefined, year: "numeric" } : { year: "numeric" })}
+        </time>
+        <strong>{display(highlighted.value, 2)}{overlay.unit === "%" ? "%" : overlay.unit && ` ${overlay.unit}`}</strong>
+        {activeRange && <small>{overlay.rangeLabel} {overlay.approximate ? "≈" : ""}{decimal(activeRange.low)}–{decimal(activeRange.high)}</small>}
+      </>}
+    </div>}
+    </div>
   </figure>;
 }

@@ -189,6 +189,9 @@ body .prediction-grid {
 .training-status-factors > div { padding: clamp(9px, 1.1vw, 14px); background: var(--surface); border: 1px solid var(--panel-border); border-radius: var(--metric-radius); }
 .training-status-factors dt { padding-bottom: 7px; border-bottom: 1px solid var(--rule); overflow-wrap: anywhere; }
 .training-status-factors .training-factor-status { display: block; margin-top: 6px; font-size: 11px; }
+.training-status-factor { display: flex; flex-direction: column; }
+.training-status-factor > .card-details-access { margin-top: auto; padding-top: 5px; }
+.training-factor-empty { margin: 12px 0 0; color: var(--muted); font-size: 11px; }
 @media (max-width: 600px) { .training-status-factors { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1051px) {
   .daily-lead:has(.workout-tomorrow) .daily-load { grid-column: span 8; }

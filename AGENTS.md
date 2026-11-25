@@ -67,3 +67,5 @@ Show a 42-day Garmin load graphic inside the Body metrics Training Load card. Pl
 Fill the Workout suggestion Recovery time bar as the Garmin countdown approaches zero. A recorded zero is full-height bright cyan. Leave days without a reading unfilled and keep the displayed hours as remaining time.
 
 Use the same segmented red–amber–green readiness scale in Body metrics and Workout suggestion, with red at 0 and green at 100. Keep Garmin’s recorded category text. Use Body metrics typography, metric readouts, and unit sizing in Training Status.
+
+Give each Training Status metric a compact dated chart and its own chart-first history dialog. Show the dated reading when hovering or using the arrow keys, including a recorded range where available. Keep VO₂ max status readings, General, and sport-specific estimates distinct. Show HRV and acute-load bands only for captured dates, and heat acclimation only on dates with actual snapshots.

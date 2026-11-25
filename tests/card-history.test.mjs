@@ -119,3 +119,26 @@ test("the Garmin chart counts each recorded series separately within the 42-day 
     ["2026-10-15", undefined], ["2026-11-23", 1.5], ["2026-11-24", null], ["2026-11-25", 1.4],
   ]);
 });
+
+test("Training Status histories preserve distinct VO₂ series, real HRV dates and recorded heat and load", () => {
+  const report = { date: "2026-11-25", wellness: { date: "2026-11-25", vo2Max: 43, heatAcclimationPercent: 100 },
+    baseHistory: { snapshots: [
+      { date: "2026-11-20", wellness: { date: "2026-11-20", heatAcclimationPercent: 70 } },
+    ] },
+    wellnessHistory: { rows: [{ date: "2026-11-22", hrv7dMs: 58, hrvLowMs: 45, hrvHighMs: 68 }, { date: "2026-11-23", hrvMs: 62 }] },
+    garminLoadHistory: { rows: [{ date: "2026-11-21", acute: 434, optimalLow: 265, optimalHigh: 500 }] },
+    performance: { vo2History: [
+      { date: "2026-11-10", sport: "General", value: 43.4, source: "Garmin Connect" },
+      { date: "2026-11-16", sport: "Cycling", value: 41.8, source: "Garmin Connect" },
+    ] },
+  };
+  const get = metric => resolveCardHistory(report, [], { kind: "training-status", metric });
+  const vo2 = get("vo2");
+  assert.deepEqual(historyChartSeries(vo2, filterCardHistory(vo2.rows, report.date, null)).map(item => [item.label, item.points.map(point => point.value)]),
+    [["Training Status reading", [43]], ["General", [43.4]], ["Cycling", [41.8]]]);
+  const hrv = get("hrv7d");
+  assert.deepEqual(hrv.rows.map(row => [row.date, row.values[0]]), [["2026-11-22", 58]]);
+  assert.deepEqual(hrv.chartBands["7-day HRV · ms"], [{ date: "2026-11-22", low: 45, high: 68 }]);
+  assert.deepEqual(get("heat").rows.map(row => [row.date, row.values[0]]), [["2026-11-20", 70], ["2026-11-25", 100]]);
+  assert.deepEqual(get("acute").rows.map(row => [row.date, row.values[0]]), [["2026-11-21", 434]]);
+});

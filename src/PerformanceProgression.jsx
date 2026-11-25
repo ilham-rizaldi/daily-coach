@@ -6,7 +6,7 @@ import { palette } from "./MetricGraphics.jsx";
 import { MetricValue } from "./Readout.jsx";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { decimal, duration, formatDate, shiftDate } from "./report.js";
-import { activityComparisons, activityEnvironments, activitySpeedSeries, dayOf, paceSeconds, speedMethods, sportOf } from "./activityProgression.js";
+import { activityComparisons, activityEnvironments, activitySpeedSeries, dayOf, paceSeconds, speedMethods, sportOf, vo2Series } from "./activityProgression.js";
 import "./progression.css";
 
 const text = value => typeof value === "string" ? value.trim() : "";
@@ -14,27 +14,6 @@ const token = value => text(value).toLowerCase().replace(/[ _]+/g, "-");
 const positive = value => Number.isFinite(value) && value > 0;
 const sportColor = sport => sport === "Cycling" ? palette.blue : sport === "Running" ? palette.green : palette.purple;
 const notFuture = (date, report) => date && dayOf(report.date) && date <= report.date;
-
-export function vo2Series(report) {
-  const groups = new Map();
-  for (const row of Array.isArray(report.performance?.vo2History) ? report.performance.vo2History : []) {
-    const sport = sportOf(row?.sport) ?? (token(row?.sport) === "general" ? "General" : null);
-    const precision = row?.precision === "month" ? "month" : "day", source = text(row?.source), value = row?.value;
-    const date = dayOf(precision === "month" ? `${text(row?.date).slice(0, 7)}-01` : row?.date);
-    if (!sport || !source || !notFuture(date, report) || !positive(value)) continue;
-    const key = JSON.stringify([sport, source]);
-    if (!groups.has(key)) groups.set(key, { key, sport, source, byDate: new Map() });
-    const dates = groups.get(key).byDate, pointKey = `${precision}:${date}`;
-    const point = { date, precision, at: Date.parse(`${date}T12:00:00Z`), value };
-    dates.set(pointKey, !dates.has(pointKey) || dates.get(pointKey)?.value === value ? point : null);
-  }
-  return [...groups.values()].map(({ byDate, ...group }) => {
-    const points = [...byDate.values()].filter(Boolean);
-    const dailyMonths = new Set(points.filter(point => point.precision === "day").map(point => point.date.slice(0, 7)));
-    return { ...group, points: points.filter(point => point.precision === "day" || !dailyMonths.has(point.date.slice(0, 7)))
-      .sort((a, b) => a.at - b.at) };
-  }).filter(group => group.points.length);
-}
 
 const accepted = new Set(["accepted", "confirmed", "current", "recorded", "verified", "official"]);
 export function personalRecords(report) {
