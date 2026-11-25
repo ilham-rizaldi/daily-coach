@@ -1,6 +1,7 @@
 import { DataCard, DetailFacts } from "./CardDetails.jsx";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
-import { statusColor } from "./MetricGraphics.jsx";
+import { palette, statusColor } from "./MetricGraphics.jsx";
+import { MetricValue } from "./Readout.jsx";
 import { decimal, formatDate } from "./report.js";
 
 export function TrainingStatus({ report }) {
@@ -9,20 +10,21 @@ export function TrainingStatus({ report }) {
   const date = fitness?.metricDate || fitness?.date || w.date;
   const source = report.preview ? "Illustrative Garmin data" : "Garmin Connect";
   const values = [
-    ["VO₂ max", Number.isFinite(w.vo2Max) ? decimal(w.vo2Max) : null, w.vo2MaxCategory],
-    ["HRV · 7-day", Number.isFinite(w.hrv7dMs) ? `${decimal(w.hrv7dMs)} ms` : null, w.hrvStatus],
-    ["Acute load", Number.isFinite(w.garminAcuteLoad) ? decimal(w.garminAcuteLoad) : null, w.garminAcuteLoadStatus],
-    ["Heat acclimation", Number.isFinite(w.heatAcclimationPercent) ? `${decimal(w.heatAcclimationPercent)}%` : null, w.heatAcclimationTrend],
-  ];
+    ["VO₂ max", w.vo2Max, "", w.vo2MaxCategory, palette.blue],
+    ["HRV · 7-day", w.hrv7dMs, "ms", w.hrvStatus, statusColor(w.hrvStatus)],
+    ["Acute load", w.garminAcuteLoad, "", w.garminAcuteLoadStatus, palette.blue],
+    ["Heat acclimation", w.heatAcclimationPercent, "%", w.heatAcclimationTrend, palette.orange],
+  ].filter(([, value]) => Number.isFinite(value));
   const summary = w.trainingStatus
     ? `${w.trainingStatus}${w.trainingStatusSince ? ` since ${formatDate(w.trainingStatusSince)}` : ""}` : null;
-  return <DataCard as="section" className="training-status-panel" title="Training Status" history="training-status"
+  return <DataCard as="section" className="training-status-panel" title="Training Status" history="training-status" aria-labelledby="training-status-title"
     detail={<DetailFacts rows={[
       ["Garmin classification", summary, w.trainingStatusBasis], ["Load Focus", w.loadFocus],
-      ...values, ["Source", source],
+      ...values.map(([label, value, unit, status]) => [label, <MetricValue value={decimal(value)} unit={unit} />, status]),
+      ["Source", source],
     ]} />}>
     <header>
-      <h2>Training Status</h2>
+      <h2 id="training-status-title">Training Status</h2>
       <EvidenceMeta source={source} date={date} dateLabel="Reading" observedAt={fitness?.observedAt} />
     </header>
     {summary ? <>
@@ -33,7 +35,14 @@ export function TrainingStatus({ report }) {
       </div>
       {w.trainingStatusBasis && <p className="training-status-basis">{w.trainingStatusBasis}</p>}
     </> : <p>Training Status was unavailable in this report.</p>}
-    <dl className="training-status-factors">{values.filter(([, value]) => value != null).map(([label, value, status]) =>
-      <div key={label}><dt>{label}</dt><dd>{value}{status && <small style={{ color: statusColor(status) }}>{status}</small>}</dd></div>)}</dl>
+    {values.length > 0 && <dl className="body-stat-row training-status-factors">
+      {values.map(([label, value, unit, status, color]) => <div key={label}>
+        <dt>{label}</dt>
+        <dd>
+          <MetricValue as="strong" value={decimal(value)} unit={unit} style={{ color }} />
+          {status && <small className="training-factor-status" style={{ color: statusColor(status) }}>{status}</small>}
+        </dd>
+      </div>)}
+    </dl>}
   </DataCard>;
 }

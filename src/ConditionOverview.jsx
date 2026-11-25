@@ -1,6 +1,6 @@
 import { decimal, formatDate, shiftDate } from "./report.js";
 import { conditionOverview, conditionStamp } from "./condition.js";
-import { BatteryRangeChart, BaselineMeter, isScore, palette, ScoreArc, ScoreMeter, ScoreRing, SleepStages, statusColor } from "./MetricGraphics.jsx";
+import { BatteryRangeChart, BaselineMeter, isScore, palette, ReadinessGauge, ScoreArc, ScoreRing, SleepStages, readinessColor, statusColor } from "./MetricGraphics.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { recoverySeries } from "./performance.js";
@@ -179,7 +179,6 @@ export function ConditionOverview({ report }) {
   const sleep = reading("sleep", w.sleepMinutes, "sleepMinutes");
   const sleepContext = sleep.fromHistory && wellnessDate !== report.date ? {} : w;
   const sleepScore = isScore(sleepContext.sleepScore) ? sleepContext.sleepScore : null;
-  const readinessColor = statusColor(w.readinessStatus, "readiness");
   const heat = w.heatAcclimationPercent;
   const extraReadings = [
     ["Peak 5-min HRV", num(w.highest5MinuteHrvMs), "ms"],
@@ -194,9 +193,9 @@ export function ConditionOverview({ report }) {
   return <section className="condition-overview body-overview" aria-labelledby="condition-title">
     <div className="condition-heading"><h2 id="condition-title">Body metrics</h2><EvidenceMeta source={source} /></div>
     <dl className="body-primary">
-      <Tile id="readiness" label="Readiness" source={source} value={num(w.readiness)} unit="/100" color={readinessColor} status={w.readinessStatus} detail={w.readinessUpdatedAtLocal} stamp={stamp("readiness")}
+      <Tile id="readiness" label="Readiness" source={source} value={num(w.readiness)} unit="/100" color={readinessColor(w.readiness)} status={w.readinessStatus} detail={w.readinessUpdatedAtLocal} stamp={stamp("readiness")}
         readings={[["Device update", w.readinessUpdatedAtLocal && `${w.readinessUpdatedAtLocal} WIB`], ["Recovery time", time(w.recoveryTimeMinutes)], ["Recent sleep scores", w.recentSleepScoresStatus], ["Recent stress", w.recentStressStatus]]}>
-        <ScoreMeter label="Readiness" value={w.readiness} color={readinessColor} />
+        <ReadinessGauge value={w.readiness} />
       </Tile>
       <Tile id="battery" label={showBatteryRange ? "Body Battery · range" : "Body Battery"} period="28d"
         history={<DetailTable caption="Recorded daily Body Battery ranges" columns={["Date", "Low", "High"]}

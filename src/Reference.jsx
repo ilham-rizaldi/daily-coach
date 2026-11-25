@@ -288,7 +288,7 @@ export function Reference({ report, researchOpen = false }) {
       </details>
       <details><summary>Color key</summary>
         <div className="table-scroll"><table className="reference-table"><caption className="sr-only">Metric color key</caption><thead><tr><th scope="col">Metric</th><th scope="col">Colors</th></tr></thead><tbody>
-          <tr><th scope="row">Readiness</th><td><ColorKey items={[["Poor", palette.red], ["Low", palette.orange], ["Moderate", palette.green], ["High", palette.blue], ["Prime", palette.purple]]} /></td></tr>
+          <tr><th scope="row">Readiness</th><td><ColorKey items={[["0", "var(--readiness-red)"], ["50", palette.orange], ["100", palette.green]]} /><small>Gauge color follows the score. The status label comes from Garmin.</small></td></tr>
           <tr><th scope="row">Sleep</th><td><ColorKey items={[["Deep", palette.deep], ["Light", palette.light], ["REM", palette.rem]]} /></td></tr>
           <tr><th scope="row">Garmin load</th><td><ColorKey items={[["Acute", palette.blue], ["Chronic", palette.orange]]} /></td></tr>
           <tr><th scope="row">Recovery trends</th><td><ColorKey items={[["7d HRV", palette.blue], ["Overnight HRV", palette.gray], ["HRV baseline", palette.green], ["RHR Δ", palette.red]]} /></td></tr>

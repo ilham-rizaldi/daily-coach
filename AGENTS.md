@@ -65,3 +65,5 @@ Name the Daily Intervals.icu panel Fitness. Show its dated Fitness and Fatigue t
 Show a 42-day Garmin load graphic inside the Body metrics Training Load card. Plot the recorded ratio on its own scale alongside coverage for the load, ratio, and dated acute range. Leave unrecorded ratios and range dates blank.
 
 Fill the Workout suggestion Recovery time bar as the Garmin countdown approaches zero. A recorded zero is full-height bright cyan. Leave days without a reading unfilled and keep the displayed hours as remaining time.
+
+Use the same segmented red–amber–green readiness scale in Body metrics and Workout suggestion, with red at 0 and green at 100. Keep Garmin’s recorded category text. Use Body metrics typography, metric readouts, and unit sizing in Training Status.

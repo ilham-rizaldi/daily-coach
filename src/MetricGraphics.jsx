@@ -5,9 +5,8 @@ export const palette = {
   light: "var(--sleep-light)", deep: "var(--sleep-deep)", rem: "var(--sleep-rem)", gray: "var(--metric-gray)",
 };
 
-export function statusColor(status, metric = "") {
+export function statusColor(status) {
   const text = String(status || "").toLowerCase();
-  if (metric === "readiness") return ({ poor: palette.red, low: palette.orange, moderate: palette.green, high: palette.blue, prime: palette.purple })[text] || palette.gray;
   if (text === "low need") return palette.green;
   if (/very high|poor|unbalanced|strained/.test(text)) return palette.red;
   if (/shortage|high|low|fair|unproductive/.test(text)) return palette.orange;
@@ -18,13 +17,29 @@ export function statusColor(status, metric = "") {
 export const isScore = value => Number.isFinite(value) && value >= 0 && value <= 100;
 const fractionFilled = (value, count, index) => Math.max(0, Math.min(1, value / 100 * count - index));
 
-export function ScoreMeter({ value, color = palette.blue, label }) {
+export function readinessColor(value) {
+  if (!isScore(value)) return palette.gray;
+  const low = "var(--readiness-red)";
+  if (value === 0) return low;
+  if (value === 50) return palette.orange;
+  if (value === 100) return palette.green;
+  const [from, to, progress] = value < 50
+    ? [low, palette.orange, value * 2]
+    : [palette.orange, palette.green, (value - 50) * 2];
+  return `color-mix(in oklab, ${from}, ${to} ${progress}%)`;
+}
+
+export function ReadinessGauge({ value, label = "Readiness" }) {
   if (!isScore(value)) return null;
   const count = 32;
-  return <div className="score-meter" role="img" aria-label={`${label}: ${decimal(value)} / 100`}
-    style={{ "--score-color": color, "--score-count": count }}>
+  return <div className="score-meter" role="img"
+    aria-label={`${label} ${decimal(value)} out of 100. Red at zero, green at 100.`}
+    style={{ "--score-count": count }}>
     {Array.from({ length: count }, (_, i) => <span key={i} aria-hidden="true"
-      style={{ "--filled": `${fractionFilled(value, count, i) * 100}%` }} />)}
+      style={{
+        "--score-color": readinessColor(i / (count - 1) * 100),
+        "--filled": `${fractionFilled(value, count, i) * 100}%`,
+      }} />)}
   </div>;
 }
 

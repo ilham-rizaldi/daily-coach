@@ -2,7 +2,7 @@ import { DataCard, DetailFacts } from "./CardDetails.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
 import { conditionStamp } from "./condition.js";
 import { decimal, duration, formatDate } from "./report.js";
-import { BaselineMeter, ScoreMeter, ScoreRing, palette, statusColor } from "./MetricGraphics.jsx";
+import { BaselineMeter, ReadinessGauge, ScoreRing, palette, readinessColor, statusColor } from "./MetricGraphics.jsx";
 import { paceClock } from "./pacing.js";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import "./workout-advice.css";
@@ -57,7 +57,6 @@ export function WorkoutAdvice({ advice }) {
     recoveryMinutes, recoveryStatus, recoveryHistory, hrv, hrv7d, hrvLow, hrvHigh, sleep, sleepStatus,
     trainingStatus, acuteHigh, performance, tomorrow, restProjection } = advice;
   const stamp = observedAt || observationWindow ? conditionStamp(date, observedAt, observationWindow) : null;
-  const readinessColor = statusColor(readinessStatus, "readiness");
   const hasHrv = hrv || Number.isFinite(hrv7d);
   const hasBaseline = [hrvLow, hrvHigh, hrv7d].every(Number.isFinite) && hrvHigh > hrvLow;
   const hasSignals = [readiness, recoveryMinutes, sleep].some(Number.isFinite) || hasHrv;
@@ -84,10 +83,10 @@ export function WorkoutAdvice({ advice }) {
     </div>
     {(stamp || hasSignals) && <div className="workout-advice-evidence">
       {hasSignals && <dl>
-        {Number.isFinite(readiness) && <div className="workout-signal" style={{ "--signal-color": readinessColor }}>
+        {Number.isFinite(readiness) && <div className="workout-signal" style={{ "--signal-color": readinessColor(readiness) }}>
           <dt>Readiness</dt><dd>
             <MetricValue value={readiness} unit="/100" />
-            <ScoreMeter value={readiness} color={readinessColor} label="Workout readiness" />
+            <ReadinessGauge value={readiness} label="Workout readiness" />
             <div className="workout-signal-meta"><span>{readinessStatus}</span><span>{readinessUpdatedAtLocal}</span></div>
           </dd>
         </div>}
