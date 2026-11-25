@@ -22,7 +22,7 @@ function HistoryPanel({ history, end, battery, initialDays = 28 }) {
   const first = period == null ? rows.at(-1)?.date : shiftDate(end, 1 - period);
   const last = period == null ? rows[0]?.date : end;
   const fitness = history.visual === "fitness";
-  const periods = fitness ? [...historyPeriods.slice(0, 2), ["6 weeks", 42], ...historyPeriods.slice(2)] : historyPeriods;
+  const periods = initialDays === 42 ? [...historyPeriods.slice(0, 2), ["6 weeks", 42], ...historyPeriods.slice(2)] : historyPeriods;
   return <div className="card-history" aria-label={label}>
     <div className="card-history-controls" role="group" aria-label="History range">
       {periods.map(([name, days]) => <button key={name} type="button" className="report-action"

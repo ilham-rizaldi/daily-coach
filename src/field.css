@@ -58,7 +58,7 @@ body .report-meta {
   content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%;
   margin-inline-end: 6px; vertical-align: 2px; background: var(--blue);
 }
-.daily-load-key div + div dt::before { background: var(--amber); }
+.daily-load-key [data-metric="chronic"] dt::before { background: var(--amber); }
 .daily-load-key dd { margin: 1px 0 0; font-size: clamp(23px, 2.6vw, 37px); letter-spacing: -.05em; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .daily-load-plot { margin: auto 0 0; padding-top: 8px; }
 .daily-load-plot svg { display: block; width: 100%; }
@@ -67,6 +67,7 @@ body .report-meta {
 .daily-grid-line { stroke: var(--rule); stroke-width: 1; stroke-dasharray: 2 4; vector-effect: non-scaling-stroke; }
 [data-load-series] { color: var(--blue); }
 [data-load-series="chronic"] { color: var(--amber); }
+[data-load-series="ratio"] { color: var(--purple); }
 [data-load-series] path { fill: none; stroke: currentColor; stroke-width: 2; vector-effect: non-scaling-stroke; }
 [data-load-series="chronic"] path { stroke-dasharray: 2 4; }
 [data-load-series] circle { fill: currentColor; }
@@ -143,7 +144,7 @@ body .prediction-grid {
   .body-primary > * { grid-column: 1 / -1; }
 }
 
-.daily-load-key div:last-child:nth-child(3) dt::before { background: var(--purple); }
+.daily-load-key [data-metric="ratio"] dt::before { background: var(--purple); }
 .daily-load-key small { font-size: 11px; color: var(--muted); }
 .daily-load-key small[data-attention="true"] { color: var(--amber); font-weight: 650; }
 .load-range-readout { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--muted); }
@@ -155,6 +156,27 @@ body .prediction-grid {
 .load-attention p { margin: 0; }
 .load-attention a { margin-left: auto; }
 .daily-load-plot { margin-top: auto; margin-bottom: auto; }
+.body-load-panel { display: flex; flex-direction: column; }
+.body-load-panel > .card-details-access { margin-top: auto; padding-top: 8px; }
+.load-card-context, .load-card-context > span, .load-chart-coverage {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; color: var(--muted); font-size: 11px;
+}
+.load-card-context { margin: 11px 0 8px; }
+.load-card-context b, .load-chart-coverage b { color: var(--text); white-space: nowrap; }
+.load-card-context .evidence-meta { margin: 0; font-size: inherit; }
+.daily-load-plot-compact { margin: 10px 0 0; padding-top: 0; }
+.daily-load-plot-compact .load-history-svg { height: clamp(148px, 15vw, 238px); }
+.daily-load-plot-compact .load-ratio-svg { height: clamp(76px, 7vw, 118px); }
+.daily-load-plot-compact svg text { font-size: 14px; }
+.daily-load-plot-compact figcaption { margin-inline: 7% 2%; }
+.load-ratio-heading { display: flex; justify-content: space-between; gap: 8px; margin: 8px 2% 0 7%; color: var(--muted); font-size: 11px; }
+.load-ratio-heading b { color: var(--purple); font-weight: 600; }
+.load-chart-coverage { margin-top: 11px; }
+.load-band-point { stroke-width: 4px; vector-effect: non-scaling-stroke; }
+@media (max-width: 760px) {
+  .daily-load-plot-compact svg text { font-size: 19px; }
+  .daily-load-plot-compact figcaption time:nth-child(even) { display: none; }
+}
 .training-status-panel { display: grid; gap: 9px; margin: 12px 0; padding: clamp(14px, 1.75vw, 22px); background: var(--surface-gradient); border: 1px solid var(--panel-border); border-radius: 16px; }
 .training-status-panel header, .training-status-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; }
 .training-status-panel header { justify-content: space-between; }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { dailyChartRuns, datedHistory, filterCardHistory, historyChartSeries, resolveCardHistory } from "../src/cardHistory.js";
+import { garminLoadWindow } from "../src/garminLoad.js";
 
 test("Body Battery all-history keeps dated low/high and gaps at the selected report cutoff", () => {
   const report = {
@@ -100,4 +101,21 @@ test("Garmin load history retains dated bands and provider ratios without backfi
   ]);
   assert.deepEqual(history.chartBands.Ratio, { low: 0.8, high: 1.5 });
   assert.deepEqual(history.chartBands.Acute.map(range => range.date).sort(), ["2026-11-23", "2026-11-24"]);
+});
+
+test("the Garmin chart counts each recorded series separately within the 42-day report window", () => {
+  const report = { date: "2026-11-25", garminLoadHistory: { rows: [
+    { date: "2026-11-25", acute: 570, chronic: 388, ratio: 1.4, optimalLow: 310, optimalHigh: 582 },
+    { date: "2026-11-24", acute: 660, chronic: 395, ratio: null },
+    { date: "2026-11-23", ratio: 1.5 },
+    { date: "2026-10-15", chronic: 480 },
+    { date: "2026-10-14", acute: 450, chronic: 470, ratio: 1.0 },
+    { date: "2026-11-26", acute: 500, chronic: 380, ratio: 1.3 },
+  ] } };
+  const { start, end, rows, pairedDays, bandDays, ratioDays } = garminLoadWindow(report);
+  assert.deepEqual([start, end], ["2026-10-15", "2026-11-25"]);
+  assert.deepEqual([pairedDays, bandDays, ratioDays], [2, 1, 2]);
+  assert.deepEqual(rows.map(row => [row.date, row.ratio]), [
+    ["2026-10-15", undefined], ["2026-11-23", 1.5], ["2026-11-24", null], ["2026-11-25", 1.4],
+  ]);
 });

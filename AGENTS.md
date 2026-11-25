@@ -61,3 +61,5 @@ Select the prediction recording profile automatically. Prefer verified recent ei
 Integrate source, reading date and capture time with the associated card using shared evidence styling. Use coach-style suggestions with measured values, supporting dates and practical next steps. Keep model ratings internal and preserve provider statuses such as High acute load. Use neutral styling for recorded references. Use available panel space to give the Workout suggestion and Body metrics graphics more room.
 
 Name the Daily Intervals.icu panel Fitness. Show its dated Fitness and Fatigue together, and absolute Form on its own scale using its own model bands. Use the captured Form when available and calculate it from the same day's pair when the export omits it. Show measured resting heart rate in bpm as the Trends card's primary readout and compare it with the preceding 28-day median.
+
+Show a 42-day Garmin load graphic inside the Body metrics Training Load card. Plot the recorded ratio on its own scale alongside coverage for the load, ratio, and dated acute range. Leave unrecorded ratios and range dates blank.

@@ -1,10 +1,31 @@
-import { decimal } from "./report.js";
+import { decimal, shiftDate } from "./report.js";
 
 // Garmin Connect's ratio band. The personalized acute band is stored per day.
 export const connectRatioRange = { low: 0.8, high: 1.5 };
 export const connectLoadGuide = "https://support.garmin.com/en-SG/?faq=SEkNpdGyhR917js0qQL3Q6";
 const valid = value => Number.isFinite(value) && value >= 0;
 const isDated = (reading, date) => (reading?.metricDate ?? reading?.date) === date;
+
+export const garminLoadWindowDays = 42;
+
+export function garminLoadWindow(report) {
+  const end = report.date;
+  const start = shiftDate(end, 1 - garminLoadWindowDays);
+  const byDate = new Map();
+  for (const row of report.garminLoadHistory?.rows || []) {
+    if (!row?.date || row.date < start || row.date > end || !/^\d{4}-\d{2}-\d{2}$/.test(row.date)
+      || !Number.isFinite(Date.parse(row.date)) || shiftDate(row.date, 0) !== row.date) continue;
+    if (![row.acute, row.chronic, row.ratio].some(valid) && !optimalAcuteRange(row)) continue;
+    byDate.set(row.date, row);
+  }
+  const rows = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  return {
+    start, end, rows,
+    pairedDays: rows.filter(row => valid(row.acute) && valid(row.chronic)).length,
+    bandDays: rows.filter(optimalAcuteRange).length,
+    ratioDays: rows.filter(row => valid(row.ratio)).length,
+  };
+}
 
 export function optimalAcuteRange(row) {
   return valid(row?.optimalLow) && valid(row?.optimalHigh) && row.optimalHigh > row.optimalLow

@@ -5,7 +5,8 @@ import { DurationValue, MetricValue } from "./Readout.jsx";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { recoverySeries } from "./performance.js";
 import { SleepDetail } from "./SleepDetail.jsx";
-import { connectRatioRange, garminLoadReading, rangeLabel } from "./garminLoad.js";
+import { connectRatioRange, garminLoadReading, garminLoadWindow, garminLoadWindowDays, rangeLabel } from "./garminLoad.js";
+import { GarminLoadChart, GarminLoadRanges } from "./GarminLoadChart.jsx";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { FitnessHistoryChart } from "./CardHistoryChart.jsx";
 import { filterCardHistory, resolveCardHistory } from "./cardHistory.js";
@@ -46,6 +47,54 @@ function Stat({ label, value, unit, detail, color }) {
       {detail && <span>{detail}</span>}
     </dd>
   </div>;
+}
+
+function GarminLoadCard({ report, data, source }) {
+  const history = garminLoadWindow(report);
+  const wellness = report.wellness || {};
+  const latest = history.rows.findLast(row => nonNegative(row.acute) || nonNegative(row.chronic) || nonNegative(row.ratio));
+  const date = latest?.date ?? wellness.date;
+  const reading = garminLoadReading(report, latest || (date ? { date } : null));
+  const values = latest ? [reading.acute, latest.chronic, reading.ratio]
+    : [wellness.garminAcuteLoad, wellness.garminChronicLoad, wellness.garminLoadRatio];
+  const labels = ["Acute", "Chronic", "Ratio"];
+  const previous = latest && history.rows.find(row => row.date === shiftDate(latest.date, -1));
+  const previousValues = previous ? [previous.acute, previous.chronic, previous.ratio] : [];
+  const changes = values.map((value, i) => {
+    if (!nonNegative(value) || !nonNegative(previousValues[i])) return null;
+    const delta = Number((value - previousValues[i]).toFixed(1));
+    return `${delta < 0 ? "−" : delta > 0 ? "+" : ""}${decimal(Math.abs(delta))}`;
+  });
+  const showChange = changes.some(change => change != null);
+  return <DataCard as="section" className="body-load-panel" aria-labelledby="body-garmin-load" title="Training Load"
+    history="garmin-load" initialHistoryDays={garminLoadWindowDays}
+    detail={<DetailFacts rows={[
+      ["Source", source], ["Reading", date ? formatDate(date, { year: "numeric" }) : null],
+      ...labels.map((label, i) => [label, num(values[i]), i === 0 ? reading.acuteStatus : i === 2 ? reading.ratioStatus : null]),
+      ["Acute load capture", date === (wellness.date || report.date) ? data.garminLoadStamp : null],
+      ["Chronic and ratio captures", date === (wellness.date || report.date) ? data.garminLoadContext : null],
+      ["Acute optimal range", rangeLabel(reading.range), "Approximate bounds from the dated Garmin chart"],
+      ["Ratio optimal range", rangeLabel(connectRatioRange), "Garmin Connect"],
+    ]} />}>
+    <h3 id="body-garmin-load">Training Load <EvidenceMeta source={source} /></h3>
+    <dl className="body-stat-row">
+      <Stat label="Acute" value={num(values[0])} detail={reading.acuteStatus} color={palette.blue} />
+      <Stat label="Chronic" value={num(values[1])} color={palette.orange} />
+      <Stat label="Ratio" value={num(values[2])} detail={reading.ratioStatus} color={reading.ratioStatus ? statusColor(reading.ratioStatus) : palette.purple} />
+    </dl>
+    <div className="load-card-context">
+      {date && values.some(nonNegative) && <EvidenceMeta date={date} dateLabel="Latest" />}
+      {showChange && <span>vs <time dateTime={previous.date}>{formatDate(previous.date)}</time>
+        {changes.map((change, i) => change != null && <span key={labels[i]}>{labels[i]} <b>{change}</b></span>)}
+      </span>}
+    </div>
+    <GarminLoadRanges range={reading.range} />
+    <GarminLoadChart window={history} compact />
+    {(reading.acuteNote || reading.ratioNote) && <div className="load-attention">
+      <strong>Above optimal</strong><div>{reading.acuteNote && <p>{reading.acuteNote}</p>}
+        {reading.ratioNote && <p>{reading.ratioNote}</p>}</div>
+    </div>}
+  </DataCard>;
 }
 
 function FitnessCard({ report, stamp }) {
@@ -142,8 +191,6 @@ export function ConditionOverview({ report }) {
     ["Next sleep need", time(w.nextSleepNeedMinutes)],
     ["Nap", time(w.napMinutes)],
   ].filter(([, value]) => value != null);
-  const garminReading = garminLoadReading(report, report.garminLoadHistory?.rows?.find(row => row.date === report.date));
-  const readingRows = items => items.map(item => [item.label, item.unit ? `${item.value} ${item.unit}` : item.value, item.status || undefined]);
   return <section className="condition-overview body-overview" aria-labelledby="condition-title">
     <div className="condition-heading"><h2 id="condition-title">Body metrics</h2><EvidenceMeta source={source} /></div>
     <dl className="body-primary">
@@ -182,23 +229,7 @@ export function ConditionOverview({ report }) {
       <Tile id="recovery" label="Recovery" value={time(w.recoveryTimeMinutes)} color={statusColor(w.recoveryTimeStatus)} status={w.recoveryTimeStatus} detail={w.readinessUpdatedAtLocal ? `@ ${w.readinessUpdatedAtLocal}` : null} stamp={stamp("recovery")} source={source} readings={[["Recent stress", w.recentStressStatus], ["Recent sleep scores", w.recentSleepScoresStatus]]}><div className="recovery-tags">{w.recentStressStatus && <span>Stress <b>{w.recentStressStatus}</b></span>}{w.recentSleepScoresStatus && <span>Sleep <b>{w.recentSleepScoresStatus}</b></span>}</div></Tile>
     </dl>
     <div className="body-secondary">
-      <DataCard as="section" className="body-load-panel" aria-labelledby="body-garmin-load" title="Training Load" history="garmin-load"
-        detail={<DetailFacts rows={[["Source", source], ["Acute load capture", data.garminLoadStamp],
-          ...readingRows(data.garminLoad), ["Chronic and ratio captures", data.garminLoadContext],
-          ["Acute optimal range", rangeLabel(garminReading.range), "Approximate bounds from the dated Garmin chart"],
-          ["Ratio optimal range", rangeLabel(connectRatioRange), "Garmin Connect"],
-        ]} />}>
-        <h3 id="body-garmin-load">Training Load <EvidenceMeta source={source} /></h3>
-        <dl className="body-stat-row">
-          <Stat label="Acute" value={num(w.garminAcuteLoad)} detail={garminReading.acuteStatus} color={palette.blue} />
-          <Stat label="Chronic" value={num(w.garminChronicLoad)} color={palette.orange} />
-          <Stat label="Ratio" value={num(w.garminLoadRatio)} detail={garminReading.ratioStatus} color={statusColor(garminReading.ratioStatus)} />
-        </dl>
-        {(garminReading.acuteNote || garminReading.ratioNote) && <div className="load-attention">
-          <strong>Above optimal</strong><div>{garminReading.acuteNote && <p>{garminReading.acuteNote}</p>}
-            {garminReading.ratioNote && <p>{garminReading.ratioNote}</p>}</div>
-        </div>}
-      </DataCard>
+      <GarminLoadCard report={report} data={data} source={source} />
       <FitnessCard report={report} stamp={data.intervalsStamp} />
       <DataCard as="section" className="body-vitals-panel" aria-labelledby="body-vitals" title="Vitals" history="vitals" detail={<DetailFacts rows={[["Source", source], ["Reading", data.overnightStamp], ...data.overnight.map(item => [item.label, item.value, item.context])]} />}><h3 id="body-vitals">Vitals</h3><dl className="body-stat-row"><Stat label="SpO₂" value={num(w.averageSpo2)} unit="%" detail={Number.isFinite(w.lowestSpo2)?`Min ${w.lowestSpo2}%`:null} color={palette.blue} /><Stat label="RR" value={num(w.averageRespiration)} unit="br/min" detail={Number.isFinite(w.minimumRespiration)?`Min ${w.minimumRespiration}`:null} /><Stat label="Awake" value={num(w.awakeMinutes)} unit="min" detail={Number.isFinite(w.restlessMoments)?`${w.restlessMoments} restless`:null} /></dl></DataCard>
       <DataCard as="section" aria-labelledby="body-adaptation" title="Adaptation · Garmin" history="adaptation" detail={<DetailFacts rows={[["Source", source], ["Training status capture", data.fitnessStamp], ...data.fitness.map(item => [item.label, item.value, item.context])]} />}>
