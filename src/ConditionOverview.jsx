@@ -1,4 +1,4 @@
-import { decimal, formatDate } from "./report.js";
+import { decimal, formatDate, shiftDate } from "./report.js";
 import { conditionOverview, conditionStamp } from "./condition.js";
 import { BatteryRangeChart, BaselineMeter, isScore, palette, ScoreArc, ScoreMeter, ScoreRing, SleepStages, statusColor } from "./MetricGraphics.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
@@ -7,6 +7,8 @@ import { recoverySeries } from "./performance.js";
 import { SleepDetail } from "./SleepDetail.jsx";
 import { connectRatioRange, garminLoadReading, rangeLabel } from "./garminLoad.js";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
+import { FitnessHistoryChart } from "./CardHistoryChart.jsx";
+import { filterCardHistory, resolveCardHistory } from "./cardHistory.js";
 
 const num = value => Number.isFinite(value) ? decimal(value) : null;
 const time = value => Number.isFinite(value) && value >= 0 ? <DurationValue seconds={value * 60} /> : null;
@@ -46,6 +48,28 @@ function Stat({ label, value, unit, detail, color }) {
   </div>;
 }
 
+function FitnessCard({ report, stamp }) {
+  const source = report.preview ? "Illustrative Intervals.icu data" : "Intervals.icu";
+  const history = resolveCardHistory(report, [], "intervals");
+  const rows = filterCardHistory(history.rows, report.date, 42);
+  const latest = rows[0] || filterCardHistory(history.rows, report.date, null)[0];
+  const [fitness, fatigue, form] = latest?.plot ?? [];
+  return <DataCard as="section" className="body-fitness-panel" aria-labelledby="body-fitness" title="Fitness" history="intervals" initialHistoryDays={42}
+    detail={<DetailFacts rows={[
+      ["Source", source], ["Reading", latest?.date === report.intervals?.date ? stamp : latest?.date],
+      ["Form", "Fitness minus Fatigue for dates with both values when the export omits Form."],
+    ]} />}>
+    <h3 id="body-fitness">Fitness <EvidenceMeta source={source} date={latest?.date} dateLabel="Latest" /></h3>
+    <dl className="body-stat-row">
+      <Stat label="Fitness" value={num(fitness)} color={palette.blue} />
+      <Stat label="Fatigue" value={num(fatigue)} color={palette.purple} />
+      <Stat label="Form" value={Number.isFinite(form) ? `${form > 0 ? "+" : ""}${decimal(form)}` : null} color={palette.green} />
+    </dl>
+    {rows.length > 0 && <FitnessHistoryChart history={history} rows={rows} first={shiftDate(report.date, -41)} last={report.date} compact />}
+    {!report.preview && <a className="fitness-source-link" href="https://intervals.icu/fitness" target="_blank" rel="noreferrer">Open Fitness in Intervals.icu ↗</a>}
+  </DataCard>;
+}
+
 function AvailableSleepStages({ wellness }) {
   const stages = [
     ["Deep", wellness.deepSleepMinutes, palette.deep],
@@ -62,7 +86,7 @@ function AvailableSleepStages({ wellness }) {
 }
 
 export function ConditionOverview({ report }) {
-  const w = report.wellness || {}, intervals = report.intervals || {};
+  const w = report.wellness || {};
   const data = conditionOverview(report);
   const source = report.preview ? "Illustrative Garmin data" : "Garmin Connect";
   const stamp = id => data.primary.find(item => item.id === id)?.stamp;
@@ -175,7 +199,7 @@ export function ConditionOverview({ report }) {
             {garminReading.ratioNote && <p>{garminReading.ratioNote}</p>}</div>
         </div>}
       </DataCard>
-      <DataCard as="section" aria-labelledby="body-intervals" title="Intervals.icu" history="intervals" detail={<DetailFacts rows={[["Source", report.preview ? "Illustrative Intervals.icu data" : "Intervals.icu"], ["Reading", data.intervalsStamp], ...readingRows(data.intervals)]} />}><h3 id="body-intervals">Intervals.icu</h3><dl className="body-stat-row"><Stat label="CTL" value={num(intervals.fitness)} color={palette.blue} /><Stat label="ATL" value={num(intervals.fatigue)} color={palette.purple} /><Stat label="Form" value={Number.isFinite(intervals.form) ? `${intervals.form>0?"+":""}${decimal(intervals.form)}` : null} color={palette.orange} /></dl></DataCard>
+      <FitnessCard report={report} stamp={data.intervalsStamp} />
       <DataCard as="section" className="body-vitals-panel" aria-labelledby="body-vitals" title="Vitals" history="vitals" detail={<DetailFacts rows={[["Source", source], ["Reading", data.overnightStamp], ...data.overnight.map(item => [item.label, item.value, item.context])]} />}><h3 id="body-vitals">Vitals</h3><dl className="body-stat-row"><Stat label="SpO₂" value={num(w.averageSpo2)} unit="%" detail={Number.isFinite(w.lowestSpo2)?`Min ${w.lowestSpo2}%`:null} color={palette.blue} /><Stat label="RR" value={num(w.averageRespiration)} unit="br/min" detail={Number.isFinite(w.minimumRespiration)?`Min ${w.minimumRespiration}`:null} /><Stat label="Awake" value={num(w.awakeMinutes)} unit="min" detail={Number.isFinite(w.restlessMoments)?`${w.restlessMoments} restless`:null} /></dl></DataCard>
       <DataCard as="section" aria-labelledby="body-adaptation" title="Adaptation · Garmin" history="adaptation" detail={<DetailFacts rows={[["Source", source], ["Training status capture", data.fitnessStamp], ...data.fitness.map(item => [item.label, item.value, item.context])]} />}>
         <h3 id="body-adaptation">Adaptation · Garmin</h3>

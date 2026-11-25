@@ -178,15 +178,22 @@ const activityChart = [
 function intervalHistory(report, snapshots) {
   const unique = new Map();
   for (const row of [
+    report.intervals,
     ...(report.intervals?.displayedSnapshots || []),
     ...(report.baseHistory?.intervalsDaily || []),
     ...snapshots.map(item => item.intervals).filter(Boolean),
   ]) {
-    if (!day(row.date) || unique.has(row.date)) continue;
+    if (!day(row?.date) || row.date > report.date || unique.has(row.date)
+      || row.modelState === "unverified" || row.provenance?.state === "unverified"
+      || ![row.fitness, row.fatigue, row.form].some(Number.isFinite)) continue;
     unique.set(row.date, row);
   }
-  return datedHistory("Fitness and fatigue · Intervals.icu", ["CTL", "ATL", "Form"], [...unique.values()],
-    row => [row.fitness, row.fatigue, row.form], { daily: true });
+  const form = row => Number.isFinite(row.form) ? row.form :
+    Number.isFinite(row.fitness) && Number.isFinite(row.fatigue) ? row.fitness - row.fatigue : null;
+  const chart = [["Fitness", row => row.fitness], ["Fatigue", row => row.fatigue], ["Form", form]];
+  const history = datedHistory("Fitness history · Intervals.icu", chart.map(([label]) => label), [...unique.values()],
+    row => chart.map(([, read]) => numberText(read(row))), { daily: true, chart });
+  return { ...history, visual: "fitness" };
 }
 
 export function resolveCardHistory(report, reports, definition) {

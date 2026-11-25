@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useId, useRef, useState } from "r
 import { createPortal } from "react-dom";
 import { filterCardHistory, resolveCardHistory } from "./cardHistory.js";
 import { formatDate, shiftDate } from "./report.js";
-import { CardHistoryChart } from "./CardHistoryChart.jsx";
+import { CardHistoryChart, FitnessHistoryChart } from "./CardHistoryChart.jsx";
 import { SourceMark } from "./EvidenceMeta.jsx";
 
 const interactive = "a, button, select, input, textarea, label, summary, [role='button'], [role='link'], [contenteditable], dialog";
@@ -21,12 +21,15 @@ function HistoryPanel({ history, end, battery, initialDays = 28 }) {
   if (!all.length) return <p>This card has no dated readings in the available report history.</p>;
   const first = period == null ? rows.at(-1)?.date : shiftDate(end, 1 - period);
   const last = period == null ? rows[0]?.date : end;
+  const fitness = history.visual === "fitness";
+  const periods = fitness ? [...historyPeriods.slice(0, 2), ["6 weeks", 42], ...historyPeriods.slice(2)] : historyPeriods;
   return <div className="card-history" aria-label={label}>
     <div className="card-history-controls" role="group" aria-label="History range">
-      {historyPeriods.map(([name, days]) => <button key={name} type="button" className="report-action"
+      {periods.map(([name, days]) => <button key={name} type="button" className="report-action"
         aria-pressed={period === days} onClick={() => { setPeriod(days); setLimit(30); }}>{name}</button>)}
     </div>
-    <CardHistoryChart history={history} rows={rows} first={first} last={last} battery={battery} />
+    {fitness ? <FitnessHistoryChart history={history} rows={rows} first={first} last={last} />
+      : <CardHistoryChart history={history} rows={rows} first={first} last={last} battery={battery} />}
     <p className="card-history-coverage">
       {rows.length} {rows.length === 1 ? "entry" : "entries"} · Available {historyDate(all.at(-1))} – {historyDate(all[0])}
       {battery && all[0].date === end && " · Report day may be partial"}

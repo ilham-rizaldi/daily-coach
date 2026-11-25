@@ -13,7 +13,7 @@ import TrainingMix from "./TrainingMix.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
 
 const number = (value, places = 1) => Number.isFinite(value) ? decimal(value, places) : "—";
-const signed = value => Number.isFinite(value) ? `${value > 0 ? "+" : ""}${decimal(value, 0)}` : "—";
+const signed = (value, places = 0) => Number.isFinite(value) ? `${value > 0 ? "+" : ""}${decimal(value, places)}` : "—";
 const tooltipStyle = { background: "var(--surface-raised)", border: "1px solid var(--control-border)", borderRadius: 9, color: "var(--text)", fontSize: 12 };
 const ticks = { fill: "var(--muted)", fontSize: 12 };
 
@@ -53,11 +53,26 @@ function Recovery({ report }) {
             <Line type="monotoneX" dataKey="hrv7dMs" name="7d · ms" stroke={palette.blue} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           </Plot><div className="performance-key"><span style={{ color: palette.blue }}>7d</span><span>Overnight</span><span style={{ color: palette.green }}>Baseline</span></div>
         </DataCard>
-        <DataCard title="Resting heart rate trend" history="resting-hr" detail={dated(["RHR · bpm", "Change · bpm"], row => [number(row.rhrBpm, 0), signed(row.rhrDelta)], "Change against the preceding 28-day median, with at least seven prior readings")}><div className="performance-chart-title"><h3>RHR Δ <small>bpm</small></h3><MetricValue as="strong" value={signed(last.rhrDelta)} unit="bpm" style={{ color: palette.red }} /></div>
-          <Plot data={data} label="Resting HR deviation from preceding 28-day median, requiring seven prior readings" formatter={(value) => [`${number(value)} bpm`, "RHR Δ"]}>
-            <ReferenceLine y={0} stroke="var(--control-border)" strokeDasharray="3 3" />
-            <Line type="monotoneX" dataKey="rhrDelta" name="RHR Δ" stroke={palette.red} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
-          </Plot><div className="performance-key">28d personal median</div>
+        <DataCard title="Resting heart rate trend" history="resting-hr"
+          detail={dated(["RHR · bpm", "28d median · bpm", "Change · bpm"],
+            row => [number(row.rhrBpm), number(row.rhrBaseline), signed(row.rhrDelta, 1)],
+            "Daily RHR and change from the preceding 28-day median, with at least seven prior readings")}>
+          <div className="performance-chart-title">
+            <h3>Resting heart rate</h3>
+            <div className="recovery-readout rhr-trend-readout">
+              <MetricValue as="strong" value={number(last.rhrBpm)} unit={Number.isFinite(last.rhrBpm) ? "bpm" : undefined} style={{ color: palette.red }} />
+              {Number.isFinite(last.rhrDelta) && <small className="metric-context">
+                {signed(last.rhrDelta, 1)} bpm vs {number(last.rhrBaseline)} bpm median
+              </small>}
+            </div>
+          </div>
+          <Plot data={data} label="Daily resting heart rate and preceding 28-day median in bpm"
+            formatter={(value, name) => [`${number(value)} bpm`, name]}>
+            <Line type="monotoneX" dataKey="rhrBaseline" name="28d median" stroke={palette.gray} strokeDasharray="4 4"
+              strokeWidth={1.4} dot={false} connectNulls={false} isAnimationActive={false} />
+            <Line type="monotoneX" dataKey="rhrBpm" name="Resting HR" stroke={palette.red}
+              strokeWidth={2} dot={{ r: 2, strokeWidth: 0, fill: palette.red }} connectNulls={false} isAnimationActive={false} />
+          </Plot><div className="performance-key"><span style={{ color: palette.red }}>Daily RHR</span><span>28d personal median</span></div>
         </DataCard>
         <DataCard title="Sleep and sleep need" history="sleep" detail={dated(["Sleep · min", "Need · min", "Gap · min"], row => [number(row.sleepMinutes, 0), number(row.sleepNeedMinutes, 0), signed(row.sleepGap)], "Sleep duration minus the recorded need for that night")}><div className="performance-chart-title"><h3>Sleep − need <small>min</small></h3><MetricValue as="strong" value={signed(last.sleepGap)} unit="min" style={{ color: Number.isFinite(last.sleepGap) && last.sleepGap >= 0 ? palette.green : palette.orange }} /></div>
           <Plot data={data} label="Sleep duration minus captured sleep need in minutes" formatter={(value) => [`${signed(value)} min`, "Sleep − need"]}>

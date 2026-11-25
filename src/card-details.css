@@ -78,6 +78,18 @@
 }
 .card-history .detail-table th[scope="row"] { white-space: nowrap; }
 .card-history-more { margin-top: 12px; }
+.fitness-history-plot[data-compact="true"] { margin: 12px 0 8px; }
+.fitness-line { fill: none; stroke: var(--fitness-line); stroke-width: 1.75; vector-effect: non-scaling-stroke; }
+.fitness-point { fill: var(--fitness-line); }
+.fitness-form-label { margin: 2px 0 0 8%; color: var(--muted); font-size: 12px; }
+.fitness-plot-key { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 11px; }
+.fitness-plot-key span { display: inline-flex; align-items: center; gap: 5px; }
+.fitness-plot-key i { width: 7px; height: 7px; border-radius: 50%; }
+.fitness-plot-key strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.fitness-zone-key { margin: 10px 0 0 8%; }
+.fitness-source-link { display: inline-block; color: var(--muted); font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.fitness-source-link:hover, .fitness-source-link:focus-visible { color: var(--blue); }
+@media (max-width: 600px) { .fitness-history-plot svg text { font-size: 20px; } }
 .card-detail-more { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--rule); }
 .card-detail-more summary { width: fit-content; cursor: pointer; color: var(--blue); }
 .card-detail-more[open] summary { margin-bottom: 10px; }

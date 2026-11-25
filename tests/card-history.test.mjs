@@ -49,14 +49,25 @@ test("history chart plots raw units and leaves an empty day between lines", () =
 });
 
 test("Intervals wellness readings and fitness model fields stay on distinct cards", () => {
-  const report = { date: "2026-06-10", baseHistory: {
+  const report = { date: "2026-06-10", intervals: {
+    date: "2026-06-10", fitness: 24, fatigue: 39, form: -15,
+    displayedSnapshots: [{ date: "2026-06-08", fitness: 20, fatigue: 20, modelState: "unverified" }],
+  }, baseHistory: {
     intervalsWellness: [{ date: "2026-06-09", restingHrBpm: 52 }],
-    intervalsDaily: [{ date: "2026-06-08", fitness: 19, fatigue: 25 }],
+    intervalsDaily: [
+      { date: "2026-06-08", fitness: 19.5, fatigue: 25 },
+      { date: "2026-06-10", fitness: 25, fatigue: 40 },
+      { date: "2026-06-11", fitness: 24, fatigue: 35 },
+    ],
   } };
   const wellness = resolveCardHistory(report, [], "intervals-wellness");
   const load = resolveCardHistory(report, [], "intervals");
   assert.deepEqual(historyChartSeries(wellness, wellness.rows).map(series => series.label), ["Resting HR · bpm"]);
-  assert.deepEqual(historyChartSeries(load, load.rows).map(series => series.label), ["CTL", "ATL"]);
+  const rows = filterCardHistory(load.rows, report.date, null);
+  assert.deepEqual(rows.map(row => [row.date, row.plot]), [
+    ["2026-06-10", [24, 39, -15]], ["2026-06-08", [19.5, 25, -5.5]],
+  ]);
+  assert.deepEqual(historyChartSeries(load, rows).map(series => series.label), ["Fitness", "Fatigue", "Form"]);
 });
 
 test("weekly history respects the selected sport and excludes the report day", () => {

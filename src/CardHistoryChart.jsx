@@ -10,11 +10,12 @@ const yAt = (value, low, high, reverse = false) => {
 };
 const compactTick = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });
 
-function HistoryAxis({ low, high, first, last, label, format = value => decimal(value, 1), reverse, children }) {
+function HistoryAxis({ low, high, first, last, label, format = value => decimal(value, 1), reverse, dates = true, background, children }) {
   const expanded = Date.parse(last) - Date.parse(first) >= 300 * DAY;
   const dateLabel = date => formatDate(date, expanded ? { month: "short", year: "numeric" } : {});
   return <>
     <svg viewBox={`0 0 ${frame.width} ${frame.height}`} role="img" aria-label={label}>
+      {background}
       {[1, 0.75, 0.5, 0.25, 0].map((step, index) => {
         const value = low + (high - low) * step;
         const y = yAt(value, low, high, reverse);
@@ -25,7 +26,7 @@ function HistoryAxis({ low, high, first, last, label, format = value => decimal(
       })}
       {children}
     </svg>
-    <div className="card-history-dates"><span>{dateLabel(first)}</span>{last !== first && <span>{dateLabel(last)}</span>}</div>
+    {dates && <div className="card-history-dates"><span>{dateLabel(first)}</span>{last !== first && <span>{dateLabel(last)}</span>}</div>}
   </>;
 }
 
@@ -33,6 +34,65 @@ function dateAxis(first, last) {
   const start = Date.parse(first), span = Date.parse(last) - start;
   return date => span ? frame.left + (Date.parse(date) - start) / span * (frame.right - frame.left) :
     (frame.left + frame.right) / 2;
+}
+
+const formZones = [
+  ["High risk", -Infinity, -30, "var(--red)"],
+  ["Optimal", -30, -10, "var(--green)"],
+  ["Grey zone", -10, 5, "var(--muted)"],
+  ["Fresh", 5, 20, "var(--blue)"],
+  ["Transition", 20, Infinity, "var(--amber)"],
+];
+const fitnessColors = { Fitness: "var(--blue)", Fatigue: "var(--purple)", Form: "var(--green)" };
+
+function FitnessPlot({ series, first, last, form = false, dates }) {
+  if (!series.length) return null;
+  const points = series.flatMap(item => item.points.map(point => point.value));
+  const step = form ? 15 : 5;
+  const low = Math.floor(Math.min(form ? -36 : Infinity, ...points) / step) * step;
+  const high = Math.max(low + step * 2, Math.ceil(Math.max(form ? 24 : -Infinity, ...points) / step) * step);
+  const xAt = dateAxis(first, last);
+  const y = value => yAt(value, low, high);
+  return <HistoryAxis low={low} high={high} first={first} last={last} dates={dates}
+    label={form ? "Form · Intervals.icu absolute zones" : "Fitness and Fatigue · Intervals.icu"}
+    background={form && formZones.map(([label, bottom, top, color]) => <rect key={label} x={frame.left}
+      width={frame.right - frame.left} y={y(Math.min(high, top))} height={y(Math.max(low, bottom)) - y(Math.min(high, top))}
+      fill={color} fillOpacity={label === "Optimal" ? 0.16 : 0.09} />)}>
+    {series.map(({ label, points }) => {
+      const color = fitnessColors[label];
+      const runs = dailyChartRuns(points);
+      const connectedDates = new Set(runs.flatMap(run => run.map(point => point.date)));
+      return <g key={label} style={{ "--fitness-line": color }}>
+        {runs.map(run => <path key={run[0].date} className="fitness-line"
+          d={smoothLinePath(run.map(({ date, value }) => [xAt(date), y(value)]))} />)}
+        {points.map(({ date, value }, index) => <circle key={date} className="fitness-point" cx={xAt(date)} cy={y(value)}
+          r={index === points.length - 1 || !connectedDates.has(date) ? 3.2 : 1.2}>
+          <title>{`${formatDate(date)} · ${label} ${decimal(value)}`}</title>
+        </circle>)}
+      </g>;
+    })}
+  </HistoryAxis>;
+}
+
+export function FitnessHistoryChart({ history, rows, first, last, compact = false }) {
+  const series = historyChartSeries(history, rows);
+  if (!series.length) return null;
+  const load = series.filter(item => item.label !== "Form");
+  const form = series.filter(item => item.label === "Form");
+  return <figure className="card-history-plot fitness-history-plot" data-compact={compact}>
+    {!compact && <figcaption className="fitness-plot-key">
+      {series.map(({ label, points }) => <span key={label}><i style={{ background: fitnessColors[label] }} />
+        {label} <strong>{decimal(points.at(-1).value)}</strong></span>)}
+    </figcaption>}
+    <FitnessPlot series={load} first={first} last={last} dates={!form.length} />
+    {form.length > 0 && <>
+      <div className="fitness-form-label">Form</div>
+      <FitnessPlot series={form} first={first} last={last} form dates />
+      <div className="fitness-plot-key fitness-zone-key" aria-label="Absolute Form zones">
+        {[...formZones].reverse().map(([label, , , color]) => <span key={label}><i style={{ background: color }} />{label}</span>)}
+      </div>
+    </>}
+  </figure>;
 }
 
 function PlotHeading({ label, value, date, monthly = false, children }) {
