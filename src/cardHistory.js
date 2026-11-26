@@ -76,6 +76,10 @@ const wellnessMetrics = {
     [["SpO₂ · %", row => row.averageSpo2], ["Respiration · br/min", row => row.averageRespiration], ["Awake · min", row => row.awakeMinutes]]],
   adaptation: ["Adaptation · Garmin Connect", ["VO₂ max", "Heat · %", "Training status"],
     row => [row.vo2Max, row.heatAcclimationPercent, row.trainingStatus]],
+  "vitals-adaptation": ["Vitals & adaptation · Garmin Connect", ["SpO₂ · %", "Respiration · br/min", "Awake", "VO₂ max", "Heat · %"],
+    row => [row.averageSpo2, row.averageRespiration, minuteText(row.awakeMinutes), row.vo2Max, row.heatAcclimationPercent],
+    [["SpO₂ · %", row => row.averageSpo2], ["Respiration · br/min", row => row.averageRespiration],
+      ["Awake · min", row => row.awakeMinutes], ["VO₂ max", row => row.vo2Max], ["Heat · %", row => row.heatAcclimationPercent]]],
 };
 
 function reportSnapshots(report, reports) {
@@ -99,6 +103,9 @@ function garminWellness(report, snapshots) {
   }
   for (const row of report.wellnessHistory?.rows || []) {
     byDate.set(row.date, { ...byDate.get(row.date), ...row });
+  }
+  for (const row of nativeHeatRows(report)) {
+    byDate.set(row.date, { ...byDate.get(row.date), date: row.date, heatAcclimationPercent: row.value });
   }
   return [...byDate.values()];
 }
@@ -237,6 +244,11 @@ function fitnessSnapshots(report, snapshots, field) {
   }).filter(([date]) => day(date) && date <= report.date).reverse()).values()];
 }
 
+function nativeHeatRows(report) {
+  return (report.trainingStatusHistory?.heat || []).filter(row => day(row?.date) && row.date <= report.date
+    && row.source === "Garmin Connect" && Number.isFinite(row.value) && row.value >= 0 && row.value <= 100);
+}
+
 function trainingFactorHistory(report, snapshots, kind) {
   if (kind === "vo2") {
     const capturedLabel = "Training Status reading";
@@ -249,9 +261,19 @@ function trainingFactorHistory(report, snapshots, kind) {
     return datedHistory("VO₂ max · Garmin Connect", ["VO₂ max · mL/kg/min", "Reading", "Status"],
       rows, row => [row.value, row.series, row.status], { chart });
   }
-  if (kind === "heat") return datedHistory("Heat acclimation · Garmin Connect", ["Heat acclimation · %", "Status"],
-    fitnessSnapshots(report, snapshots, "heatAcclimationPercent").filter(row => row.heatAcclimationPercent >= 0 && row.heatAcclimationPercent <= 100),
-    row => [row.heatAcclimationPercent, row.heatAcclimationTrend]);
+  if (kind === "heat") {
+    const readings = new Map(fitnessSnapshots(report, snapshots, "heatAcclimationPercent")
+      .filter(row => row.heatAcclimationPercent >= 0 && row.heatAcclimationPercent <= 100)
+      .map(row => [row.date, { ...row, basis: "Garmin snapshot" }]));
+    for (const row of nativeHeatRows(report)) {
+      const snapshot = readings.get(row.date);
+      readings.set(row.date, { date: row.date, heatAcclimationPercent: row.value,
+        heatAcclimationTrend: snapshot?.heatAcclimationPercent === row.value ? snapshot.heatAcclimationTrend : null,
+        basis: "Garmin four-week chart" });
+    }
+    return datedHistory("Heat acclimation · Garmin Connect", ["Heat acclimation · %", "Status", "Reading"],
+      [...readings.values()], row => [row.heatAcclimationPercent, row.heatAcclimationTrend, row.basis], { daily: true });
+  }
   if (kind === "hrv7d") {
     const rows = garminWellness(report, snapshots).filter(row => Number.isFinite(row.hrv7dMs) && row.hrv7dMs >= 0);
     const label = "7-day HRV · ms";

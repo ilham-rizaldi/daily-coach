@@ -1,7 +1,6 @@
 import { useId } from "react";
 import { DataCard, DetailTable } from "./CardDetails.jsx";
 import { CardHistoryChart } from "./CardHistoryChart.jsx";
-import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { datedHistory } from "./cardHistory.js";
 import { formatDate } from "./report.js";
 import { equipmentTypes, formatKg, strengthSummary } from "./strength.js";
@@ -85,7 +84,5 @@ export function StrengthLift({ report }) {
     </div>
     {data.measured > 0 && <CardHistoryChart history={history} rows={history.rows}
       first={data.sessions.at(-1).date} last={data.sessions[0].date} compact />}
-    <EvidenceMeta className="evidence-footer" source={report.preview ? "Illustrative workouts" : "Garmin Connect"}
-      from={data.sessions.at(-1).date} date={data.sessions[0].date} />
   </DataCard>;
 }

@@ -7,7 +7,6 @@ import { cyclingProgression, recoverySeries, trainingPlacement } from "./perform
 import { SportSpeedCards } from "./PerformanceProgression.jsx";
 import { activitySpeedSeries } from "./activityProgression.js";
 import { StrengthLift } from "./StrengthLift.jsx";
-import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import "./performance.css";
 import TrainingMix from "./TrainingMix.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
@@ -42,7 +41,6 @@ function Recovery({ report }) {
   </>;
   return <section className="performance-recovery" aria-labelledby="recovery-trend-title">
     <div className="performance-heading"><div><h2 id="recovery-trend-title">Recovery trends</h2>
-      {available && <EvidenceMeta source={report.preview ? "Illustrative Garmin data" : "Garmin Connect"} observedAt={report.wellnessHistory?.observedAt} />}
     </div><div className="performance-period" aria-label="Recovery period">{[7, 28, 56].map(value => <button key={value} aria-pressed={value === days} onClick={() => setDays(value)}>{value}d</button>)}</div></div>
     {available ? <>
       <div className="performance-chart-grid">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { palette } from "./MetricGraphics.jsx";
+import { palette, readinessBands } from "./MetricGraphics.jsx";
 import { decimal, formatDate } from "./report.js";
 import { contributionWeights, historicalLoadRate } from "./forecast.js";
 import { projectGarminRest } from "./garminForecast.js";
@@ -62,6 +62,7 @@ const glossary = [
   ["Recovery and workout suggestion", "Daily / Predictions", "Dated snapshot", "Uses same-day captured Garmin readiness and remaining recovery time. Poor readiness suggests rest. Low readiness, remaining recovery time, flagged HRV or poor recent sleep favor easy effort. Older or incomplete captures prompt a recovery recheck. Session intensity still depends on the saved plan and the warm-up."],
   ["Garmin TCX / Intervals FIT", "Predictions", "Recording source", "Linked copies count once and original Garmin files take priority. The model keeps recording devices and indoor or outdoor evidence separate. Sources remain visible in Details."],
   ["Prediction checks", "Predictions", "bpm / sessions", "Details shows the matched dates, recorded HR and later test results. Heart-rate estimates are checked against the recent median. A single comparable effort or a whole-session average can serve as a recorded reference."],
+  ["Predicted vs actual HR", "Predictions", "bpm / days", "A representative effort per date is tested against earlier recordings in the same duration band and recording profile. Auto starts with 8 to under 12 minutes and can choose a band with more comparisons when that band has none. The earlier HR median is a baseline. Above-ceiling counts use the highest measured peak across eligible blocks each day and include only days with a measured peak."],
   ["Extrapolation", "Forecast", "Status", "A planned duration or current load state outside the captured calibration range."],
 ];
 
@@ -79,6 +80,8 @@ const methodLinks = [
   { title: "Sport contributions", url: "https://forum.intervals.icu/t/fitness-and-fatigue-for-different-activity-types/652" },
   { title: "Garmin training load", url: "https://www.garmin.com/en-US/garmin-technology/cycling-science/physiological-measurements/training-load/" },
   { title: "Garmin readiness colors", url: "https://www8.garmin.com/manuals-apac/webhelp/forerunner265series/EN-SG/GUID-35D1273C-4F9C-4029-9B8F-F997F4D7C3A8-7793.html" },
+  { title: "Garmin Training Status", url: "https://www.garmin.com/en-US/garmin-technology/running-science/physiological-measurements/training-status/" },
+  { title: "Garmin Training Readiness", url: "https://www.garmin.com/en-US/garmin-technology/running-science/physiological-measurements/training-readiness/" },
   { title: "Testing predictions in chronological order", url: "https://otexts.com/fpp3/toolbox.html#time-series-cross-validation" },
   { title: "Intervals.icu activity FIT exports", url: "https://forum.intervals.icu/t/import-and-download-workout-and-activity-fit-files/19295" },
   ...loadFocusGuideSources,
@@ -295,7 +298,7 @@ export function Reference({ report, researchOpen = false }) {
       </details>
       <details><summary>Color key</summary>
         <div className="table-scroll"><table className="reference-table"><caption className="sr-only">Metric color key</caption><thead><tr><th scope="col">Metric</th><th scope="col">Colors</th></tr></thead><tbody>
-          <tr><th scope="row">Readiness</th><td><ColorKey items={[["0", "var(--readiness-red)"], ["50", palette.orange], ["100", palette.green]]} /><small>Gauge color follows the score. The status label comes from Garmin.</small></td></tr>
+          <tr><th scope="row">Readiness</th><td><ColorKey items={readinessBands.map(band => [`${band.name} ${band.min || 1}–${band.max}`, band.color])} /><small>Readiness uses Garmin’s score bands.</small></td></tr>
           <tr><th scope="row">Sleep</th><td><ColorKey items={[["Deep", palette.deep], ["Light", palette.light], ["REM", palette.rem]]} /></td></tr>
           <tr><th scope="row">Garmin load</th><td><ColorKey items={[["Acute", palette.blue], ["Chronic", palette.orange]]} /></td></tr>
           <tr><th scope="row">Recovery trends</th><td><ColorKey items={[["7d HRV", palette.blue], ["Overnight HRV", palette.gray], ["HRV baseline", palette.green], ["RHR Δ", palette.red]]} /></td></tr>

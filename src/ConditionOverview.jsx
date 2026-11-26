@@ -7,6 +7,7 @@ import { recoverySeries } from "./performance.js";
 import { SleepDetail } from "./SleepDetail.jsx";
 import { connectRatioRange, garminLoadReading, garminLoadWindow, garminLoadWindowDays, rangeLabel } from "./garminLoad.js";
 import { GarminLoadChart, GarminLoadRanges } from "./GarminLoadChart.jsx";
+import { FitnessInsight, GarminLoadInsight } from "./LoadInsight.jsx";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { FitnessHistoryChart } from "./CardHistoryChart.jsx";
 import { filterCardHistory, resolveCardHistory } from "./cardHistory.js";
@@ -75,6 +76,7 @@ function GarminLoadCard({ report, data, source }) {
       ["Chronic and ratio captures", date === (wellness.date || report.date) ? data.garminLoadContext : null],
       ["Acute optimal range", rangeLabel(reading.range), "Approximate bounds from the dated Garmin chart"],
       ["Ratio optimal range", rangeLabel(connectRatioRange), "Garmin Connect"],
+      ["Measured days", `${history.pairedDays} acute/chronic · ${history.ratioDays} ratio · ${history.bandDays} acute optimal band`],
     ]} />}>
     <h3 id="body-garmin-load">Training Load <EvidenceMeta source={source} /></h3>
     <dl className="body-stat-row">
@@ -90,10 +92,7 @@ function GarminLoadCard({ report, data, source }) {
     </div>
     <GarminLoadRanges range={reading.range} />
     <GarminLoadChart window={history} compact />
-    {(reading.acuteNote || reading.ratioNote) && <div className="load-attention">
-      <strong>Above optimal</strong><div>{reading.acuteNote && <p>{reading.acuteNote}</p>}
-        {reading.ratioNote && <p>{reading.ratioNote}</p>}</div>
-    </div>}
+    <GarminLoadInsight reading={reading} latest={latest} previous={previous} preview={report.preview} />
   </DataCard>;
 }
 
@@ -103,6 +102,8 @@ function FitnessCard({ report, stamp }) {
   const rows = filterCardHistory(history.rows, report.date, 42);
   const latest = rows[0] || filterCardHistory(history.rows, report.date, null)[0];
   const [fitness, fatigue, form] = latest?.plot ?? [];
+  const prior = latest && rows.find(row => row.date === shiftDate(latest.date, -1));
+  const week = latest && rows.find(row => row.date === shiftDate(latest.date, -7));
   return <DataCard as="section" className="body-fitness-panel" aria-labelledby="body-fitness" title="Fitness" history="intervals" initialHistoryDays={42}
     detail={<DetailFacts rows={[
       ["Source", source], ["Reading", latest?.date === report.intervals?.date ? stamp : latest?.date],
@@ -115,6 +116,7 @@ function FitnessCard({ report, stamp }) {
       <Stat label="Form" value={Number.isFinite(form) ? `${form > 0 ? "+" : ""}${decimal(form)}` : null} color={palette.green} />
     </dl>
     {rows.length > 0 && <FitnessHistoryChart history={history} rows={rows} first={shiftDate(report.date, -41)} last={report.date} compact />}
+    <FitnessInsight latest={latest} prior={prior} week={week} />
     {!report.preview && <a className="fitness-source-link" href="https://intervals.icu/fitness" target="_blank" rel="noreferrer">Open Fitness in Intervals.icu ↗</a>}
   </DataCard>;
 }
@@ -230,19 +232,34 @@ export function ConditionOverview({ report }) {
     <div className="body-secondary">
       <GarminLoadCard report={report} data={data} source={source} />
       <FitnessCard report={report} stamp={data.intervalsStamp} />
-      <DataCard as="section" className="body-vitals-panel" aria-labelledby="body-vitals" title="Vitals" history="vitals" detail={<DetailFacts rows={[["Source", source], ["Reading", data.overnightStamp], ...data.overnight.map(item => [item.label, item.value, item.context])]} />}><h3 id="body-vitals">Vitals</h3><dl className="body-stat-row"><Stat label="SpO₂" value={num(w.averageSpo2)} unit="%" detail={Number.isFinite(w.lowestSpo2)?`Min ${w.lowestSpo2}%`:null} color={palette.blue} /><Stat label="RR" value={num(w.averageRespiration)} unit="br/min" detail={Number.isFinite(w.minimumRespiration)?`Min ${w.minimumRespiration}`:null} /><Stat label="Awake" value={num(w.awakeMinutes)} unit="min" detail={Number.isFinite(w.restlessMoments)?`${w.restlessMoments} restless`:null} /></dl></DataCard>
-      <DataCard as="section" aria-labelledby="body-adaptation" title="Adaptation · Garmin" history="adaptation" detail={<DetailFacts rows={[["Source", source], ["Training status capture", data.fitnessStamp], ...data.fitness.map(item => [item.label, item.value, item.context])]} />}>
-        <h3 id="body-adaptation">Adaptation · Garmin</h3>
-        <dl className="body-stat-row adaptation-measures">
-          <Stat label="VO₂ max" value={num(w.vo2Max)} detail={w.vo2MaxCategory} color={palette.blue} />
-          {isScore(heat) ? <div className="adaptation-heat">
-            <dt>Heat acclimation</dt>
-            <dd><ScoreArc label="Heat acclimation" value={heat} color={palette.orange} />
-              {w.heatAcclimationTrend && <span>{w.heatAcclimationTrend}</span>}
-            </dd>
-          </div> : <Stat label="Heat acclimation" value={null} detail={w.heatAcclimationTrend} />}
-        </dl>
-        <div className="adaptation-status">{w.trainingStatus && <span style={{ color: statusColor(w.trainingStatus) }}>{w.trainingStatus}</span>}{w.loadFocus && <span>{w.loadFocus}</span>}</div>
+      <DataCard as="section" className="body-vitals-adaptation" aria-labelledby="body-vitals-adaptation" title="Vitals & adaptation"
+        history="vitals-adaptation" detail={<DetailFacts rows={[
+          ["Source", source], ["Overnight reading", data.overnightStamp], ...data.overnight.map(item => [item.label, item.value, item.context]),
+          ["Training status reading", data.fitnessStamp], ...data.fitness.map(item => [item.label, item.value, item.context]),
+        ]} />}>
+        <h3 id="body-vitals-adaptation">Vitals &amp; adaptation</h3>
+        <div className="vitals-adaptation-groups">
+          <div className="vitals-adaptation-group">
+            <h4>Overnight</h4>
+            <dl className="body-stat-row">
+              <Stat label="SpO₂" value={num(w.averageSpo2)} unit="%" detail={Number.isFinite(w.lowestSpo2) ? `Min ${w.lowestSpo2}%` : null} color={palette.blue} />
+              <Stat label="Respiration" value={num(w.averageRespiration)} unit="br/min" detail={Number.isFinite(w.minimumRespiration) ? `Min ${w.minimumRespiration}` : null} />
+              <Stat label="Awake" value={num(w.awakeMinutes)} unit="min" detail={Number.isFinite(w.restlessMoments) ? `${w.restlessMoments} restless` : null} />
+            </dl>
+          </div>
+          <div className="vitals-adaptation-group">
+            <h4>Adaptation</h4>
+            <dl className="body-stat-row">
+              <Stat label="VO₂ max" value={num(w.vo2Max)} detail={w.vo2MaxCategory} color={palette.blue} />
+              {isScore(heat) ? <div className="adaptation-heat">
+                <dt>Heat acclimation</dt>
+                <dd><ScoreArc label="Heat acclimation" value={heat} color={palette.orange} />
+                  {w.heatAcclimationTrend && <span>{w.heatAcclimationTrend}</span>}
+                </dd>
+              </div> : <Stat label="Heat acclimation" value={null} detail={w.heatAcclimationTrend} />}
+            </dl>
+          </div>
+        </div>
       </DataCard>
     </div>
     {extraReadings.length > 0 && <details className="check-in-panel body-more">

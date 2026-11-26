@@ -63,9 +63,9 @@ export function LoadForecast({ report }) {
     <section className="load-forecast" aria-labelledby="forecast-heading">
       <div className="forecast-heading">
         <div><h2 id="forecast-heading">Load simulator</h2>
-          <EvidenceMeta source="Intervals.icu-style model" date={date} dateLabel="Projection" state="End-of-day estimate" />
+          <EvidenceMeta source="Intervals.icu-style estimate" date={date} />
         </div>
-        <div className="forecast-calibration">{historical && <EvidenceMeta date={report.date} dateLabel="Snapshot" />}{estimate.history?.sparse && <span>Sparse</span>}{estimate.available && plan.sport !== "Rest" && estimate.hasVariation === false && <span>No effort separation</span>}{estimate.durationExtrapolated && <span>Extrapolated</span>}</div>
+        {historical && <EvidenceMeta date={report.date} dateLabel="Snapshot" />}
       </div>
       <div className="forecast-controls">
         <label>Sport<select value={plan.sport} onChange={event => changePlan(event.target.value)}>{sports.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>
@@ -84,6 +84,11 @@ export function LoadForecast({ report }) {
         <div className="table-scroll"><table><caption>{formatDate(date)} · {effortLabels[plan.effort]}</caption><thead><tr><th scope="col">Session</th><th scope="col">Load</th><th scope="col">ATL / CTL</th><th scope="col">TSB</th><th scope="col">Select</th></tr></thead><tbody>{comparisons.map(row => <tr key={row.label}><th scope="row">{row.label}</th><td>{row.load.available ? `${decimal(row.load.low, 1)}–${decimal(row.load.high, 1)}` : "—"}</td><td>{row.projected.available && !invalidToday ? decimal(row.projected.mid.ratio, 2) : "—"}</td><td>{row.projected.available && !invalidToday ? signed(row.projected.mid.form) : "—"}</td><td><button className="forecast-use" aria-label={`Use ${row.label}`} onClick={() => changePlan(row.sport, row.minutes)}>Use</button></td></tr>)}</tbody></table></div>
       </details>
       <details className="forecast-details"><summary>Model settings</summary>
+        <DetailFacts rows={[
+          ["Comparable sessions", estimate.history?.n, estimate.history?.sparse ? "Limited history" : null],
+          ["Effort bands", estimate.available && plan.sport !== "Rest" && estimate.hasVariation === false ? "Similar load rates across effort choices" : null],
+          ["Duration", estimate.durationExtrapolated ? "Outside recorded duration range" : null],
+        ]} />
         <label className="forecast-today-toggle"><input type="checkbox" checked={todayEnabled} onChange={event => setTodayEnabled(event.target.checked)} />Additional session today</label>
         {todayEnabled && <div className="forecast-controls forecast-today-controls">
           <label>Today · sport<select value={todayPlan.sport} onChange={event => setTodayPlan({ ...todayPlan, sport: event.target.value })}>{sports.filter(([value]) => value !== "Rest").map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label>

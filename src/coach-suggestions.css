@@ -34,6 +34,7 @@
 }
 
 .coach-suggestions-evidence {
+  margin-top: 7px;
   min-height: 36px;
   padding: 4px 10px;
   border: 1px solid var(--rule);
@@ -46,23 +47,18 @@
 }
 
 .coach-suggestions-signals {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 5px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
+  margin: 6px 0 0;
+  padding-inline-start: 16px;
   color: var(--muted);
   font-size: 12px;
 }
 
-.coach-suggestions-signals li {
-  padding: 3px 8px;
-  border: 1px solid var(--panel-border);
-  border-radius: 4px;
-  background: var(--surface);
-  font-variant-numeric: tabular-nums;
-}
+.coach-plan-readings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 9px 0 0; }
+.coach-plan-readings > div { min-width: 0; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 7px; }
+.coach-plan-readings dt { color: var(--muted); font-size: 11px; }
+.coach-plan-readings dd { margin: 2px 0 0; font-size: clamp(12px, 1.6vw, 16px); font-weight: 650; }
 
 .coach-suggestions-grid {
   display: grid;

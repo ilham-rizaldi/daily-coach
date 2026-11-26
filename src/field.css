@@ -155,6 +155,24 @@ body .prediction-grid {
 .load-attention strong { color: var(--amber); }
 .load-attention p { margin: 0; }
 .load-attention a { margin-left: auto; }
+.load-interpretation { display: grid; gap: 6px; padding: 11px 12px; line-height: 1.45; }
+.load-interpretation[data-level="steady"] { border-left-color: var(--blue); background: color-mix(in srgb, var(--blue) 7%, transparent); }
+.load-interpretation[data-level="steady"] strong { color: var(--blue); }
+.load-interpretation[data-level="fitness"] { border-left-color: var(--purple); background: color-mix(in srgb, var(--purple) 8%, transparent); }
+.load-interpretation[data-level="fitness"] strong { color: var(--purple); }
+.body-overview .body-secondary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.body-vitals-adaptation { grid-column: 1 / -1; }
+.vitals-adaptation-groups { display: grid; grid-template-columns: 3fr 2fr; gap: 10px; }
+.vitals-adaptation-group { min-width: 0; padding: 10px; border: 1px solid var(--rule); border-radius: 8px; }
+.vitals-adaptation-group h4 { margin: 0 0 10px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.vitals-adaptation-group .body-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.vitals-adaptation-group + .vitals-adaptation-group .body-stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.vitals-adaptation-group .body-stat-row dt { font-size: 11px; }
+.body-vitals-adaptation .body-stat-row dd strong { font-size: clamp(20px, 2.4vw, 32px); }
+.body-vitals-adaptation .adaptation-heat .score-arc { max-width: 100px; }
+@media (max-width: 760px) {
+  .body-overview .body-secondary, .vitals-adaptation-groups { grid-template-columns: minmax(0, 1fr); }
+}
 .daily-load-plot { margin-top: auto; margin-bottom: auto; }
 .body-load-panel { display: flex; flex-direction: column; }
 .body-load-panel > .card-details-access { margin-top: auto; padding-top: 8px; }
@@ -183,6 +201,8 @@ body .prediction-grid {
 .training-status-panel h2 { margin: 0; font-size: var(--panel-heading); font-weight: 680; letter-spacing: -.025em; }
 .training-status-summary strong { display: inline-flex; align-items: center; gap: 7px; font-size: clamp(19px, 2.4vw, 27px); font-weight: 650; letter-spacing: -.025em; }
 .training-status-summary .status-dot::before { width: 6px; height: 6px; margin: 0; }
+.training-status-timeline { display: grid; grid-template-columns: repeat(28, minmax(0, 1fr)); gap: 2px; }
+.training-status-timeline span { min-width: 0; height: 6px; border-radius: 2px; background: var(--rule); }
 .training-status-summary span, .training-status-basis { color: var(--muted); font-size: 13px; }
 .training-status-basis { margin: 0; }
 .training-status-factors { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; gap: 8px; }

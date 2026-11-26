@@ -50,6 +50,8 @@
 .mix-focus-guide small { line-height: 1.35; }
 .mix-focus-action { display: block; margin-top: 5px; }
 .mix-card .mix-recovery-note { color: var(--text); font-weight: 600; }
+.mix-focus-summary { display: flex; flex-wrap: wrap; gap: 3px 10px; margin: 0; color: var(--muted); font-size: 12px; }
+.mix-focus-summary b { color: var(--text); }
 .mix-card .mix-target-note { color: var(--quiet, #a0afbe); }
 .mix-zone-key { display: flex; flex-wrap: wrap; gap: 4px 11px; margin-top: 10px; color: var(--muted, #b1becb); font-size: 11px; }
 .mix-zone-key span { white-space: nowrap; }

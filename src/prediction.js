@@ -403,6 +403,49 @@ export function automaticHeartRate(data, key, value, band) {
   };
 }
 
+export function predictionAudit(data, key, ceiling, band) {
+  if (band) return auditDuration(data, key, ceiling, band);
+  const standard = auditDuration(data, key, ceiling, predictionDurations.find(item => item.id === "steady"));
+  if (standard.compared) return standard;
+  const alternatives = predictionDurations.filter(item => item !== standard.band)
+    .map(item => auditDuration(data, key, ceiling, item)).filter(result => result.compared);
+  return alternatives.sort((a, b) => b.compared - a.compared || b.measured - a.measured)[0] ?? standard;
+}
+
+function auditDuration(data, key, ceiling, band) {
+  const cohort = data?.cohort;
+  const validCeiling = finiteIn(ceiling, HR_CEILING_MIN, HR_CEILING_MAX);
+  const days = groupOn((cohort?.historyRows ?? []).filter(row => inPredictionDuration(row, band)), row => row.date);
+  const prior = [];
+  const rows = [...days.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, observations]) => {
+    const actual = dayRepresentative(observations);
+    const eligibleFrom = shiftDate(date, -PREDICTION_DAYS);
+    const historyRows = prior.filter(row => row.date >= shiftDate(date, -EXTENDED_PREDICTION_DAYS));
+    const recent = historyRows.filter(row => row.date >= eligibleFrom);
+    const historicalData = { cohort: { ...cohort, historyRows, recent }, context: [] };
+    const fit = automaticHeartRate(historicalData, key, actual.value, band);
+    const estimate = fit.kind === "estimate" ? fit.bpm : null;
+    const priorDays = [...groupOn(historyRows, row => row.date).values()].slice(-7);
+    const baseline = priorDays.length >= 2 ? median(priorDays.map(samples => dayRepresentative(samples).hrBpm)) : null;
+    const peaks = observations.map(row => row.peakHrBpm).filter((peak, index) =>
+      finiteIn(peak, HR_CEILING_MIN, HR_CEILING_MAX) && peak >= observations[index].hrBpm);
+    const peak = peaks.length ? Math.max(...peaks) : null;
+    prior.push(...observations);
+    return { ...actual, estimate, baseline, peak, blocks: observations.length, measuredPeaks: peaks.length,
+      over: validCeiling && peak != null ? peak > ceiling : null,
+      matchedDays: estimate != null ? fit.matched.length : 0 };
+  });
+  const paired = rows.filter(row => row.estimate != null);
+  const comparedWithBaseline = rows.filter(row => row.baseline != null);
+  const measured = rows.filter(row => row.peak != null);
+  return {
+    rows, band, validCeiling, compared: paired.length, measured: measured.length,
+    overshoots: validCeiling ? measured.filter(row => row.over).length : null,
+    meanError: paired.length ? paired.reduce((sum, row) => sum + Math.abs(row.estimate - row.hrBpm), 0) / paired.length : null,
+    baselineError: comparedWithBaseline.length ? comparedWithBaseline.reduce((sum, row) => sum + Math.abs(row.baseline - row.hrBpm), 0) / comparedWithBaseline.length : null,
+  };
+}
+
 export function automaticCeiling(data, key, ceiling, band) {
   if (!predictionModes[key] || !finiteIn(ceiling, HR_CEILING_MIN, HR_CEILING_MAX)) {
     return withoutForecast(`Enter an HR ceiling from ${HR_CEILING_MIN} to ${HR_CEILING_MAX} bpm.`);

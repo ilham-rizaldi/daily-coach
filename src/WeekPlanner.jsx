@@ -56,7 +56,7 @@ export default function WeekPlanner({ report }) {
   }
   return <section className="week-planner" aria-labelledby="week-plan-title">
     <div className="week-plan-heading"><div><h2 id="week-plan-title">7-day plan</h2>
-      <EvidenceMeta source="Intervals.icu-style model" from={plans[0]?.date} date={plans.at(-1)?.date} state="End-of-day estimate" />
+      <EvidenceMeta source="Intervals.icu-style estimate" />
     </div><div className="week-plan-actions"><button onClick={() => setPlans(restWeek(report))}>Reset rest</button></div></div>
     <div className="week-plan-grid">{plans.map((plan, index) => {
       const estimate = estimateSessionLoad(report, { sport: plan.sport, minutes: numeric(plan.minutes), effort: plan.effort });
@@ -80,18 +80,17 @@ export default function WeekPlanner({ report }) {
         <small>{valid && estimate.available ? `${display(estimate.low)}–${display(estimate.high)}` : valid ? "History unavailable" : "1–600 min"}</small>
       </DataCard>;
     })}</div>
-    {(Number.isFinite(readiness) || hardSessions > 0 || scenarioFlags.length > 0) && <div className={`week-scenario-status${recoveryReview ? " week-scenario-caution" : ""}`} aria-live="polite">
+    {(Number.isFinite(readiness) || hardSessions > 0) && <div className={`week-scenario-status${recoveryReview ? " week-scenario-caution" : ""}`} aria-live="polite">
       {Number.isFinite(readiness) && <span>Baseline readiness {display(readiness)}</span>}
       {hardSessions > 0 && <span>{hardSessions} hard {hardSessions === 1 ? "session" : "sessions"}</span>}
-      {scenarioFlags.map(flag => <small key={flag}>{flag}</small>)}
     </div>}
     {!result.available && <p className="week-plan-status" role="status">{result.error}</p>}
     {result.available && <>
       <dl className="week-plan-summary"><div><dt>Volume</dt><dd><DurationValue seconds={result.totals.minutes * 60} /></dd><small>{result.totals.sessions} sessions</small></div><div><dt>TL · Est.</dt><dd>{display(result.totals.load)}</dd><small>{display(result.totals.low)}–{display(result.totals.high)}</small></div>{Object.entries(metrics).map(([key, { label, color }]) => <div key={key}><dt>{label} · {formatDate(end.date)}</dt><dd style={{ color }}>{display(end.mid[key])}</dd><small>{display(end.range[key].low)}–{display(end.range[key].high)}</small></div>)}</dl>
       <div className="week-chart-heading"><div className="week-metric-switch" role="group" aria-label="Projection metric">{Object.entries(metrics).map(([key, { label }]) => <button key={key} aria-pressed={metric === key} onClick={() => setMetric(key)}>{label}</button>)}</div><div className="week-chart-key"><span style={{ color: selected.color }}>● Plan</span><span>┄ Rest</span><span>Scenario range</span></div></div>
-      <DataCard as="div" title={`Seven-day ${selected.label} projection`} history="intervals" detail={<DetailTable
+      <DataCard as="div" title={`Seven-day ${selected.label} projection`} history="intervals" detail={<><DetailFacts rows={[["Model notes", scenarioFlags.join(" · ")]]} /><DetailTable
         caption="Intervals.icu-style estimates · baseline and daily projected outputs" columns={["Date", "Plan", "Scenario range", "Rest"]}
-        rows={chart.map(row => [row.label, display(row.value), row.range.map(display).join("–"), display(row.rest)])} />}>
+        rows={chart.map(row => [row.label, display(row.value), row.range.map(display).join("–"), display(row.rest)])} /></>}>
       <div className="week-plan-chart" role="group" aria-label={`Estimated seven-day ${selected.label} with historical scenario range and rest comparison`}>
         <ResponsiveContainer width="100%" height="100%"><ComposedChart data={chart} margin={{ top: 10, right: 12, left: 0, bottom: 0 }} accessibilityLayer>
           <CartesianGrid vertical={false} stroke="#3d454e" />

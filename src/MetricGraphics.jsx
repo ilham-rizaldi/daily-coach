@@ -17,23 +17,34 @@ export function statusColor(status) {
 export const isScore = value => Number.isFinite(value) && value >= 0 && value <= 100;
 const fractionFilled = (value, count, index) => Math.max(0, Math.min(1, value / 100 * count - index));
 
+const statusPalette = new Map([
+  ["peaking", palette.purple], ["productive", palette.green], ["maintaining", "var(--sleep-light)"],
+  ["recovery", "var(--sleep-deep)"], ["unproductive", palette.orange],
+  ["overreaching", "var(--readiness-red)"], ["strained", palette.red], ["detraining", palette.gray],
+]);
+
+export function trainingTrendColor(value) {
+  return statusPalette.get(String(value || "").trim().toLowerCase()) || palette.gray;
+}
+
+export const readinessBands = [
+  { name: "Poor", min: 0, max: 24, color: "var(--readiness-red)" },
+  { name: "Low", min: 25, max: 49, color: palette.orange },
+  { name: "Moderate", min: 50, max: 74, color: palette.green },
+  { name: "High", min: 75, max: 94, color: palette.blue },
+  { name: "Prime", min: 95, max: 100, color: palette.purple },
+];
+
 export function readinessColor(value) {
   if (!isScore(value)) return palette.gray;
-  const low = "var(--readiness-red)";
-  if (value === 0) return low;
-  if (value === 50) return palette.orange;
-  if (value === 100) return palette.green;
-  const [from, to, progress] = value < 50
-    ? [low, palette.orange, value * 2]
-    : [palette.orange, palette.green, (value - 50) * 2];
-  return `color-mix(in oklab, ${from}, ${to} ${progress}%)`;
+  return readinessBands.findLast(band => value >= band.min).color;
 }
 
 export function ReadinessGauge({ value, label = "Readiness" }) {
   if (!isScore(value)) return null;
   const count = 32;
   return <div className="score-meter" role="img"
-    aria-label={`${label} ${decimal(value)} out of 100. Red at zero, green at 100.`}
+    aria-label={`${label} ${decimal(value)} out of 100. ${readinessBands.findLast(band => value >= band.min).name} range.`}
     style={{ "--score-count": count }}>
     {Array.from({ length: count }, (_, i) => <span key={i} aria-hidden="true"
       style={{

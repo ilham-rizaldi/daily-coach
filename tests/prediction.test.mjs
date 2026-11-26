@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { shiftDate } from "../src/report.js";
-import { automaticCeiling, automaticHeartRate, automaticPredictionDataset, parseScenarioPace, predictEffortAtCeiling, predictHeartRate, predictionDataset } from "../src/prediction.js";
+import { automaticCeiling, automaticHeartRate, automaticPredictionDataset, parseScenarioPace, predictEffortAtCeiling, predictHeartRate, predictionAudit, predictionDataset, predictionDurations } from "../src/prediction.js";
 
 const end = "2026-04-25";
 const ride = (date, watts, hr, extra = {}) => ({
@@ -147,4 +147,50 @@ test("duration selects independent efforts and an unobserved ceiling provides a 
   const noEffort = automaticHeartRate(data, "cycling", 150, longer);
   assert.equal(noEffort.bpm, undefined);
   assert.equal(noEffort.closest.value, 100);
+});
+
+test("the prediction audit only trains on earlier dates and same-duration blocks", () => {
+  const day = delta => shiftDate(end, delta);
+  const report = { date: end, predictionEvidence: { blocks: [
+    ride(day(-3), 95, 125, { peakHrBpm: 130 }),
+    ride(day(-2), 105, 135, { peakHrBpm: 140 }),
+    ride(day(-2), 100, 64, { durationSeconds: 720, startSeconds: 900, peakHrBpm: 70 }),
+    ride(day(-1), 100, 134, { peakHrBpm: 150 }),
+    ride(end, 100, 185, { peakHrBpm: 190 }),
+  ] } };
+  const data = automaticPredictionDataset(report, "cycling");
+  const audit = predictionAudit(data, "cycling", 150);
+  assert.deepEqual(audit.rows.slice(0, 3).map(row => [row.estimate, row.baseline]), [[null, null], [null, null], [130, 130]]);
+  assert.equal(audit.rows[2].matchedDays, 2);
+  assert.equal(audit.overshoots, 1);
+  assert.equal(audit.measured, 4);
+  assert.equal(predictionAudit(data, "cycling", 150, predictionDurations.find(b => b.id === "long")).rows.length, 1);
+});
+
+test("the ceiling rate uses the highest measured peak once per local date", () => {
+  const first = shiftDate(end, -2);
+  const blocks = [
+    ride(first, 100, 124, { peakHrBpm: 149 }),
+    ride(first, 105, 125, { startSeconds: 810, peakHrBpm: 155 }),
+    ride(shiftDate(end, -1), 104, 125, { peakHrBpm: 150 }),
+    ride(end, 104, 125),
+  ];
+  const data = automaticPredictionDataset({ date: end, predictionEvidence: { blocks } }, "cycling");
+  const audit = predictionAudit(data, "cycling", 150);
+  assert.deepEqual(audit.rows.map(row => [row.peak, row.over, row.measuredPeaks]), [[155, true, 2], [150, false, 1], [null, null, 0]]);
+  assert.equal(audit.measured, 2);
+  assert.equal(audit.overshoots, 1);
+  assert.equal(predictionAudit(data, "cycling", 156).overshoots, 0);
+  assert.equal(predictionAudit(data, "cycling", NaN).overshoots, null);
+});
+
+test("the automatic audit uses a duration with a test when the standard band has none", () => {
+  const data = automaticPredictionDataset({ date: end, predictionEvidence: { blocks: [
+    ride(shiftDate(end, -3), 95, 125, { durationSeconds: 720 }),
+    ride(shiftDate(end, -2), 105, 135, { durationSeconds: 720 }),
+    ride(shiftDate(end, -1), 100, 131, { durationSeconds: 720 }),
+    ride(end, 110, 130),
+  ] } }, "cycling");
+  assert.equal(predictionAudit(data, "cycling", 150).band.id, "long");
+  assert.equal(predictionAudit(data, "cycling", 150).compared, 1);
 });

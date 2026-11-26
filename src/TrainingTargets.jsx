@@ -63,7 +63,6 @@ function PacingCard({ definition, plan }) {
           <dt>{metric.label}</dt>
           <dd>{range ? <>
             <Readout value={rangeLabel(range, metric.unit)} unit={metric.unit} />
-            <Evidence evidence={evidence} />
           </> : <p className="target-evidence">Target unavailable</p>}</dd>
         </DataCard>)}
     </dl>
@@ -112,7 +111,6 @@ export function ThresholdChecks({ report }) {
         <Readout value={row.value} unit={row.unit} />
         <p className="threshold-status">{row.status}</p>
         <p>{row.detail}</p>
-        <Evidence evidence={targetEvidence(row.evidence)} />
       </DataCard>)}
     </div>}
     {comparisons.length > 0 && <DataCard className="training-panel power-check" data-signal="power" title="Power by provider" history={{ kind: "activities", sport: "Ride", metric: "powerWatts" }}
@@ -174,22 +172,17 @@ export function WorkoutReview({ report }) {
         empty="No comparable work block is linked to a dated plan for this workout." />
     </>}>
       <header className="training-card-heading">
-        <div><h3>{selected.name || sport}</h3><EvidenceMeta source={selected.source} date={selected.date} year>
-          <span>{duration(selected.timerSeconds ?? selected.movingSeconds)}</span>
-        </EvidenceMeta></div>
+        <div><h3>{selected.name || sport}</h3><p>{duration(selected.timerSeconds ?? selected.movingSeconds)}</p></div>
       </header>
       <dl className="review-metrics">{rows.map(([label, value, unit, tone]) => <div key={label}>
         <dt>{label}</dt><dd><Readout value={numericValue(value, unit)} unit={unit} tone={tone} /></dd>
       </div>)}</dl>
-      {selected.powerProcessing && <p>{selected.powerProcessing}</p>}
       {Number.isFinite(selected.intervalsVariabilityIndex) && <p>Intervals.icu · VI {decimal(selected.intervalsVariabilityIndex, 2)}
         {Number.isFinite(selected.coastingPercent) && ` · Coasting ${decimal(selected.coastingPercent)}%`}</p>}
       <div className="review-comparison">
         <h4>Planned vs actual</h4>
         {review?.rows.length ? <>
-          <EvidenceMeta source={review.workBlock.source} date={review.plan.date} dateLabel="Plan" year>
-            <span>{duration(review.workBlock.seconds)} steady work</span>
-          </EvidenceMeta>
+          <p>{duration(review.workBlock.seconds)} steady work</p>
           <div className="table-scroll"><table className="reference-table"><thead>
             <tr><th scope="col">Metric</th><th scope="col">Target</th><th scope="col">Recorded</th><th scope="col">Result</th></tr>
           </thead><tbody>{review.rows.map(row => <tr key={row.key}>

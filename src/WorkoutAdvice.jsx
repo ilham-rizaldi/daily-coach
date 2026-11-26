@@ -2,9 +2,8 @@ import { DataCard, DetailFacts } from "./CardDetails.jsx";
 import { DurationValue, MetricValue } from "./Readout.jsx";
 import { conditionStamp } from "./condition.js";
 import { decimal, duration, formatDate } from "./report.js";
-import { BaselineMeter, ReadinessGauge, ScoreRing, palette, readinessColor, statusColor } from "./MetricGraphics.jsx";
+import { BaselineMeter, ReadinessGauge, ScoreRing, palette, readinessColor, statusColor, trainingTrendColor } from "./MetricGraphics.jsx";
 import { paceClock } from "./pacing.js";
-import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import "./workout-advice.css";
 
 // Garmin's recovery timer ranges from zero to four days.
@@ -78,10 +77,12 @@ export function WorkoutAdvice({ advice }) {
       {performance && <p className="workout-performance">
         <b>Longest ride today</b> · {duration(performance.seconds)} · {performance.watts} W · {performance.hr} bpm
       </p>}
-      {trainingStatus && <p className="workout-performance">Garmin rates your training trend <b>{trainingStatus}</b>.
-        {acuteHigh && " Recent load is above its usual range."}</p>}
+      {trainingStatus && <p className="workout-training-trend"><span>Training trend</span>
+        <b className="status-dot" style={{ color: trainingTrendColor(trainingStatus) }}>{trainingStatus}</b>
+        {acuteHigh && <span className="workout-high-load">High acute load</span>}
+      </p>}
     </div>
-    {(stamp || hasSignals) && <div className="workout-advice-evidence">
+    {hasSignals && <div className="workout-advice-evidence">
       {hasSignals && <dl>
         {Number.isFinite(readiness) && <div className="workout-signal" style={{ "--signal-color": readinessColor(readiness) }}>
           <dt>Readiness</dt><dd>
@@ -110,8 +111,6 @@ export function WorkoutAdvice({ advice }) {
           </dd>
         </div>}
       </dl>}
-      {stamp && <EvidenceMeta className="evidence-footer" source={source} date={date} dateLabel="Reading" observedAt={observedAt}
-        observationWindow={observationWindow} />}
     </div>}
     <TomorrowWorkout plan={tomorrow} projection={restProjection} />
   </DataCard>;

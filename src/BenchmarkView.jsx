@@ -134,7 +134,7 @@ function SegmentPanel({ data }) {
     </div>
     {group ? <>
       <div className="benchmark-readout">
-        <div><h3>{group.label}</h3><Source name={group.source} href={latest.url} date={latest.date} /></div>
+        <h3>{group.label}</h3>
         <MetricValue as="strong" value={clock(latest.seconds)} />
       </div>
       <div className="benchmark-meta">
@@ -180,7 +180,7 @@ function WorkoutPanel({ data }) {
     </div>
     {workout ? <>
       <div className="benchmark-readout">
-        <div><h3>{workout.label}</h3><Source name={workout.source} href={workout.url} date={workout.date} /></div>
+        <h3>{workout.label}</h3>
         <MetricValue as="strong" value={workout.intervals.length} unit={lapPace ? "laps" : workout.intervals.length === 1 ? "interval" : "intervals"} />
       </div>
       {lapPace ? <div className="benchmark-laps" aria-label="Recorded full-lap pace in minutes per kilometer">

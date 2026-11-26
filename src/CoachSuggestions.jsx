@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { formatDate } from "./report.js";
+import { duration, formatDate } from "./report.js";
 import { DataCard, DetailFacts } from "./CardDetails.jsx";
 import "./coach-suggestions.css";
 
@@ -53,6 +53,13 @@ export default function CoachSuggestions({ report, onEvidence, children }) {
 
   const showSession = children && report?.coaching?.nextSession?.minutes > 0
     && plan.sections.some(section => section.kind === "training");
+  const w = report.wellness;
+  const sameDate = (w?.date || w?.provenance?.datedRecovery?.date) === report.date;
+  const signals = sameDate ? [
+    ["Sleep", Number.isFinite(w.sleepMinutes) && duration(w.sleepMinutes * 60)],
+    ["Readiness", Number.isFinite(w.readiness) && `${w.readiness}/100`],
+    ["Recovery left", Number.isFinite(w.recoveryTimeMinutes) && duration(w.recoveryTimeMinutes * 60)],
+  ].filter(([, value]) => value) : [];
 
   return (
     <section className="coach-suggestions" aria-labelledby={headingId}>
@@ -61,17 +68,7 @@ export default function CoachSuggestions({ report, onEvidence, children }) {
           <p className="coach-suggestions-label">Saved coach plan{plan.plannedDate && <> · <time dateTime={plan.plannedDate}>{formatDate(plan.plannedDate)}</time></>}</p>
           <h2 id={headingId}>{plan.title}</h2>
         </div>
-        {typeof onEvidence === "function" && plan.referenceIds.length > 0 && (
-          <button type="button" className="coach-suggestions-evidence" onClick={() => onEvidence(plan.referenceIds)}>
-            Research
-          </button>
-        )}
       </header>
-      {plan.why.length > 0 && (
-        <ul className="coach-suggestions-signals" role="list" aria-label="Signals used">
-          {plan.why.map(signal => <li key={signal}>{signal}</li>)}
-        </ul>
-      )}
       <div className="coach-suggestions-grid">
         {plan.sections.map(({ kind, title, items }, index) => (
           <DataCard as="section" key={`${kind}-${index}`} className="coach-suggestion" data-kind={kind} title={title} history="coach"
@@ -84,12 +81,21 @@ export default function CoachSuggestions({ report, onEvidence, children }) {
           </DataCard>
         ))}
       </div>
+      {signals.length > 0 && <dl className="coach-plan-readings">
+        {signals.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+      </dl>}
       {(plan.alternative || plan.reassess) && (
         <dl className="coach-suggestions-options">
           {plan.alternative && <div><dt>Alternative</dt><dd>{plan.alternative}</dd></div>}
           {plan.reassess && <div><dt>Reassess</dt><dd>{plan.reassess}</dd></div>}
         </dl>
       )}
+      {plan.why.length > 0 && <details className="coach-suggestions-session">
+        <summary>Why this plan</summary>
+        <ul className="coach-suggestions-signals" aria-label="Signals used">{plan.why.map(signal => <li key={signal}>{signal}</li>)}</ul>
+      </details>}
+      {typeof onEvidence === "function" && plan.referenceIds.length > 0 && <button type="button"
+        className="coach-suggestions-evidence" onClick={() => onEvidence(plan.referenceIds)}>Research</button>}
       {showSession && (
         <details className="coach-suggestions-session">
           <summary>Session plan</summary>

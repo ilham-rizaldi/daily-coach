@@ -104,7 +104,6 @@ function HeartRateMix({ report }) {
           {zoneOrder.filter(zone => period.zones[zone] > 0).map(zone => <span key={zone} className="mix-fill" data-zone={zone}
             style={{ width: `${100 * period.zones[zone] / period.total}%` }} title={`${zone} · ${minutes(period.zones[zone])}`} />)}
         </div>
-        <small className="mix-coverage">{period.listed != null && period.listed !== period.tracked ? `${period.tracked}/${period.listed}` : period.tracked} {period.tracked === 1 && (period.listed == null || period.listed === 1) ? "session" : "sessions"} captured</small>
       </div>)}</div>
       <div className="mix-zone-key" aria-label="Latest observed zone shares">{zoneOrder.filter(zone => latest.zones[zone] > 0).map(zone => <span key={zone}><i data-zone={zone} aria-hidden="true" />{zone} <b>{decimal(100 * latest.zones[zone] / latest.total)}%</b></span>)}</div>
       <details className="performance-data mix-data"><summary>Zone data</summary><div className="table-scroll"><table>
@@ -152,8 +151,6 @@ function FocusSport({ sport, guide, reading, bucket }) {
         <MetricValue as="strong" value={focusValue(reading.value, format)} unit={sport === "cycling" ? "W" : "min/km"} />
         {reading.hr && <MetricValue as="strong" value={focusValue(reading.hr, Math.round)} unit="bpm" />}
       </div>
-      <small>{focusScopeNames[reading.scope]} · {reading.rows.length} {reading.rows.length === 1 ? "day" : "days"}</small>
-      <small>{reading.source} · {labelRange(reading.first, reading.last)}{reading.environment ? ` · ${reading.environment}` : ""}</small>
     </> : <small className="mix-guide-missing">{bucket === "anaerobic" ? "No verified short reps" : "No matched effort recorded"}</small>}
     <small>{session}</small>
   </div>;
@@ -178,9 +175,11 @@ function GarminFocus({ report }) {
   const advice = items.length && workoutAdvice(report, jakartaDate(new Date()));
   const easyTargets = items.length ? easyPacingLines(report) : [];
   const readings = items.length ? loadFocusReadings(report, start, end) : {};
+  const aboveTarget = items.filter(item => item.status === "above").map(item => item.label.toLowerCase());
+  const belowTarget = items.filter(item => item.status === "below").map(item => item.label.toLowerCase());
   const readingRows = items.flatMap(({ key, label }) => Object.entries(readings[key] || {}).flatMap(([sport, reading]) =>
     reading.rows.map(row => [
-      label, focusSportNames[sport], formatDate(row.date, { year: "numeric" }), minutes(row.durationSeconds),
+      label, focusSportNames[sport], formatDate(row.date, { year: "numeric" }), minutes(row.durationSeconds), focusScopeNames[reading.scope], row.environment,
       sport === "cycling" ? `${Math.round(row.value)} W` : `${paceClock(row.value)} min/km`,
       Number.isFinite(row.hrBpm) ? `${Math.round(row.hrBpm)} bpm` : null,
       Number.isFinite(row.peakHrBpm) ? `${Math.round(row.peakHrBpm)} bpm` : null,
@@ -204,13 +203,15 @@ function GarminFocus({ report }) {
       })} />
       {!!readingRows.length && <>
         <h3>Recorded efforts in this window</h3>
-        <DetailTable columns={["Focus", "Sport", "Date", "Duration", "Power or pace", "Recorded HR", "Peak HR", "Source"]} rows={readingRows} />
+        <DetailTable columns={["Focus", "Sport", "Date", "Duration", "Basis", "Environment", "Power or pace", "Recorded HR", "Peak HR", "Source"]} rows={readingRows} />
       </>}
       {!!easyTargets.length && <>
         <h3>Easy pacing after recovery</h3>
         <DetailTable columns={["Target", "Pacing guide", "Source", "Evidence date"]} rows={easyTargets} />
       </>}
       <p>{loadFocusGuideMethod}</p>
+      <p>Load Focus compares the recent distribution of exercise load across easy endurance, harder aerobic work and short high-intensity work with Garmin’s target bands. Targets describe the training mix over the period. Recovery and the next session’s purpose guide the next workout.</p>
+      {items.some(item => item.target && item.approximate) && <p>Dashed bands show chart-derived targets.</p>}
       <p>Recorded ranges show the strongest eligible block per day in one comparable recording group. Aerobic blocks last 8 to under 12 minutes and use HR from the end of the block. Easy HR matches use the report’s dated easy HR guardrails when a matching Garmin category is unavailable. Anaerobic readings require labelled work reps of 10–120 seconds and use average rep HR when recorded.</p>
       <div className="forecast-references">{loadFocusGuideSources.map(source => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}</a>)}</div>
     </>}
@@ -219,7 +220,12 @@ function GarminFocus({ report }) {
       <EvidenceMeta source={report.preview ? "Illustrative Garmin data" : "Garmin Connect"} href={items.length ? url : null}
         from={items.length ? start : null} date={items.length ? end : null} />
     </div></div>
-    {items.length ? <div className="mix-load-buckets">{items.map(item => <div key={item.key} className="mix-bucket">
+    {items.length ? <div className="mix-load-buckets">
+      {(aboveTarget.length > 0 || belowTarget.length > 0) && <p className="mix-focus-summary">
+        {aboveTarget.length > 0 && <span><b>Above target</b> {aboveTarget.join(" and ")}.</span>}
+        {belowTarget.length > 0 && <span><b>Below target</b> {belowTarget.join(" and ")}.</span>}
+      </p>}
+      {items.map(item => <div key={item.key} className="mix-bucket">
       <div className="mix-row"><span>{item.label}</span><MetricValue as="strong" value={decimal(item.points, 0)} unit="pts" /></div>
       <div className="mix-track mix-focus-track" aria-hidden="true">
         <span className="mix-fill" data-bucket={item.key} style={{ width: `${100 * item.points / max}%` }} />
@@ -240,7 +246,6 @@ function GarminFocus({ report }) {
       {item.status && <small className="mix-focus-action">{loadFocusAction(item.key, item.status)}</small>}
     </div>)}
       {recoveryNote && <small className="mix-recovery-note">{recoveryNote}</small>}
-      {items.some(item => item.target && item.approximate) && <small className="mix-target-note">Dashed bands show chart-derived targets.</small>}
     </div> : <p className="mix-empty">Load Focus totals not captured</p>}
   </DataCard>;
 }

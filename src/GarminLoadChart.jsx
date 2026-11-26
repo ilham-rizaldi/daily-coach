@@ -45,7 +45,7 @@ function RatioPlot({ rows, start, dates }) {
   const high = Math.max(2, Math.ceil(Math.max(...rows.map(row => row.ratio)) * 2) / 2);
   const { x, y } = axes(frame, start, low, high);
   return <>
-    <div className="load-ratio-heading"><b>Load ratio</b><span>{rows.length} / {garminLoadWindowDays} days</span></div>
+    <div className="load-ratio-heading"><b>Load ratio</b></div>
     <svg className="load-ratio-svg" viewBox={`0 0 ${frame.width} ${frame.height}`} preserveAspectRatio="none" role="img"
       aria-label={`Garmin load ratio on ${rows.length} recorded days. Green shows the ${rangeLabel(connectRatioRange)} optimal range.`}>
       <rect className="load-optimal-band" x={frame.left} width={frame.right - frame.left}
@@ -65,7 +65,7 @@ export function GarminLoadRanges({ range }) {
 
 export function GarminLoadChart({ window: history, compact = false }) {
   const fill = useId();
-  const { rows, start, end, pairedDays, bandDays } = history;
+  const { rows, start, end } = history;
   const acute = rows.filter(row => valid(row.acute));
   const chronic = rows.filter(row => valid(row.chronic));
   const ratios = compact ? rows.filter(row => valid(row.ratio)) : [];
@@ -82,7 +82,7 @@ export function GarminLoadChart({ window: history, compact = false }) {
   const connected = new Set(bandRuns.flatMap(run => run.map(row => row.date)));
   if (!acute.length && !chronic.length && !ratios.length) return <p className="daily-load-empty">Daily load history is unavailable for this report.</p>;
 
-  return <><figure className={compact ? "daily-load-plot daily-load-plot-compact" : "daily-load-plot"}>
+  return <figure className={compact ? "daily-load-plot daily-load-plot-compact" : "daily-load-plot"}>
     {(acute.length > 0 || chronic.length > 0) && <svg className="load-history-svg"
       viewBox={`0 0 ${frame.width} ${frame.height}`} preserveAspectRatio="none" role="img"
       aria-label={`Garmin acute and chronic load, ${formatDate(start)} to ${formatDate(end)}. Cyan is acute, amber is chronic, and green shows the dated acute optimal range.`}>
@@ -109,10 +109,5 @@ export function GarminLoadChart({ window: history, compact = false }) {
     </svg>}
     {ratios.length > 0 && <RatioPlot rows={ratios} start={start} dates={tickDates} />}
     <figcaption>{tickDates.map(date => <time key={date} dateTime={date}>{formatDate(date)}</time>)}</figcaption>
-  </figure>
-    {compact && <div className="load-chart-coverage" aria-label="Garmin chart coverage">
-      <span>Acute + chronic <b>{pairedDays} / {garminLoadWindowDays} days</b></span>
-      <span>Acute optimal band <b>{bandDays} / {garminLoadWindowDays} days</b></span>
-    </div>}
-  </>;
+  </figure>;
 }

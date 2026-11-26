@@ -46,6 +46,9 @@
 
 .workout-advice-main .workout-performance { margin-top: 7px; }
 .workout-performance b { color: var(--text); }
+.workout-advice-main .workout-training-trend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 8px; }
+.workout-training-trend b { font-size: inherit; font-weight: 700; }
+.workout-high-load { color: var(--amber); }
 .workout-tomorrow { display: grid; grid-column: 1 / -1; width: 100%; gap: 7px; border-top: 1px solid var(--rule); padding-top: 9px; }
 .workout-tomorrow h3 { margin: 0; font-size: 15px; }
 .workout-tomorrow p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }

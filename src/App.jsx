@@ -255,7 +255,7 @@ export function App() {
           {section === "Archive" && (
             <>
               <div className="archive-list">{reports.map((item, index) => <button key={item.date} onClick={() => selectReport(index)} aria-current={index === reportIndex ? "true" : undefined}>
-                <EvidenceMeta as="span" date={item.date} year observedAt={preview ? null : item.capturedAt} />
+                <EvidenceMeta as="span" date={item.date} year />
                 <strong>{item.coaching.headline.split(";")[0]}</strong><span>{index === reportIndex ? "Selected" : "Open"}</span></button>)}</div>
               {!preview && <div className="archive-actions"><button onClick={copyLink}>Copy link</button><button onClick={lockArchive}>Lock</button></div>}
             </>

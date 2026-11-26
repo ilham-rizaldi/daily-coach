@@ -1,6 +1,5 @@
 import { DataCard, DetailFacts } from "./CardDetails.jsx";
 import { formatDate } from "./report.js";
-import { EvidenceMeta } from "./EvidenceMeta.jsx";
 
 const span = item => item.first && item.last
   ? `${formatDate(item.first, { year: "numeric" })} – ${formatDate(item.last, { year: "numeric" })}` : "Dates unavailable";
@@ -24,23 +23,18 @@ export function SourceHistory({ capture }) {
           ] : []),
         ]} />}>
         <h3>{item.source}</h3><strong className="training-number">{item.records}<small> activities</small></strong>
-        <EvidenceMeta className="evidence-footer" from={item.first} date={item.last} year state={item.status} />
       </DataCard>)}
       {battery && <DataCard title="Body Battery source coverage" className="training-panel" history="battery"
         detail={<DetailFacts rows={[["Source", battery.detail], ["Recorded dates", span(battery)],
           ["Days with low and high", battery.records], ["Files", battery.files],
           ["Conflicting dates", battery.unresolvedDates?.length || "None in downloaded windows"]]} />}>
         <h3>Body Battery</h3><strong className="training-number">{battery.records}<small> days</small></strong>
-        <EvidenceMeta className="evidence-footer" source="Garmin Connect" from={battery.first} date={battery.last} year state={battery.status} />
       </DataCard>}
       {wellbeing && <DataCard title="Intervals.icu wellness" className="training-panel" history="intervals-wellness"
         detail={<DetailFacts rows={[["Source", "Intervals.icu wellness CSV"], ["Export window", span(wellbeing)],
           ["Calendar rows", wellbeing.csvRows], ["Days with a wellness reading", wellbeing.recordedDays],
           ["Dates with CTL and ATL", wellbeing.fitnessDays]]} />}>
         <h3>Intervals.icu wellness</h3><strong className="training-number">{wellbeing.recordedDays}<small> recorded days</small></strong>
-        <EvidenceMeta className="evidence-footer" from={wellbeing.first} date={wellbeing.last} year>
-          <span>{wellbeing.fitnessDays} dates with CTL and ATL</span>
-        </EvidenceMeta>
       </DataCard>}
     </div>
   </section>;

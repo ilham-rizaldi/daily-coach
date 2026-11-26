@@ -4,7 +4,6 @@ import { datedHistory } from "./cardHistory.js";
 import { smoothLinePath } from "./chart-lines.js";
 import { palette } from "./MetricGraphics.jsx";
 import { MetricValue } from "./Readout.jsx";
-import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { decimal, duration, formatDate, shiftDate } from "./report.js";
 import { activityComparisons, activityEnvironments, activitySpeedSeries, dayOf, paceSeconds, speedMethods, sportOf, vo2Series } from "./activityProgression.js";
 import "./progression.css";
@@ -87,7 +86,6 @@ function Vo2Card({ series }) {
       [pointDate(point, true), decimal(point.value), point.precision === "month" ? "Monthly" : "Daily"])} />
   </>}>
     <div className="progression-readout"><h4>{sport}</h4><MetricValue as="strong" value={decimal(latest.value)} unit="mL/kg/min" style={{ color }} /></div>
-    <EvidenceMeta source={source} date={latest.date} precision={latest.precision} className="evidence-footer" />
     <Sparkline label={`${sport} VO₂ max · ${source}`} points={points} color={color} />
     {hasMonthly && points.length > 1 && <div className="progression-card-meta"><span>○ Monthly{hasDaily ? " · ● Daily" : ""}</span></div>}
   </DataCard>;
@@ -178,10 +176,6 @@ function SpeedCard({ sport, groups, reportDate }) {
     </div>
     {latest ? <>
       <RecentSessions points={points} display={display} unit={unit} label={label} color={color} running={running} />
-      <EvidenceMeta className="evidence-footer" source={source}>
-        <span>{points.length} {points.length === 1 ? "session" : "sessions"} in range</span>
-        <span>{speedMethods[basis]} · Whole-session average</span>
-      </EvidenceMeta>
     </> : <p className="progression-empty">No verified {environment.toLowerCase()} sessions with {byTime ? "comparable duration" : "recorded distance"}.</p>}
   </DataCard>;
 }
@@ -207,18 +201,16 @@ function RecordCard({ record }) {
     <div className="progression-record-sport" style={{ color: sportColor(sport) }}>{sport}</div>
     <h4>{label}</h4>
     <MetricValue as="strong" value={timed ? effortClock(value) : typeof value === "number" ? decimal(value, 2) : value} unit={timed ? undefined : unit} />
-    <EvidenceMeta className="evidence-footer" source={source} href={url} date={date} year />
   </DataCard>;
 }
 
 export default function PerformanceProgression({ report, segmentRecordKeys, compactRecords = false }) {
   const vo2 = vo2Series(report), speed = activitySpeedSeries(report), records = personalRecords(report).filter(record => !segmentRecordKeys?.has(record.key));
-  const observed = dayOf(report.performance?.observedAt);
   const recordGrid = records.length
     ? <div className="progression-grid progression-records">{records.map(record => <RecordCard key={record.key} record={record} />)}</div>
     : <p className="progression-empty">Provider PRs not captured</p>;
   return <section className="progression" aria-labelledby="progression-title">
-    <div className="performance-heading"><h2 id="progression-title">Performance progression</h2>{notFuture(observed, report) && <span className="quiet">Captured {formatDate(observed)}</span>}</div>
+    <div className="performance-heading"><h2 id="progression-title">Performance progression</h2></div>
     <div className="progression-block">
       <h3>VO₂ max</h3>
       {vo2.length ? <div className="progression-grid">{vo2.map(series => <Vo2Card key={series.key} series={series} />)}</div> : <p className="progression-empty">VO₂ max not captured</p>}

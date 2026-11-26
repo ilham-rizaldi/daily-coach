@@ -14,6 +14,7 @@ export const loadFocusGuide = {
 };
 
 export const loadFocusGuideSources = [
+  { title: "Garmin Training Load Focus", url: "https://www.garmin.com/en-US/garmin-technology/running-science/physiological-measurements/training-load-focus/" },
   { title: "Garmin Training Effect", url: "https://support.garmin.com/en-US/?faq=Vi2undejXR5Mmq662o4lO9" },
   { title: "Garmin five-zone heart-rate model", url: "https://support.garmin.com/en-US/?faq=w8qlOr7BQ16Z82HVrevpw9" },
   { title: "Coggan cycling power zones", url: "https://www.trainingpeaks.com/blog/power-training-levels/" },

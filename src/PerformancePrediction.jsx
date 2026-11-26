@@ -2,13 +2,13 @@ import { useMemo, useState } from "react";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { datedHistory } from "./cardHistory.js";
 import { PredictionChart } from "./PredictionChart.jsx";
+import { HeartRateAudit } from "./HeartRateAudit.jsx";
 import { MetricValue } from "./Readout.jsx";
 import { WorkoutAdvice } from "./WorkoutAdvice.jsx";
 import { decimal, duration, formatDate } from "./report.js";
 import { paceClock } from "./pacing.js";
-import { EvidenceMeta } from "./EvidenceMeta.jsx";
-import { HR_CEILING_MIN, HR_CEILING_MAX, EXTENDED_PREDICTION_DAYS, parseScenarioPace, automaticCeiling,
-  automaticHeartRate, automaticPredictionDataset, inPredictionDuration, predictionDurations, predictionModes, suggestedEffort } from "./prediction.js";
+import { HR_CEILING_MIN, HR_CEILING_MAX, parseScenarioPace, automaticCeiling,
+  automaticHeartRate, automaticPredictionDataset, inPredictionDuration, predictionAudit, predictionDurations, predictionModes, suggestedEffort } from "./prediction.js";
 import "./predictions.css";
 
 const dateText = date => formatDate(date, { year: "numeric" });
@@ -60,9 +60,6 @@ function PredictionEstimate({ name, mode, data, cohort, history, inverse = false
   const value = efforts ? [...new Set(efforts.map(v => effortText(v, mode)))].join("–")
     : !inverse && Number.isFinite(result.bpm) ? decimal(result.bpm, 0) : null;
   const observed = result.range && value != null ? [...new Set(result.range.map(v => decimal(v, 0)))].join("–") : "";
-  const matches = result.matched ?? [];
-  const dates = [...new Set(matches.map(row => row.date))].sort();
-  const sources = [...new Set(matches.map(row => row.source).filter(Boolean))];
   return <DataCard className="prediction-estimate" data-axis={inverse ? "effort" : "hr"}
     title={`${name} · ${title}`} history={history} detailExpanded
     detail={<EvidenceDetails result={result} data={data} cohort={cohort} mode={mode} inverse={inverse} />}>
@@ -73,14 +70,11 @@ function PredictionEstimate({ name, mode, data, cohort, history, inverse = false
       {value != null ? <MetricValue as="strong" value={value} unit={inverse ? profile.unit : "bpm"} />
         : <strong className="prediction-unavailable">No estimate</strong>}
       {observed && <small>{observed} bpm {inverse ? "peak HR" : "recorded"}</small>}
-      <EvidenceMeta className="evidence-inset" source={sources.join(" + ")} from={dates[0]} date={dates.at(-1)}
-        dateLabel={dates.length ? `${dates.length} comparable ${dates.length === 1 ? "day" : "days"}` : null} />
     </div>
     {result.reason && <p className="prediction-reason">{result.reason}</p>}
     {result.closest && <div className="prediction-closest">
       <strong>Closest recorded effort</strong>
       <span>{withUnit(result.closest.value, mode)} · {decimal(inverse ? result.closest.peakHrBpm : result.closest.hrBpm, 0)} bpm{inverse ? " peak" : ""}</span>
-      <EvidenceMeta source={result.closest.source} date={result.closest.date}><span>{duration(result.closest.durationSeconds)}</span></EvidenceMeta>
     </div>}
   </DataCard>;
 }
@@ -96,13 +90,13 @@ function SportPrediction({ report, name, modes }) {
   const band = predictionDurations.find(row => row.id === durationId);
   const shownBlocks = useMemo(() => (cohort?.historyRows ?? []).filter(row => inPredictionDuration(row, band)), [cohort, band]);
   const shownContext = useMemo(() => data.context.filter(row => inPredictionDuration(row, band)), [data.context, band]);
-  const days = new Set(shownBlocks.map(row => row.date)).size;
   const defaultEffort = suggestedEffort(report, mode, { rows: shownBlocks.filter(row => row.date >= data.first) });
   const text = entry ?? (paceMode(mode) ? paceClock(defaultEffort) : String(Math.round(defaultEffort * 10) / 10));
   const effort = paceMode(mode) ? parseScenarioPace(text) : asNumber(text);
   const ceiling = asNumber(capEntry);
   const hr = useMemo(() => automaticHeartRate(data, mode, effort, band), [data, mode, effort, band]);
   const target = useMemo(() => automaticCeiling(data, mode, ceiling, band), [data, mode, ceiling, band]);
+  const audit = useMemo(() => predictionAudit(data, mode, ceiling, band), [data, mode, ceiling, band]);
   const history = useMemo(() => {
     const effortMetric = [paceMode(mode) ? "Pace · sec/km" : "Power · W", row => row.value];
     if (shownBlocks.length) return datedHistory("Recorded steady blocks", ["Effort", "HR · bpm", "Peak HR · bpm", "Block", "Source"],
@@ -116,9 +110,7 @@ function SportPrediction({ report, name, modes }) {
 
   return <section className="prediction-sport" data-sport={name} aria-label={`${name} predictions`}>
     <header className="prediction-sport-header">
-      <div><h2>{name}</h2>
-        <p>{`${days} ${days === 1 ? "day" : "days"} of paired effort and HR`}</p>
-      </div>
+      <h2>{name}</h2>
       {modes.length > 1 && <div className="prediction-mode" role="group" aria-label="Running effort metric">
         {modes.map(key => <button type="button" key={key} aria-pressed={key === mode}
           onClick={() => { setMode(key); setEntry(null); }}>{paceMode(key) ? "Pace" : "Watch power"}</button>)}
@@ -156,14 +148,12 @@ function SportPrediction({ report, name, modes }) {
     </div>
     <PredictionChart rows={shownBlocks} pace={paceMode(mode)} effort={effort} ceiling={ceiling}
       target={target.effortRange} forwardMatches={hr.matched} ceilingMatches={target.matched} />
+    <HeartRateAudit name={name} audit={audit} ceiling={ceiling} effortLabel={value => withUnit(value, mode)} automatic={!band} />
   </section>;
 }
 
 export default function PerformancePrediction({ report, advice }) {
   return <section className="prediction-page" aria-labelledby="view-title">
-    <header className="prediction-heading">
-      <p>Measured steady efforts · up to {EXTENDED_PREDICTION_DAYS} days</p>
-    </header>
     <WorkoutAdvice advice={advice} />
     <div className="prediction-grid">
       <SportPrediction report={report} name="Cycling" modes={["cycling"]} />

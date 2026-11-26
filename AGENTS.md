@@ -66,10 +66,14 @@ Show a 42-day Garmin load graphic inside the Body metrics Training Load card. Pl
 
 Fill the Workout suggestion Recovery time bar as the Garmin countdown approaches zero. A recorded zero is full-height bright cyan. Leave days without a reading unfilled and keep the displayed hours as remaining time.
 
-Use the same segmented red–amber–green readiness scale in Body metrics and Workout suggestion, with red at 0 and green at 100. Keep Garmin’s recorded category text. Use Body metrics typography, metric readouts, and unit sizing in Training Status.
+Use the same segmented Garmin readiness bands in Body metrics and Workout suggestion, with red for Poor and purple for Prime. Keep Garmin’s recorded category text. Color Training Status consistently across the recommendation and timeline, retaining blank dates. Use Body metrics typography, metric readouts, and unit sizing in Training Status.
 
 Give each Training Status metric a compact dated chart and its own chart-first history dialog. Show the dated reading when hovering or using the arrow keys, including a recorded range where available. Keep VO₂ max status readings, General, and sport-specific estimates distinct. Show HRV and acute-load bands only for captured dates, and heat acclimation only on dates with actual snapshots.
 
 Give each Garmin Load Focus bucket a practical cycling and running intensity guide. Name the zone systems and keep Garmin's Training Effect bucket, configured provider zones, researched intensity bands and personal pacing targets distinct. Use dated recovery to guide workout timing. Never prescribe hard work to fill a Load Focus gap.
 
 Show observed workout watts or pace and paired HR directly on the Load Focus card, with dates and distinct day counts. Keep the same recording group and window. Identify an easy effort matched by the report's HR guardrails separately from provider classification. Use labelled short work reps for anaerobic readings and show gaps when the recordings do not support a value.
+
+Show predicted vs actual HR by date for cycling watts and running pace. Train each check with strictly earlier days in a comparable duration band. Show the earlier HR median as a separate baseline. Count days above the editable ceiling using measured block peaks, and leave dates without a measured peak outside the rate.
+
+Keep capture stamps, sources for individual recordings, coverage notes and technical labels in Details or Reference. Keep the main report date, analysis dates and short provider labels where they distinguish the Garmin and Intervals.icu models. Explain measured changes in Training Load and Fitness, combine Vitals and Adaptation into one compact card, and put the coach action before the expandable evidence.
