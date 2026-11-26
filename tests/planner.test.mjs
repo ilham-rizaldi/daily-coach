@@ -39,6 +39,29 @@ test("rest scenario advances exactly seven dates from the captured dated anchor"
   });
 });
 
+test("both forecasts use captured time constants and label edits and legacy defaults", () => {
+  const report = fixture();
+  report.intervals.settings.timeConstants = { fitnessDays: 28, fatigueDays: 10 };
+  const plan = restWeek(report);
+  const week = projectWeek(report, plan);
+  const tomorrow = projectTomorrow(report, { load: 0 });
+  assert.deepEqual(week.timeConstantSources, { fitness: "captured", fatigue: "captured" });
+  assert.deepEqual(tomorrow.timeConstantSources, week.timeConstantSources);
+  close(week.rows[0].mid.fitness, report.intervals.fitness * Math.exp(-1 / 28));
+  close(week.rows[0].mid.fatigue, report.intervals.fatigue * Math.exp(-1 / 10));
+  close(week.rows[0].mid.fitness, tomorrow.mid.fitness);
+  close(week.rows[0].mid.fatigue, tomorrow.mid.fatigue);
+
+  const edited = projectTomorrow(report, { load: 0, fitnessDays: 32 });
+  assert.deepEqual(edited.timeConstantSources, { fitness: "edited", fatigue: "captured" });
+  close(edited.mid.fitness, report.intervals.fitness * Math.exp(-1 / 32));
+  report.intervals.settings.timeConstants.fatigueDays = 0;
+  const fallback = projectWeek(report, plan);
+  assert.deepEqual(fallback.timeConstantSources, { fitness: "captured", fatigue: "assumed" });
+  assert.equal(fallback.fatigueDays, 7);
+  assert.deepEqual(projectTomorrow(fixture(), { load: 0 }).timeConstantSources, { fitness: "assumed", fatigue: "assumed" });
+});
+
 test("first-day center matches tomorrow model including only remaining-today load delta", () => {
   const report = fixture(), plans = restWeek(report);
   plans[0] = { ...plans[0], sport: "Ride", minutes: 75, effort: "hard" };

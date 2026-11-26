@@ -81,7 +81,7 @@ Use the available history for depth. A longer report cannot substitute for missi
    npm run report -- .local/report.private.json
    ```
 
-   This validates and encrypts the report, preserves the private local archive and prepares email files. It does not capture source data, send mail or publish code.
+   This validates and encrypts the report, preserves the private local archive and prepares email files. When the owner-authorized shared viewer is configured and enabled in `.local/global-access/publish.private.json`, it also updates the latest encrypted report at that viewer. Verify the returned shared report date before saying it is available across devices. Source capture, email delivery and code deployment are separate steps.
 
 4. Decrypt the generated private payload and verify that it matches the intended report, date and revision. Check units, totals, deduplication, exclusions, completed-day windows, source coverage and prescription duration. Verify the configured viewer destination and the intended report selection. Never paste a full private link into a public checker or issue.
 5. If the viewer source changes, run its relevant tests and build before deployment. Commit only reviewed source, clearly illustrative examples and viewer assets. Review the outgoing file list and diff for private data before any GitHub write. Preserve unrelated changes and never force-push to overwrite another update.

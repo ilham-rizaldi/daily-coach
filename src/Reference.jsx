@@ -6,6 +6,7 @@ import { projectGarminRest } from "./garminForecast.js";
 import { ThresholdChecks } from "./TrainingTargets.jsx";
 import { SourceHistory } from "./SourceHistory.jsx";
 import { EvidenceMeta, SourceMark } from "./EvidenceMeta.jsx";
+import { loadFocusGuideMethod, loadFocusGuideSources } from "./loadFocusGuide.js";
 
 const glossary = [
   ["RHR Δ", "Recovery trend", "bpm", "Daily RHR minus the median of the preceding 28 calendar days. At least seven prior readings are required; the current day is excluded from its baseline."],
@@ -80,6 +81,7 @@ const methodLinks = [
   { title: "Garmin readiness colors", url: "https://www8.garmin.com/manuals-apac/webhelp/forerunner265series/EN-SG/GUID-35D1273C-4F9C-4029-9B8F-F997F4D7C3A8-7793.html" },
   { title: "Testing predictions in chronological order", url: "https://otexts.com/fpp3/toolbox.html#time-series-cross-validation" },
   { title: "Intervals.icu activity FIT exports", url: "https://forum.intervals.icu/t/import-and-download-workout-and-activity-fit-files/19295" },
+  ...loadFocusGuideSources,
 ];
 
 function ColorKey({ items }) {
@@ -270,6 +272,11 @@ export function Reference({ report, researchOpen = false }) {
     {!terms.length && <p className="quiet" role="status">No matching terms.</p>}
 
     <div className="reference-methods">
+      <details><summary>Load Focus training zones</summary>
+        <p>{loadFocusGuideMethod}</p>
+        <p>Research commonly groups intensity into three bands around the first and second ventilatory thresholds. The card translates those concepts into practical sport-specific guides. The same zone numbers can represent different intensities across devices or sport profiles.</p>
+        <p>Load Focus shows recorded watts, pace and heart rate when comparable evidence is available in the selected window. The readings describe the recorded effort. Personal training targets still depend on the planned session and recovery. Open Details for each recording and the separately sourced easy-session targets.</p>
+      </details>
       <details><summary>Recovery & progression</summary>
         <p>Recovery charts use dated native Garmin exports, preserving missing days and values. HRV baseline limits and the seven-day HRV average are captured source values. RHR Δ uses only prior readings; sleep gap uses same-date sleep need. Load, recovery scores and performance are distinct measurements.</p>
         <p>Cycling blocks end before the report date. Duration uses session timers, with canonical duration as a legacy fallback. Strength placement includes recorded sessions without converting strength time into cycling volume. Open Data for dates, counts, coverage and missing values.</p>

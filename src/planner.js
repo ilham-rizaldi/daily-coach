@@ -1,5 +1,5 @@
 import { shiftDate } from "./report.js";
-import { contributionWeights, DEFAULT_TIME_CONSTANTS, estimateSessionLoad } from "./forecast.js";
+import { contributionWeights, estimateSessionLoad, resolveTimeConstants, validTimeConstant } from "./forecast.js";
 
 export const PLANNER_SPORTS = ["Rest", "Ride", "Run", "Weight Training"];
 const nonnegative = value => Number.isFinite(value) && value >= 0;
@@ -58,12 +58,13 @@ function envelope(base, terms) {
 }
 
 export function projectWeek(report, plans, options = {}) {
-  const { fitnessDays = DEFAULT_TIME_CONSTANTS.fitnessDays, fatigueDays = DEFAULT_TIME_CONSTANTS.fatigueDays, todayPlan = null } = options;
+  const { todayPlan = null } = options;
+  const { fitnessDays, fatigueDays, timeConstantSources } = resolveTimeConstants(report, options);
   if (!dateValid(report?.date)) return { available: false, error: "Report date unavailable", rows: [] };
   const source = report.intervals;
   const sourceDate = source?.date || source?.observedDate;
   if (!dateValid(sourceDate) || sourceDate !== report.date || ![source?.fitness, source?.fatigue].every(nonnegative)) return { available: false, error: "Dated Intervals baseline required", rows: [] };
-  if (![fitnessDays, fatigueDays].every(value => Number.isFinite(value) && value >= 1 && value <= 365)) return { available: false, error: "Time constants: 1–365 d", rows: [] };
+  if (![fitnessDays, fatigueDays].every(validTimeConstant)) return { available: false, error: "Time constants: 1–365 d", rows: [] };
   if (!Array.isArray(plans) || plans.length !== 7 || plans.some((plan, index) => plan?.date !== shiftDate(report.date, index + 1))) return { available: false, error: "Seven consecutive future dates required", rows: [] };
 
   const estimates = plans.map(plan => session(report, plan));
@@ -93,7 +94,7 @@ export function projectWeek(report, plans, options = {}) {
   });
   if (rows.some(row => ![row.mid.fitness, row.mid.fatigue, row.range.fitness.high, row.range.fatigue.high].every(Number.isFinite))) return { available: false, error: "Load values exceed model range", rows: [], estimates, today };
   return {
-    available: true, baseline, todayAdjusted, todayRange, today, rows, fitnessDays, fatigueDays,
+    available: true, baseline, todayAdjusted, todayRange, today, rows, fitnessDays, fatigueDays, timeConstantSources,
     totals: {
       minutes: estimates.reduce((sum, estimate) => sum + estimate.minutes, 0),
       sessions: plans.filter(plan => plan.sport !== "Rest").length,

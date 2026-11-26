@@ -2,7 +2,7 @@ import { useState } from "react";
 import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
 import { decimal, formatDate, jakartaDate, shiftDate } from "./report.js";
-import { contributionWeights, estimateSessionLoad, projectTomorrow } from "./forecast.js";
+import { contributionWeights, estimateSessionLoad, projectTomorrow, resolveTimeConstants, validTimeConstant } from "./forecast.js";
 import { GarminRestForecast } from "./GarminRestForecast.jsx";
 import { ForecastBars, forecastColors } from "./ForecastGraphics.jsx";
 
@@ -24,8 +24,9 @@ export function LoadForecast({ report }) {
   const [plan, setPlan] = useState(() => initialPlan());
   const [todayEnabled, setTodayEnabled] = useState(false);
   const [todayPlan, setTodayPlan] = useState(() => initialPlan());
-  const [fitnessDays, setFitnessDays] = useState("42");
-  const [fatigueDays, setFatigueDays] = useState("7");
+  const initialConstants = resolveTimeConstants(report);
+  const [fitnessDays, setFitnessDays] = useState(() => String(initialConstants.fitnessDays));
+  const [fatigueDays, setFatigueDays] = useState(() => String(initialConstants.fatigueDays));
   const estimate = estimateSessionLoad(report, { sport: plan.sport, minutes: number(plan.minutes), effort: plan.effort });
   const weights = contributionWeights(report, plan.sport);
   const todayEstimate = estimateSessionLoad(report, { sport: todayEnabled ? todayPlan.sport : "Rest", minutes: todayEnabled ? number(todayPlan.minutes) : 0, effort: todayPlan.effort });
@@ -37,7 +38,7 @@ export function LoadForecast({ report }) {
   const invalidDuration = plan.sport !== "Rest" && (!Number.isFinite(number(plan.minutes)) || number(plan.minutes) <= 0 || number(plan.minutes) > 600);
   const invalidToday = todayEnabled && (!Number.isFinite(number(todayPlan.minutes)) || number(todayPlan.minutes) <= 0 || number(todayPlan.minutes) > 600);
   const available = forecast.available && estimate.available && todayEstimate.available && !invalidDuration && !invalidToday;
-  const invalidConstants = ![number(fitnessDays), number(fatigueDays)].every(value => Number.isFinite(value) && value >= 1 && value <= 365);
+  const invalidConstants = ![number(fitnessDays), number(fatigueDays)].every(validTimeConstant);
   const unavailable = invalidDuration || invalidToday ? "Duration: 1–600 min" : invalidConstants ? "Time constants: 1–365 d" : !estimate.available || !todayEstimate.available ? "Sport load history unavailable" : "Dated Intervals baseline required";
   const projectionDetails = metrics => <>
     <DetailFacts rows={[["Projection date", formatDate(date)], ["Baseline", forecast.baseline?.date && formatDate(forecast.baseline.date)],
@@ -94,7 +95,7 @@ export function LoadForecast({ report }) {
           <label>CTL τ · d<input type="number" min="1" max="365" step="1" value={fitnessDays} onChange={event => setFitnessDays(event.target.value)} /></label>
           <label>ATL τ · d<input type="number" min="1" max="365" step="1" value={fatigueDays} onChange={event => setFatigueDays(event.target.value)} /></label>
         </div>
-        <div className="forecast-config-meta"><span>CTL / ATL {decimal(weights.fitness * 100, 0)}% / {decimal(weights.fatigue * 100, 0)}%{weights.assumed ? " · assumed" : ""}</span><span>Baseline {forecast.baseline?.date ? formatDate(forecast.baseline.date) : "—"}{forecast.baseline && !forecast.baseline.dateVerified ? " · assumed date" : ""}</span>{estimate.history?.window && <span>Calibration {formatDate(estimate.history.window.start)}–{formatDate(estimate.history.window.end)} · n={estimate.history.n}</span>}<span>τ user-defined</span></div>
+        <div className="forecast-config-meta"><span>CTL / ATL {decimal(weights.fitness * 100, 0)}% / {decimal(weights.fatigue * 100, 0)}%{weights.assumed ? " · assumed" : ""}</span><span>Baseline {forecast.baseline?.date ? formatDate(forecast.baseline.date) : "—"}{forecast.baseline && !forecast.baseline.dateVerified ? " · assumed date" : ""}</span>{estimate.history?.window && <span>Calibration {formatDate(estimate.history.window.start)}–{formatDate(estimate.history.window.end)} · n={estimate.history.n}</span>}{forecast.timeConstantSources && <span>CTL τ {forecast.timeConstantSources.fitness} · ATL τ {forecast.timeConstantSources.fatigue}</span>}</div>
       </details>
     </section>
   </>;

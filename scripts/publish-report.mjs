@@ -6,6 +6,7 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import { validateReport } from "../src/report.js";
 import { assertReportReady } from "../src/report-readiness.js";
 import { renderEmail } from "./email.mjs";
+import { publishSharedReport } from "./shared-report.mjs";
 
 export function encryptArchive(archive, key) {
   const iv = randomBytes(12);
@@ -60,7 +61,8 @@ async function main() {
   await atomicWrite(resolve(".local/report.email.txt"), email.text);
   await atomicWrite(resolve(".local/email.private.json"), JSON.stringify({ to: config.email, subject: email.subject, payload: { mime_type: "multipart/alternative", parts: [{ mime_type: "text/plain", body: { content: email.text } }, { mime_type: "text/html", body: { content: email.html } }] } }));
   await atomicWrite(resolve(".local/last-report.private.json"), JSON.stringify(report, null, 2) + "\n");
-  console.log(JSON.stringify({ status: "prepared", date: report.date, archiveReports: archive.reports.length, emailBytes: Buffer.byteLength(email.html), privateLinkCharacters: privateUrl.length, encryptedBytes: Buffer.byteLength(encrypted), emailFile: ".local/email.private.json", privateArchiveFile: ".local/archive.enc.json" }));
+  const sharedReportDate = await publishSharedReport(report, reportPayload, config.archiveKey);
+  console.log(JSON.stringify({ status: "prepared", date: report.date, sharedReportDate, archiveReports: archive.reports.length, emailBytes: Buffer.byteLength(email.html), privateLinkCharacters: privateUrl.length, encryptedBytes: Buffer.byteLength(encrypted), emailFile: ".local/email.private.json", privateArchiveFile: ".local/archive.enc.json" }));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

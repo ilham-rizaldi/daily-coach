@@ -39,6 +39,17 @@
 .mix-card .mix-focus-status[data-status="below"] { color: var(--amber, #d59b5f); }
 .mix-card .mix-focus-status[data-status="within"] { color: var(--green, #72b392); }
 .mix-card .mix-focus-status[data-status="above"] { color: var(--red, #db7b7e); }
+.mix-focus-guide { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 7px; }
+.mix-focus-sport { display: grid; align-content: start; min-width: 0; gap: 3px; padding: 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--canvas); }
+.mix-guide-sport { color: var(--muted); font-size: 11px; }
+.mix-guide-zone { color: var(--mix-color); font-size: 12px; font-weight: 600; }
+.mix-guide-readings { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 9px; margin: 1px 0; }
+.mix-guide-readings strong { color: var(--text); font-size: clamp(17px, 1.7vw, 23px); font-weight: 700; line-height: 1.2; }
+.mix-guide-readings strong + strong { color: var(--pink, #fa70a4); }
+.mix-card .mix-guide-missing { margin: 2px 0; color: var(--text); font-weight: 600; }
+.mix-focus-guide small { line-height: 1.35; }
+.mix-focus-action { display: block; margin-top: 5px; }
+.mix-card .mix-recovery-note { color: var(--text); font-weight: 600; }
 .mix-card .mix-target-note { color: var(--quiet, #a0afbe); }
 .mix-zone-key { display: flex; flex-wrap: wrap; gap: 4px 11px; margin-top: 10px; color: var(--muted, #b1becb); font-size: 11px; }
 .mix-zone-key span { white-space: nowrap; }

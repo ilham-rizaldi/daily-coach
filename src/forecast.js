@@ -4,10 +4,24 @@ import { shiftDate } from "./report.js";
 // from Garmin's proprietary weighted acute/chronic-load calculation.
 export const DEFAULT_TIME_CONSTANTS = { fitnessDays: 42, fatigueDays: 7 };
 
+export const validTimeConstant = value => Number.isFinite(value) && value >= 1 && value <= 365;
+
 const finiteNonnegative = value => Number.isFinite(value) && value >= 0;
 const validDate = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
   && Number.isFinite(Date.parse(`${value}T12:00:00Z`))
   && new Date(`${value}T12:00:00Z`).toISOString().slice(0, 10) === value;
+
+export function resolveTimeConstants(report, overrides = {}) {
+  const captured = report?.intervals?.settings?.timeConstants;
+  const resolve = key => {
+    const hasCapture = validTimeConstant(captured?.[key]);
+    const initial = hasCapture ? captured[key] : DEFAULT_TIME_CONSTANTS[key];
+    const value = overrides[key] === undefined ? initial : overrides[key];
+    return { value, source: value !== initial ? "edited" : hasCapture ? "captured" : "assumed" };
+  };
+  const fitness = resolve("fitnessDays"), fatigue = resolve("fatigueDays");
+  return { fitnessDays: fitness.value, fatigueDays: fatigue.value, timeConstantSources: { fitness: fitness.source, fatigue: fatigue.source } };
+}
 
 function quantile(values, fraction) {
   if (!values.length) return null;
@@ -142,8 +156,8 @@ export function projectTomorrow(report, options = {}) {
   const {
     todayLoad = 0, todayFitnessWeight = 1, todayFatigueWeight = 1,
     loadLow, load, loadHigh, fitnessWeight = 1, fatigueWeight = 1,
-    fitnessDays = DEFAULT_TIME_CONSTANTS.fitnessDays, fatigueDays = DEFAULT_TIME_CONSTANTS.fatigueDays,
   } = options;
+  const { fitnessDays, fatigueDays, timeConstantSources } = resolveTimeConstants(report, options);
   const source = report?.intervals;
   if (!validDate(report?.date)) return { available: false, error: "A valid report date is needed." };
   const sourceDate = source?.date || source?.observedDate;
@@ -154,7 +168,7 @@ export function projectTomorrow(report, options = {}) {
   if (![todayLoad, lowLoad, load, highLoad].every(finiteNonnegative)) return { available: false, error: "Enter non-negative numeric load values; blank or unavailable values are not zero." };
   if (lowLoad > load || highLoad < load) return { available: false, error: "The low estimate must not exceed the central estimate, and the high estimate must not be below it." };
   if (![todayFitnessWeight, todayFatigueWeight, fitnessWeight, fatigueWeight].every(finiteNonnegative)) return { available: false, error: "Fitness and fatigue contribution weights must be non-negative numbers." };
-  if (![fitnessDays, fatigueDays].every(value => Number.isFinite(value) && value >= 1 && value <= 365)) return { available: false, error: "Time constants must be between 1 and 365 days." };
+  if (![fitnessDays, fatigueDays].every(validTimeConstant)) return { available: false, error: "Time constants must be between 1 and 365 days." };
   const fitnessDecay = Math.exp(-1 / fitnessDays);
   const fatigueDecay = Math.exp(-1 / fatigueDays);
   const baseline = {
@@ -174,7 +188,7 @@ export function projectTomorrow(report, options = {}) {
   if ([todayAdjusted, rest, low, mid, high].some(value => !Number.isFinite(value.fitness) || !Number.isFinite(value.fatigue))) return { available: false, error: "Load values are too large to model." };
   const assumptions = [
     "Intervals-style model only. The ATL/CTL ratio is not Garmin's load ratio or a safety threshold.",
-    `Time constants assumed or user-selected: fatigue ${fatigueDays} days, fitness ${fitnessDays} days. The athlete's actual constants were not verified.`,
+    `Time constants: fitness ${fitnessDays} days (${timeConstantSources.fitness}), fatigue ${fatigueDays} days (${timeConstantSources.fatigue}).`,
     "Baseline is treated as the report-date snapshot with its daily decay and already-recorded load included. Today's input adds only remaining, unrecorded training.",
     "Form here means absolute end-of-day CTL minus ATL. It may differ from a provider's start-of-day or percentage-form display.",
     "Load-range outputs vary only the entered planned load. Rounded source values, settings, future recovery and model error are not included in that range.",
@@ -185,7 +199,7 @@ export function projectTomorrow(report, options = {}) {
     todayAdjusted, rest, low, mid, high, range: projectedRange([low, mid, high]),
     startOfTomorrowForm: todayAdjusted.form,
     loads: { today: todayLoad, low: lowLoad, mid: load, high: highLoad },
-    fitnessDays, fatigueDays, assumptions,
+    fitnessDays, fatigueDays, timeConstantSources, assumptions,
     formula: "CTL(next) = CTL × exp(−1/fitness days) + fitness load × (1 − exp(−1/fitness days)); ATL uses fatigue days and fatigue load.",
   };
 }

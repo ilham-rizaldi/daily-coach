@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { decimal, duration, formatDate } from "./report.js";
-import { estimateSessionLoad } from "./forecast.js";
+import { estimateSessionLoad, resolveTimeConstants } from "./forecast.js";
 import { palette } from "./MetricGraphics.jsx";
 import { projectWeek, restWeek } from "./planner.js";
 import "./planner.css";
@@ -24,8 +24,9 @@ function ChartTooltip({ active, payload, label, metric }) {
 export default function WeekPlanner({ report }) {
   const [plans, setPlans] = useState(() => restWeek(report));
   const [metric, setMetric] = useState("form");
-  const [fitnessDays, setFitnessDays] = useState("42");
-  const [fatigueDays, setFatigueDays] = useState("7");
+  const initialConstants = resolveTimeConstants(report);
+  const [fitnessDays, setFitnessDays] = useState(() => String(initialConstants.fitnessDays));
+  const [fatigueDays, setFatigueDays] = useState(() => String(initialConstants.fatigueDays));
   const [todayEnabled, setTodayEnabled] = useState(false);
   const [todayPlan, setTodayPlan] = useState({ sport: "Ride", minutes: "30", effort: "easy" });
   const result = projectWeek(report, plans.map(plan => ({ ...plan, minutes: numeric(plan.minutes) })), {
@@ -110,6 +111,7 @@ export default function WeekPlanner({ report }) {
       <label className="week-today-toggle"><input type="checkbox" checked={todayEnabled} onChange={event => setTodayEnabled(event.target.checked)} />Additional session today</label>
       {todayEnabled && <div className="week-today-controls"><label>Sport<select value={todayPlan.sport} onChange={event => setTodayPlan({ ...todayPlan, sport: event.target.value })}>{sports.filter(([value]) => value !== "Rest").map(([value, name]) => <option key={value} value={value}>{name}</option>)}</select></label><label>min<input type="number" min="1" max="600" value={todayPlan.minutes} onChange={event => setTodayPlan({ ...todayPlan, minutes: event.target.value })} /></label><label>Effort<select value={todayPlan.effort} onChange={event => setTodayPlan({ ...todayPlan, effort: event.target.value })}><option value="easy">Easy</option><option value="moderate">Moderate</option><option value="hard">Hard</option></select></label><div><span>TL · Est.</span><output>{result.today?.available ? display(result.today.mid) : "—"}</output></div></div>}
       <span className="week-settings-meta">Baseline {report.intervals?.date ? formatDate(report.intervals.date) : "—"} · calibration and weights in Reference</span>
+      {result.timeConstantSources && <span className="week-settings-meta">CTL τ {result.timeConstantSources.fitness} · ATL τ {result.timeConstantSources.fatigue}</span>}
     </details>
   </section>;
 }

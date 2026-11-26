@@ -69,3 +69,7 @@ Fill the Workout suggestion Recovery time bar as the Garmin countdown approaches
 Use the same segmented red–amber–green readiness scale in Body metrics and Workout suggestion, with red at 0 and green at 100. Keep Garmin’s recorded category text. Use Body metrics typography, metric readouts, and unit sizing in Training Status.
 
 Give each Training Status metric a compact dated chart and its own chart-first history dialog. Show the dated reading when hovering or using the arrow keys, including a recorded range where available. Keep VO₂ max status readings, General, and sport-specific estimates distinct. Show HRV and acute-load bands only for captured dates, and heat acclimation only on dates with actual snapshots.
+
+Give each Garmin Load Focus bucket a practical cycling and running intensity guide. Name the zone systems and keep Garmin's Training Effect bucket, configured provider zones, researched intensity bands and personal pacing targets distinct. Use dated recovery to guide workout timing. Never prescribe hard work to fill a Load Focus gap.
+
+Show observed workout watts or pace and paired HR directly on the Load Focus card, with dates and distinct day counts. Keep the same recording group and window. Identify an easy effort matched by the report's HR guardrails separately from provider classification. Use labelled short work reps for anaerobic readings and show gaps when the recordings do not support a value.

@@ -3,7 +3,11 @@ import { DataCard, DetailFacts, DetailTable } from "./CardDetails.jsx";
 import { datedHistory } from "./cardHistory.js";
 import { DurationValue, MetricValue } from "./Readout.jsx";
 import { EvidenceMeta } from "./EvidenceMeta.jsx";
-import { DAY, decimal, formatDate, shiftDate } from "./report.js";
+import { loadFocusAction, loadFocusGuide, loadFocusGuideMethod, loadFocusGuideSources } from "./loadFocusGuide.js";
+import { loadFocusReadings } from "./loadFocusReadings.js";
+import { paceClock, rangeFor, targetEvidence } from "./pacing.js";
+import { DAY, decimal, formatDate, jakartaDate, shiftDate } from "./report.js";
+import { workoutAdvice } from "./workoutAdvice.js";
 import "./training-mix.css";
 
 const zoneOrder = ["Z1", "Z2", "Z3", "Z4", "Z5", "Z6", "Z7"];
@@ -112,6 +116,49 @@ function HeartRateMix({ report }) {
   </DataCard>;
 }
 
+function easyPacingLines(report) {
+  const metrics = [
+    ["cycling", "Cycling power", "powerWatts", "W", decimal],
+    ["cycling", "Cycling HR", "hrBpm", "bpm", decimal],
+    ["running", "Run–walk pace", "paceSecondsPerKm", "min/km", paceClock],
+    ["running", "Running HR", "hrBpm", "bpm", decimal],
+  ];
+  return metrics.flatMap(([sport, label, key, unit, format]) => {
+    const plan = report.coaching?.pacing?.[sport];
+    const range = rangeFor(plan?.[key]), evidence = targetEvidence(plan?.evidence?.[key]);
+    if (!range || !evidence || !dateOnly(evidence.date) || evidence.date > report.date) return [];
+    const [low, high] = range;
+    return [[label, `${format(low)}–${format(high)} ${unit}`, evidence.source, formatDate(evidence.date, { year: "numeric" })]];
+  });
+}
+
+const focusSportNames = { cycling: "Cycling", running: "Running" };
+const focusScopeNames = { steady: "Recorded steady blocks", "easy-match": "Recorded easy HR match", "short-rep": "Recorded short reps" };
+
+function focusValue(range, format) {
+  if (!range) return null;
+  const [low, high] = range.map(format);
+  return low === high ? low : `${low}–${high}`;
+}
+
+function FocusSport({ sport, guide, reading, bucket }) {
+  const [zone, session] = guide;
+  const format = sport === "cycling" ? Math.round : paceClock;
+  return <div className="mix-focus-sport">
+    <span className="mix-guide-sport">{focusSportNames[sport]}</span>
+    <span className="mix-guide-zone">{zone}</span>
+    {reading ? <>
+      <div className="mix-guide-readings">
+        <MetricValue as="strong" value={focusValue(reading.value, format)} unit={sport === "cycling" ? "W" : "min/km"} />
+        {reading.hr && <MetricValue as="strong" value={focusValue(reading.hr, Math.round)} unit="bpm" />}
+      </div>
+      <small>{focusScopeNames[reading.scope]} · {reading.rows.length} {reading.rows.length === 1 ? "day" : "days"}</small>
+      <small>{reading.source} · {labelRange(reading.first, reading.last)}{reading.environment ? ` · ${reading.environment}` : ""}</small>
+    </> : <small className="mix-guide-missing">{bucket === "anaerobic" ? "No verified short reps" : "No matched effort recorded"}</small>}
+    <small>{session}</small>
+  </div>;
+}
+
 function GarminFocus({ report }) {
   const focus = report.trainingMix?.garminLoadFocus;
   const start = dateOnly(focus?.start), end = dateOnly(focus?.end);
@@ -128,12 +175,45 @@ function GarminFocus({ report }) {
   }) : [];
   const max = Math.max(1, ...items.map(item => Math.max(item.points, item.target ? item.targetHigh : 0)));
   const url = sourceLink(focus?.sourceUrl);
+  const advice = items.length && workoutAdvice(report, jakartaDate(new Date()));
+  const easyTargets = items.length ? easyPacingLines(report) : [];
+  const readings = items.length ? loadFocusReadings(report, start, end) : {};
+  const readingRows = items.flatMap(({ key, label }) => Object.entries(readings[key] || {}).flatMap(([sport, reading]) =>
+    reading.rows.map(row => [
+      label, focusSportNames[sport], formatDate(row.date, { year: "numeric" }), minutes(row.durationSeconds),
+      sport === "cycling" ? `${Math.round(row.value)} W` : `${paceClock(row.value)} min/km`,
+      Number.isFinite(row.hrBpm) ? `${Math.round(row.hrBpm)} bpm` : null,
+      Number.isFinite(row.peakHrBpm) ? `${Math.round(row.peakHrBpm)} bpm` : null,
+      sourceLink(row.sourceUrl) ? <a href={sourceLink(row.sourceUrl)} target="_blank" rel="noreferrer">{row.source}</a> : row.source,
+    ])));
+  const recoveryNote = {
+    rest: "Recovery check favors rest.",
+    easy: "Recovery check favors easy effort.",
+    recheck: "Check your latest recovery before choosing an effort.",
+  }[advice?.state];
   return <DataCard className="mix-card" title="Garmin Load Focus" history="load-focus" detail={<>
     <DetailFacts rows={[["Source", report.preview ? "Illustrative data" : url ? <a href={url} target="_blank" rel="noopener noreferrer">Garmin Connect</a> : "Garmin Connect"],
       ["Period", items.length ? labelRange(start, end) : null]]} />
     <DetailTable columns={["Bucket", "Points", "Target", "Status"]} rows={items.map(item => [
       item.label, decimal(item.points), item.target ? `${item.approximate ? "≈ " : ""}${decimal(item.targetLow)}–${decimal(item.targetHigh)}` : null, focusStatusLabels[item.status],
     ])} />
+    {!!items.length && <>
+      <DetailTable columns={["Training focus", "Cycling", "Running"]} rows={items.map(({ key, label }) => {
+        const { cycling, running } = loadFocusGuide[key];
+        return [label, cycling.join(" · "), running.join(" · ")];
+      })} />
+      {!!readingRows.length && <>
+        <h3>Recorded efforts in this window</h3>
+        <DetailTable columns={["Focus", "Sport", "Date", "Duration", "Power or pace", "Recorded HR", "Peak HR", "Source"]} rows={readingRows} />
+      </>}
+      {!!easyTargets.length && <>
+        <h3>Easy pacing after recovery</h3>
+        <DetailTable columns={["Target", "Pacing guide", "Source", "Evidence date"]} rows={easyTargets} />
+      </>}
+      <p>{loadFocusGuideMethod}</p>
+      <p>Recorded ranges show the strongest eligible block per day in one comparable recording group. Aerobic blocks last 8 to under 12 minutes and use HR from the end of the block. Easy HR matches use the report’s dated easy HR guardrails when a matching Garmin category is unavailable. Anaerobic readings require labelled work reps of 10–120 seconds and use average rep HR when recorded.</p>
+      <div className="forecast-references">{loadFocusGuideSources.map(source => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.title}</a>)}</div>
+    </>}
   </>}>
     <div className="mix-card-heading"><div><h3>Load Focus</h3>
       <EvidenceMeta source={report.preview ? "Illustrative Garmin data" : "Garmin Connect"} href={items.length ? url : null}
@@ -153,7 +233,15 @@ function GarminFocus({ report }) {
           ? <><span className="mix-focus-value">{decimal(item.delta)} pts</span> {item.status === "below" ? "short" : "over"}</>
           : focusStatusLabels[item.status]}</small>}
       </div>
-    </div>)}{items.some(item => item.target && item.approximate) && <small className="mix-target-note">Dashed bands show chart-derived targets.</small>}</div> : <p className="mix-empty">Load Focus totals not captured</p>}
+      <div className="mix-focus-guide" data-bucket={item.key}>
+        {Object.entries(loadFocusGuide[item.key]).map(([sport, guide]) =>
+          <FocusSport key={sport} sport={sport} guide={guide} reading={readings[item.key]?.[sport]} bucket={item.key} />)}
+      </div>
+      {item.status && <small className="mix-focus-action">{loadFocusAction(item.key, item.status)}</small>}
+    </div>)}
+      {recoveryNote && <small className="mix-recovery-note">{recoveryNote}</small>}
+      {items.some(item => item.target && item.approximate) && <small className="mix-target-note">Dashed bands show chart-derived targets.</small>}
+    </div> : <p className="mix-empty">Load Focus totals not captured</p>}
   </DataCard>;
 }
 
