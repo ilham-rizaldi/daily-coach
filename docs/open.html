@@ -97,10 +97,13 @@
     }
 
     const saved = savedEnvelope();
-    const showSaved = new URL(location.href).searchParams.get("report") === "saved";
+    const url = new URL(location.href);
+    const showSaved = url.searchParams.get("report") === "saved";
     const envelope = parseEnvelope(fragment || (showSaved ? saved : null));
     const missingReport = "Paste the full private report link from your original message.";
-    const forwarding = openLatest(fragment);
+    const fromGitHub = url.hostname === "ilham-rizaldi.github.io" && !fragment && !showSaved;
+    const forwarding = fromGitHub || openLatest(fragment);
+    if (fromGitHub) location.replace(sharedReport + "?from=github");
     if (location.protocol === "file:" && !fragment) {
       location.replace("https://ilham-rizaldi.github.io/daily-coach/open.html");
     }

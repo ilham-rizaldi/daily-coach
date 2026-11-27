@@ -23,7 +23,7 @@ function envelope() {
     wrappedkey: wrapped.toString("base64url"), iv: payload.iv, data: payload.ciphertext });
 }
 
-function loadPage(params, storage = new Map(), protocol = "https:", search = "") {
+function loadPage(params, storage = new Map(), protocol = "https:", search = "", host = "example.com") {
   const elements = Object.fromEntries(["access", "open", "status", "code", "bookmark-access", "bookmark", "legacy-link"].map(id => [id,
     { value: "", textContent: "", disabled: false, focus() {} }]));
   let submit;
@@ -31,7 +31,7 @@ function loadPage(params, storage = new Map(), protocol = "https:", search = "")
   let destination;
   elements.access.addEventListener = (_, callback) => { submit = callback; };
   elements["bookmark-access"].addEventListener = (_, callback) => { submitBookmark = callback; };
-  const location = { protocol, hash: "#" + params, href: "https://example.com/daily-coach/open.html" + search + "#" + params,
+  const location = { protocol, hash: params ? "#" + params : "", href: `https://${host}/daily-coach/open.html${search}#${params}`,
     replace(url) { destination = url; } };
   runInNewContext(script, { document: { getElementById: id => elements[id] }, location,
     localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) },
@@ -114,6 +114,24 @@ test("a private bookmark opens the live report with the token in its fragment on
   assert.equal(page.destination(), undefined);
   page.pasteBookmark("https://ilham-rizaldi.github.io/daily-coach/open.html#" + fragment);
   assert.equal(page.destination(), expected);
+});
+
+test("GitHub entry points open the hosted report and preserve demo and legacy access", () => {
+  const host = "ilham-rizaldi.github.io";
+  const expected = "https://performance-desk-report.ilhamngeprint.chatgpt.site/open?from=github";
+  const index = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const entry = index.match(/<script>([\s\S]*?)<\/script>/)[1];
+  function indexDestination(hash = "", search = "") {
+    let destination;
+    const location = { hostname: host, hash, search, replace(url) { destination = url; } };
+    runInNewContext(entry, { location, URLSearchParams });
+    return destination;
+  }
+  assert.equal(indexDestination(), expected);
+  assert.equal(indexDestination("", "?preview=1"), undefined);
+  assert.equal(indexDestination("#key=old"), undefined);
+  assert.equal(loadPage("", new Map(), "https:", "", host).destination(), expected);
+  assert.equal(loadPage("", new Map(), "https:", "?report=saved", host).destination(), undefined);
 });
 
 test("the bare local page opens the live access form", () => {

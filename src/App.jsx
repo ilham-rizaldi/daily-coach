@@ -146,7 +146,7 @@ export function App() {
     changeSection("Daily");
   }
 
-  function lockArchive() {
+  async function lockArchive() {
     unlockVersion.current++;
     try { sessionStorage.removeItem("daily-coach-access"); } catch { /* The in-memory key is cleared below. */ }
     setReports([]);
@@ -158,6 +158,15 @@ export function App() {
     setSection("Daily");
     setDetail(false);
     if (location.hash) history.replaceState(null, "", `${location.pathname}${location.search}`);
+    if (location.hostname === "performance-desk-report.ilhamngeprint.chatgpt.site") {
+      try {
+        const response = await fetch("/api/latest", { method: "POST", keepalive: true,
+          headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lock: true }) });
+        if (!response.ok) throw new Error("Could not clear browser access");
+      } catch {
+        setCopyState("This tab is locked. Browser access could not be cleared. Try again after reconnecting.");
+      }
+    }
   }
 
   const report = reports[reportIndex];
@@ -185,8 +194,8 @@ export function App() {
         {!report && !loading && (
           <section className="decision empty-report" aria-labelledby="empty-report-title">
             <h1 id="empty-report-title">No report open</h1>
-            <p>Use your access code or open a private report link.</p>
-            <a className="report-action report-action-primary" href="./open.html">Enter access code</a>
+            <p>Open the private link you received or paste it on the access page.</p>
+            <a className="report-action report-action-primary" href="./open.html">Open private report</a>
             <a className="report-action" href="https://chatgpt.com/library" target="_blank" rel="noreferrer">Open ChatGPT Library</a>
           </section>
         )}

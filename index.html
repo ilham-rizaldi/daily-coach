@@ -8,6 +8,11 @@
     <meta name="color-scheme" content="dark" />
     <meta name="description" content="Your private daily coaching report." />
     <title>Daily Coach · Performance Desk</title>
+    <script>
+      if (location.hostname === "ilham-rizaldi.github.io" && !location.hash && new URLSearchParams(location.search).get("preview") !== "1") {
+        location.replace("https://performance-desk-report.ilhamngeprint.chatgpt.site/open?from=github");
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
