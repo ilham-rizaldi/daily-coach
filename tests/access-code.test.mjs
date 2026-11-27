@@ -23,15 +23,15 @@ function envelope() {
     wrappedkey: wrapped.toString("base64url"), iv: payload.iv, data: payload.ciphertext });
 }
 
-function loadPage(params, storage = new Map(), protocol = "https:") {
-  const elements = Object.fromEntries(["access", "open", "status", "code", "bookmark-access", "bookmark"].map(id => [id,
+function loadPage(params, storage = new Map(), protocol = "https:", search = "") {
+  const elements = Object.fromEntries(["access", "open", "status", "code", "bookmark-access", "bookmark", "legacy-link"].map(id => [id,
     { value: "", textContent: "", disabled: false, focus() {} }]));
   let submit;
   let submitBookmark;
   let destination;
   elements.access.addEventListener = (_, callback) => { submit = callback; };
   elements["bookmark-access"].addEventListener = (_, callback) => { submitBookmark = callback; };
-  const location = { protocol, hash: "#" + params, href: "https://example.com/daily-coach/open.html#" + params,
+  const location = { protocol, hash: "#" + params, href: "https://example.com/daily-coach/open.html" + search + "#" + params,
     replace(url) { destination = url; } };
   runInNewContext(script, { document: { getElementById: id => elements[id] }, location,
     localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) },
@@ -55,7 +55,7 @@ test("a correct access code opens the intended authenticated report", async () =
   assert.equal(page.elements.code.value, "");
 });
 
-test("a complete private link allows later code-only access on the same browser", async () => {
+test("an older encrypted report can be reopened explicitly from a saved report", async () => {
   const params = envelope();
   const storage = new Map();
   const page = loadPage(params, storage);
@@ -66,8 +66,11 @@ test("a complete private link allows later code-only access on the same browser"
   assert.ok(page.destination());
   assert.deepEqual([...storage.values()], [params.toString()]);
   const reopened = loadPage("", storage);
-  await reopened.submit("sample-access-code");
-  assert.equal(reopened.destination(), page.destination());
+  assert.equal(reopened.elements.access.hidden, true);
+  assert.equal(reopened.elements["legacy-link"].hidden, false);
+  const legacy = loadPage("", storage, "https:", "?report=saved");
+  await legacy.submit("sample-access-code");
+  assert.equal(legacy.destination(), page.destination());
 });
 
 test("altered report ciphertext cannot replace a saved encrypted report", async () => {
