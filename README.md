@@ -1,6 +1,7 @@
 # Performance Desk
 
-- [Open the personal dashboard](https://ilham-rizaldi.github.io/daily-coach/) and enter the access code. The hosted viewer serves the latest published report.
+- [Open the live Performance Desk](https://ilham-rizaldi.github.io/performance-desk-starter/). The owner’s private bookmark unlocks Garmin Connect and Intervals.icu data.
+- [Open the previous access-code viewer](https://performance-desk-report.ilhamngeprint.chatgpt.site/desk/) to read a legacy snapshot.
 - [Set up your own dashboard](https://github.com/ilham-rizaldi/performance-desk-starter/blob/main/SETUP-PROMPT.md) from the clean Starter repository. It connects to Garmin and Intervals.icu and syncs while the local app runs.
 
 ## Legacy Daily Coach archive
