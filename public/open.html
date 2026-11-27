@@ -21,13 +21,20 @@
     button:disabled { opacity: 0.65; cursor: wait; }
     #status { color: #ffb9ad; font-size: 14px; line-height: 1.5; }
     #status:empty { display: none; }
+    .help { color: #adb5c2; font-size: 14px; line-height: 1.5; margin: 0 0 20px; }
   </style>
 </head>
 <body>
   <main>
     <p class="brand">Performance Desk</p>
     <h1>Open your report</h1>
-    <form id="access">
+    <form id="bookmark-access" hidden>
+      <p class="help" id="bookmark-help">Copy the full private link from the message where you received it, then paste it here.</p>
+      <label for="bookmark">Private report link</label>
+      <input id="bookmark" type="password" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="512" aria-describedby="bookmark-help" required>
+      <button type="submit">Open latest report</button>
+    </form>
+    <form id="access" hidden>
       <label for="code">Access code</label>
       <input id="code" type="password" autocomplete="one-time-code" maxlength="128" required>
       <button id="open" type="submit">Open report</button>
@@ -41,8 +48,31 @@
     const button = document.getElementById("open");
     const status = document.getElementById("status");
     const code = document.getElementById("code");
+    const bookmarkForm = document.getElementById("bookmark-access");
+    const bookmark = document.getElementById("bookmark");
+    const sharedReport = "https://performance-desk-report.ilhamngeprint.chatgpt.site/open";
     const decode = value => Uint8Array.from(atob(value.replace(/-/g, "+").replace(/_/g, "/")), character => character.charCodeAt(0));
     const maximumPackageSize = 2_001_024;
+
+    function openLatest(hash) {
+      const token = new URLSearchParams(hash).get("latest");
+      if (!/^[A-Za-z0-9_-]{43}$/.test(token || "")) return false;
+      const target = new URL(sharedReport);
+      target.hash = new URLSearchParams({ latest: token }).toString();
+      location.replace(target.href);
+      return true;
+    }
+
+    bookmarkForm.addEventListener("submit", event => {
+      event.preventDefault();
+      try {
+        const link = new URL(bookmark.value.trim());
+        const isSite = link.origin === new URL(sharedReport).origin && ["/open", "/open.html"].includes(link.pathname);
+        const isGitHub = link.origin === "https://ilham-rizaldi.github.io" && link.pathname === "/daily-coach/open.html";
+        if ((isSite || isGitHub) && !link.username && !link.password && openLatest(link.hash.slice(1))) return;
+      } catch { /* Explain how to recover from an incomplete link. */ }
+      status.textContent = "Paste the full private link from your original message.";
+    });
 
     function parseEnvelope(value) {
       if (!value || value.length > maximumPackageSize) return null;
@@ -63,11 +93,15 @@
     }
 
     const envelope = parseEnvelope(fragment || savedEnvelope());
-    const missingReport = "Open your private report link to use your access code on this browser.";
+    const missingReport = "Paste the full private report link from your original message.";
+    const forwarding = openLatest(fragment);
     if (location.protocol === "file:" && !fragment) {
       location.replace("https://ilham-rizaldi.github.io/daily-coach/open.html");
     }
-    if (!envelope) status.textContent = missingReport;
+    if (!forwarding) {
+      bookmarkForm.hidden = Boolean(envelope);
+      form.hidden = !envelope;
+    }
 
     form.addEventListener("submit", async event => {
       event.preventDefault();

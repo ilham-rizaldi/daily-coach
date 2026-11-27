@@ -24,11 +24,13 @@ function envelope() {
 }
 
 function loadPage(params, storage = new Map(), protocol = "https:") {
-  const elements = Object.fromEntries(["access", "open", "status", "code"].map(id => [id,
+  const elements = Object.fromEntries(["access", "open", "status", "code", "bookmark-access", "bookmark"].map(id => [id,
     { value: "", textContent: "", disabled: false, focus() {} }]));
   let submit;
+  let submitBookmark;
   let destination;
   elements.access.addEventListener = (_, callback) => { submit = callback; };
+  elements["bookmark-access"].addEventListener = (_, callback) => { submitBookmark = callback; };
   const location = { protocol, hash: "#" + params, href: "https://example.com/daily-coach/open.html#" + params,
     replace(url) { destination = url; } };
   runInNewContext(script, { document: { getElementById: id => elements[id] }, location,
@@ -37,6 +39,9 @@ function loadPage(params, storage = new Map(), protocol = "https:") {
   return { elements, destination: () => destination, async submit(code) {
     elements.code.value = code;
     await submit({ preventDefault() {} });
+  }, pasteBookmark(value) {
+    elements.bookmark.value = value;
+    submitBookmark({ preventDefault() {} });
   } };
 }
 
@@ -87,14 +92,25 @@ test("a wrong code keeps the report locked and allows another attempt", async ()
   assert.ok(page.destination());
 });
 
-test("missing envelope fields leave the code editable and explain how to open the report", async () => {
+test("a bare or incomplete link offers bookmark recovery instead of asking for a code", () => {
   const page = loadPage(new URLSearchParams("iv=bad&data=bad"));
-  assert.equal(page.elements.code.disabled, false);
-  assert.equal(page.elements.open.disabled, false);
-  await page.submit("sample-access-code");
+  assert.equal(page.elements.access.hidden, true);
+  assert.equal(page.elements["bookmark-access"].hidden, false);
+  page.pasteBookmark("https://performance-desk-report.ilhamngeprint.chatgpt.site/open");
   assert.equal(page.destination(), undefined);
-  assert.equal(page.elements.code.value, "");
-  assert.match(page.elements.status.textContent, /private report link/);
+  assert.match(page.elements.status.textContent, /full private link/);
+});
+
+test("a private bookmark opens the live report with the token in its fragment only", () => {
+  const token = "A".repeat(43);
+  const fragment = "latest=" + token;
+  const expected = "https://performance-desk-report.ilhamngeprint.chatgpt.site/open#" + fragment;
+  assert.equal(loadPage(fragment).destination(), expected);
+  const page = loadPage("");
+  page.pasteBookmark("https://example.com/open#" + fragment);
+  assert.equal(page.destination(), undefined);
+  page.pasteBookmark("https://ilham-rizaldi.github.io/daily-coach/open.html#" + fragment);
+  assert.equal(page.destination(), expected);
 });
 
 test("the bare local page opens the live access form", () => {

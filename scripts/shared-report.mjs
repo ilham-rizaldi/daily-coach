@@ -1,8 +1,32 @@
-import { createCipheriv, pbkdf2Sync, randomBytes } from "node:crypto";
+import { createCipheriv, createHash, pbkdf2Sync, randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 
 const privateSettings = ".local/global-access/publish.private.json";
 const publisherFormat = /^[A-Za-z0-9_-]{43}$/;
+const linkDigest = (context, token) => createHash("sha256").update(`${context}:${token}`).digest();
+
+async function wrapArchiveKey(config, archiveKey) {
+  const wrapiv = randomBytes(12);
+  let mode = {};
+  let context = "daily-coach-code-v1";
+  let key;
+  if (config.linkToken != null) {
+    if (!publisherFormat.test(config.linkToken)) throw new Error("The private report link is invalid.");
+    context = "daily-coach-link-v1";
+    key = linkDigest(context, config.linkToken);
+    mode = { mode: "link-v1", linkDigest: linkDigest("daily-coach-link-id-v1", config.linkToken).toString("base64url") };
+  } else {
+    const { passcode } = JSON.parse(await readFile(".local/report-access.private.json", "utf8"));
+    if (typeof passcode !== "string" || !passcode.trim()) throw new Error("The shared report access code is missing.");
+    const salt = randomBytes(16);
+    key = pbkdf2Sync(passcode.trim(), salt, 600000, 32, "sha256");
+    mode = { salt: salt.toString("base64url") };
+  }
+  const cipher = createCipheriv("aes-256-gcm", key, wrapiv);
+  cipher.setAAD(Buffer.from(context));
+  const wrapped = Buffer.concat([cipher.update(Buffer.from(archiveKey, "base64url")), cipher.final(), cipher.getAuthTag()]);
+  return { ...mode, wrapiv: wrapiv.toString("base64url"), wrappedkey: wrapped.toString("base64url") };
+}
 
 export async function publishSharedReport(report, payload, archiveKey) {
   let config;
@@ -16,18 +40,11 @@ export async function publishSharedReport(report, payload, archiveKey) {
   const site = new URL(config.url);
   if (site.protocol !== "https:" || !site.hostname.endsWith(".chatgpt.site") || site.username || site.password
     || !publisherFormat.test(config.publisher || "")) throw new Error("The shared report destination is invalid.");
-  const { passcode } = JSON.parse(await readFile(".local/report-access.private.json", "utf8"));
-  if (typeof passcode !== "string" || !passcode.trim()) throw new Error("The shared report access code is missing.");
   if (payload.ciphertext.length > 2_000_000) throw new Error("The encrypted report exceeds the shared viewer limit.");
-  const salt = randomBytes(16);
-  const wrapiv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", pbkdf2Sync(passcode.trim(), salt, 600000, 32, "sha256"), wrapiv);
-  cipher.setAAD(Buffer.from("daily-coach-code-v1"));
-  const wrapped = Buffer.concat([cipher.update(Buffer.from(archiveKey, "base64url")), cipher.final(), cipher.getAuthTag()]);
   const revision = Date.parse(report.revisedAt || report.compiledAt || report.capturedAt);
   const body = {
     date: report.date, revision,
-    envelope: { salt: salt.toString("base64url"), wrapiv: wrapiv.toString("base64url"), wrappedkey: wrapped.toString("base64url"),
+    envelope: { ...await wrapArchiveKey(config, archiveKey),
       iv: payload.iv, data: payload.ciphertext },
   };
   let response;
