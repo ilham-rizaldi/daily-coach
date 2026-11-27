@@ -1,4 +1,9 @@
-# Daily Coach
+# Performance Desk
+
+- [Open the personal dashboard](https://ilham-rizaldi.github.io/daily-coach/) and enter the access code. The hosted viewer serves the latest published report.
+- [Set up your own dashboard](https://github.com/ilham-rizaldi/performance-desk-starter/blob/main/SETUP-PROMPT.md) from the clean Starter repository. It connects to Garmin and Intervals.icu and syncs while the local app runs.
+
+## Legacy Daily Coach archive
 
 A personal coaching email and web archive for cycling, running and strength training. Reports run on the owner's command. The Performance Desk design uses a charcoal background, lime accents, a coaching decision, training history, a next-session plan, and inspectable sources.
 
